@@ -7731,10 +7731,12 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             }
             const sel = getSelection(), box = document.getElementById('reader-content-text');
             const editing = !document.getElementById('reader-editor-box').classList.contains('hidden');
-            const ok = sel && !sel.isCollapsed && sel.anchorNode && box && box.contains(sel.anchorNode) && box.contains(sel.focusNode) && !editing && !document.getElementById('partial-dialog').open && String(sel).trim().length > 0;
+            const ok = sel && !sel.isCollapsed && sel.anchorNode && box && box.getClientRects().length > 0 && !document.getElementById('view-reader').classList.contains('hidden') && box.contains(sel.anchorNode) && box.contains(sel.focusNode) && !editing && !document.getElementById('partial-dialog').open && String(sel).trim().length > 0;
             chip.hidden = !ok;
         }
-        document.addEventListener('selectionchange', () => { clearTimeout(partialChipPaint._t); partialChipPaint._t = setTimeout(partialChipPaint, 120); });
+        const partialChipSoon = () => { clearTimeout(partialChipPaint._t); partialChipPaint._t = setTimeout(partialChipPaint, 120); };
+        // 画面を移ったとき（選んだままでも）、ボタンが残らないように、タップ・スクロール・画面の切り替えのたびに、見直す
+        ['selectionchange', 'pointerup', 'touchend', 'click', 'scroll', 'visibilitychange'].forEach(t => document.addEventListener(t, partialChipSoon, true));
         function partialOpen() {
             if (visualDraft.mode !== 'visual') { toast('本文をタップしてから押してください'); return; }
             const sel = editorSelection();
