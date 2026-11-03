@@ -20,9 +20,9 @@ All text in this README and the manuals was written by AI.
 
 The manuals below are in Japanese. Open a PDF to read it, or download a Word file.
 
-- Getting started: [Read PDF](README.pdf) / [Download Word](README.docx?raw=true)
-- Google Drive setup: [Quick guide PDF](docs/drive-setup-easy.pdf) / [Word](docs/drive-setup-easy.docx?raw=true)
-- Google Drive setup in detail: [Illustrated PDF](docs/drive-setup-detail.pdf) / [Word](docs/drive-setup-detail.docx?raw=true)
-- Special text effects: [Read PDF](docs/effects.pdf) / [Word](docs/effects.docx?raw=true)
+- Getting started: [Read PDF](README.pdf) / [Download Word](https://raw.githubusercontent.com/to-hu59/minimal-editor-dist/main/README.docx)
+- Google Drive setup: [Quick guide PDF](docs/drive-setup-easy.pdf) / [Word](https://raw.githubusercontent.com/to-hu59/minimal-editor-dist/main/docs/drive-setup-easy.docx)
+- Google Drive setup in detail: [Illustrated PDF](docs/drive-setup-detail.pdf) / [Word](https://raw.githubusercontent.com/to-hu59/minimal-editor-dist/main/docs/drive-setup-detail.docx)
+- Special text effects: [Read PDF](docs/effects.pdf) / [Word](https://raw.githubusercontent.com/to-hu59/minimal-editor-dist/main/docs/effects.docx)
 
 If browser translation makes the instructions hard to read, open the PDF or Word manual instead. Keep a separate backup of important text.
