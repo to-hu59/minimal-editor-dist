@@ -1594,6 +1594,7 @@
                     <button type="button" id="tab-stat-time" class="flex-1 py-1.5 rounded-xl font-bold bg-woodAccent text-white shadow-xs transition">📅 年・月別</button>
                     <button type="button" id="tab-stat-genre" class="flex-1 py-1.5 rounded-xl font-bold bg-white text-softMuted border border-woodBorder transition">🏷️ ジャンル</button>
                     <button type="button" id="tab-stat-author" class="flex-1 py-1.5 rounded-xl font-bold bg-white text-softMuted border border-woodBorder transition">✍️ 作家別</button>
+                    <button type="button" id="tab-stat-activity" class="flex-1 py-1.5 rounded-xl font-bold bg-white text-softMuted border border-woodBorder transition">📖 記録</button>
                 </div>
 
                 <div class="p-4 space-y-3.5 overflow-y-auto pb-28">
@@ -1608,9 +1609,29 @@
                         </div>
                     </div>
 
-                    <div class="bg-kinariDark p-1 rounded-xl flex items-center border border-woodBorder text-xs" role="group" aria-label="数え方">
+                    <div id="stat-unit-box" class="bg-kinariDark p-1 rounded-xl flex items-center border border-woodBorder text-xs" role="group" aria-label="数え方">
                         <button type="button" id="btn-stat-unit-book" class="flex-1 py-1 rounded-lg font-bold bg-white text-woodAccentDark shadow-xs transition">冊で数える</button>
                         <button type="button" id="btn-stat-unit-chap" class="flex-1 py-1 rounded-lg font-bold text-softMuted hover:text-softText transition">話で数える</button>
+                    </div>
+                    <div id="stat-panel-activity" class="hidden space-y-3.5">
+                        <div class="bg-kinariDark p-1 rounded-xl flex items-center border border-woodBorder text-xs" role="group" aria-label="期間">
+                            <button type="button" id="act-p-month" class="flex-1 py-1 rounded-lg font-bold transition">月</button>
+                            <button type="button" id="act-p-year" class="flex-1 py-1 rounded-lg font-bold transition">年</button>
+                            <button type="button" id="act-p-all" class="flex-1 py-1 rounded-lg font-bold transition">全期間</button>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <button type="button" id="act-prev" class="w-10 h-10 rounded-xl border border-woodBorder bg-white text-lg font-bold text-softText" aria-label="前へ">‹</button>
+                            <span id="act-title" class="text-sm font-bold text-softText"></span>
+                            <button type="button" id="act-next" class="w-10 h-10 rounded-xl border border-woodBorder bg-white text-lg font-bold text-softText" aria-label="次へ">›</button>
+                        </div>
+                        <div id="act-summary" class="grid grid-cols-4 gap-1.5 text-center text-xs"></div>
+                        <p id="act-msg" class="text-[11px] text-softMuted leading-relaxed"></p>
+                        <div class="bg-white border border-woodBorder rounded-2xl p-3.5 shadow-xs">
+                            <div id="act-cal"></div>
+                            <div id="act-bars" class="w-full h-40 relative hidden"><canvas id="actBarChart"></canvas></div>
+                        </div>
+                        <div id="act-rank" class="space-y-3.5"></div>
+                        <div id="act-list" class="space-y-2"></div>
                     </div>
                     <div id="stat-panel-time" class="space-y-3.5">
                         <div class="bg-kinariDark p-1 rounded-xl flex items-center border border-woodBorder text-xs">
@@ -1800,6 +1821,7 @@
                         <span class="font-bold text-softMuted block mb-1">更新履歴</span>
                         <div id="changelog" class="text-[11px] text-softMuted leading-relaxed">
 <div class="mb-1.5"><b class="text-softText">2026-11-03（6）</b><br>編集の道具：「画面の枠」を「特殊演出」にして（動く人のマーク）、右端に固定した（「原文」のボタンはなくした）。「特殊な文字」（回転の矢印と星のマーク）を足して、縦書き（この部分だけ）・ななめ・左右反転・上下反転・回転・逆さを入れられるようにした（編集画面で、ルビや色と同じように、その場で見える。選ばないときは、いまの行ぜんぶ）。文字色の「カスタム」に「この色にする」を足して、選んだ色が本文と「A」の線に出るようにした。OCRのボタンのマークを変えた。特殊演出に、電光掲示板（右から左へ流れる・文字ごとの色・背景の色・折り返し）、駅の発車案内、空港の出発案内、文字化けするシステム画面、文字が崩れる配信コメント、ページがめくれない、ページが巻き戻る、を足した（🎬の演出ビューで動く）。作品のメニューに、Googleドキュメントへの書き出し（本文のみ）を足した。Driveの自動同期は、はじめは切にして、「いま同期する」で手動にできるようにした。Driveのフォルダ名とアプリ名を「読書リーダー(仮)」にした。</div>
+<div class="mb-1.5"><b class="text-softText">2026-11-04（2）</b><br>読書グラフ＆統計に、「記録」のタブを足した（アクティビティ）。話を最後まで読むと、その日の記録が残る（ページめくりは最後のページ、スクロールは一番下。短い話は、全部見えたとき）。「月」「年」「全期間」を切り替えて、「2026年11月」のところを、‹ › で変えられる。月は、日ごとの色のカレンダー（日を押すと、その日の記録）。ほかに、読んだ話・作品・読んだ日・文字数、前の月・年との比べ、よく読んだ作品・ジャンル・作家、日ごとの一覧（押すと、その話が開く）が出る。記録は、この機能を入れた日から。作品といっしょに、同期・バックアップに入る。</div>
 <div class="mb-1.5"><b class="text-softText">2026-11-04</b><br>読書グラフ＆統計を直した。月別は、いまの月まで（直近6か月）を出すようにした（これまでは、5〜10月に決まっていて、11月の作品が出なかった）。「冊で数える」「話で数える」の切り替えを足した。話にすると、年別・月別のグラフ、ジャンル比率、作家別が、話の数で出る。総登録作品のところにも、「4 冊・14 話」と、話の数を出す。</div>
 <div class="mb-1.5"><b class="text-softText">2026-11-03（12）</b><br>Driveのログイン（Googleの許可）は、約1時間で切れるので、切れたあと、最初に画面をタップしたときに、自動でやり直すようにした（許可ずみなら、小さな窓が一瞬ひらいて、すぐ閉じる）。設定のGoogle Driveの欄の、「ログインが切れたら、さわったときに自動でやり直す」で、入り切りできる（はじめは入）。</div>
 <div class="mb-1.5"><b class="text-softText">2026-11-03（11）</b><br>「ファイルから」（話を足す・「＋」の「ファイルから作る」）で、画像（.png .jpg など）も、何枚でも、まとめて選べるようにした。画像は、ファイルの名前の順に並び、「1話ごとの枚数」（例：3,4,3／3枚ずつなら 3）か、画像ごとの「新しい話」のチェックで、どこから新しい話にするかを決められる。決めたあと、1枚ずつ、画像から文字を読み取って（日本語の横書き。最初はネットが必要）、話にする。</div>
@@ -8321,6 +8343,7 @@ function updateReaderProgress(){
  const input=document.getElementById('reader-progress');if(!input)return;const {sequence,index}=readerSequenceIndex(),pages=pageReader.model?.pages.length||1;
  input.disabled=readerTurning||!sequence.length;input.value=String(Math.round(1000*(Math.max(0,index)+(pagingActive()?(pageReader.index+1)/pages:0))/Math.max(1,sequence.length)));
  input.setAttribute('aria-valuetext',`${index+1}/${sequence.length}話・${pageReader.index+1}/${pages}ページ`);
+ if(pagingActive()&&pageReader.index>=pages-1)readLogSoon();
 }
 function pageFromFraction(fraction,n){const p=Math.max(0,Math.min(n-1,Math.ceil(fraction*n-1e-9)-1));return pageReader.model?.spread?p-p%2:p;}
 // 棒をドラッグ中：同じ話の中なら、ぺらぺらとめくりながら、つまみを正しい位置に固定する
@@ -8426,7 +8449,7 @@ function previewReaderStep(step){
 }
 function commitReaderStep(step){
  if(step.kind==='chapter'){
-  const forward=step.dir>0;if(forward)candNotify(); // 話の終わり
+  const forward=step.dir>0;if(forward){readLogCheck(state.currentBookId,state.currentChapterId);candNotify();} // 話の終わり
   adoptReaderChapter(step.record,forward?0:step.record.model.pages.length-1);if(forward&&readerTitleCardOn()){pageReader.edge='title';renderReaderCurrent();}updatePageControls();return;
  }
  if(step.kind==='page'){pageReader.edge=null;pageReader.index=step.index;}else pageReader.edge='title';
@@ -8603,9 +8626,9 @@ function setupPaging(){
             const book=state.books.find(b=>b.id===state.currentBookId);if(!book)return;
             const sequence=getReaderSequence(book),index=sequence.findIndex(x=>x.chap.id===state.currentChapterId);
             const target=sequence[index+direction];
-            if(direction>0 && index>=0 && !target){candNotify();return;} // 最後の話：本の終わり
+            if(direction>0 && index>=0 && !target){readLogCheck(state.currentBookId,state.currentChapterId);candNotify();return;} // 最後の話：本の終わり
             if(index<0 || !target || !canLeaveReader())return;
-            if(direction>0)candNotify(); // 話の終わり
+            if(direction>0){readLogCheck(state.currentBookId,state.currentChapterId);candNotify();} // 話の終わり
             const outgoing=animate?captureReaderSheet():null;
             readerTurning=true;
             if(target.volId)openReaderForVolumeChapter(target.volId,target.chap.id,target.partIdx);else openReader(target.chap.id,target.partIdx);
@@ -8690,14 +8713,15 @@ function setupPaging(){
             state.statTab = tab;
             const tabTime = document.getElementById('tab-stat-time');
             const tabGenre = document.getElementById('tab-stat-genre');
-            const tabAuthor = document.getElementById('tab-stat-author');
+            const tabAuthor = document.getElementById('tab-stat-author'), tabAct = document.getElementById('tab-stat-activity'), pAct = document.getElementById('stat-panel-activity');
 
             const pTime = document.getElementById('stat-panel-time');
             const pGenre = document.getElementById('stat-panel-genre');
             const pAuthor = document.getElementById('stat-panel-author');
 
-            [tabTime, tabGenre, tabAuthor].forEach(t => t.className = "flex-1 py-1.5 rounded-xl font-bold bg-white text-softMuted border border-woodBorder transition");
-            [pTime, pGenre, pAuthor].forEach(p => p.classList.add('hidden'));
+            [tabTime, tabGenre, tabAuthor, tabAct].forEach(t => t.className = "flex-1 py-1.5 rounded-xl font-bold bg-white text-softMuted border border-woodBorder transition");
+            [pTime, pGenre, pAuthor, pAct].forEach(p => p.classList.add('hidden'));
+            document.getElementById('stat-unit-box').classList.toggle('hidden', tab === 'activity');
 
             if (tab === 'time') {
                 tabTime.className = "flex-1 py-1.5 rounded-xl font-bold bg-woodAccent text-white shadow-xs transition";
@@ -8707,6 +8731,10 @@ function setupPaging(){
                 tabGenre.className = "flex-1 py-1.5 rounded-xl font-bold bg-woodAccent text-white shadow-xs transition";
                 pGenre.classList.remove('hidden');
                 renderGenreDoughnutChart();
+            } else if (tab === 'activity') {
+                tabAct.className = "flex-1 py-1.5 rounded-xl font-bold bg-woodAccent text-white shadow-xs transition";
+                pAct.classList.remove('hidden');
+                renderActivity();
             } else {
                 tabAuthor.className = "flex-1 py-1.5 rounded-xl font-bold bg-woodAccent text-white shadow-xs transition";
                 pAuthor.classList.remove('hidden');
@@ -8716,6 +8744,92 @@ function setupPaging(){
             renderGlobalSummaryStats();
         }
 
+        // ===== 読んだ記録：話を最後まで読んだとき、その日の記録を、作品に残す（book.readLog = [{ d: '2026-11-04', c: 話のid, t: 話の名前, n: 文字数 }]）。同期・バックアップにも入る =====
+        function readLogDay(dt) { const d = dt || new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+        function readLogRecord(bookId, chapId) {
+            const book = state.books.find(b => b.id === bookId); if (!book || !chapId) return false;
+            const ent = getFlatChapters(book).find(f => f.chap.id === chapId); if (!ent) return false;
+            const d = readLogDay(); if (!Array.isArray(book.readLog)) book.readLog = [];
+            if (book.readLog.some(x => x.d === d && x.c === chapId)) return false;
+            book.readLog.push({ d, c: chapId, t: String(ent.chap.title || ''), n: (ent.chap.content || '').length });
+            save(); return true;
+        }
+        // 最後まで読んだか：ページめくりは、最後のページ／スクロールは、いちばん下
+        function readerAtEnd() {
+            try {
+                if (typeof pagingActive === 'function' && pagingActive() && pageReader.model) return pageReader.index >= pageReader.model.pages.length - 1 && !pageReader.edge;
+                const w = document.getElementById('reader-body-wrap'); return !!w && w.scrollTop + w.clientHeight >= w.scrollHeight - 60;
+            } catch (e) { return false; }
+        }
+        function readLogCheck(bookId, chapId) { if (bookId && chapId && readerAtEnd()) readLogRecord(bookId, chapId); }
+        let readLogTimer = null;
+        function readLogSoon() {   // 途中の移り変わりで、まちがえて残さないように、少しおいて、まだ同じ話の終わりにいるときだけ
+            const bookId = state.currentBookId, chapId = state.currentChapterId; clearTimeout(readLogTimer);
+            readLogTimer = setTimeout(() => {
+                const rv = document.getElementById('view-reader'), eb = document.getElementById('reader-editor-box');
+                if (!rv || rv.classList.contains('hidden') || (eb && !eb.classList.contains('hidden'))) return;
+                if (state.currentBookId === bookId && state.currentChapterId === chapId) readLogCheck(bookId, chapId);
+            }, 1500);
+        }
+        document.addEventListener('scroll', e => { if (e.target && e.target.id === 'reader-body-wrap') readLogSoon(); }, true);
+        // ===== 読んだ記録の画面（統計の「読んだ記録」）：月・年・全期間 =====
+        function readLogAll() {
+            const out = []; state.books.forEach(b => (b.readLog || []).forEach(x => out.push({ d: x.d, bid: b.id, bt: b.title || '', c: x.c, t: x.t || '', n: x.n || 0, tags: b.tags || [], author: b.author || '' })));
+            return out;
+        }
+        function actState() { if (!state.act) { const n = new Date(); state.act = { mode: 'month', y: n.getFullYear(), m: n.getMonth() + 1, day: '' }; } return state.act; }
+        function actFilter(all, A) { const p2 = n => String(n).padStart(2, '0'); const pre = A.mode === 'month' ? A.y + '-' + p2(A.m) : A.mode === 'year' ? String(A.y) : ''; return all.filter(x => x.d.startsWith(pre)); }
+        function actPrevRange(A) { return A.mode === 'month' ? (A.m === 1 ? { ...A, y: A.y - 1, m: 12 } : { ...A, m: A.m - 1 }) : A.mode === 'year' ? { ...A, y: A.y - 1 } : null; }
+        function renderActivity() {
+            const A = actState(), all = readLogAll(), now = new Date();
+            const on = 'flex-1 py-1 rounded-lg font-bold bg-white text-woodAccentDark shadow-xs transition', off = 'flex-1 py-1 rounded-lg font-bold text-softMuted hover:text-softText transition';
+            ['month', 'year', 'all'].forEach(m => { document.getElementById('act-p-' + m).className = A.mode === m ? on : off; });
+            document.getElementById('act-title').textContent = A.mode === 'month' ? A.y + '年' + A.m + '月' : A.mode === 'year' ? A.y + '年' : '全期間';
+            const nav = A.mode !== 'all'; document.getElementById('act-prev').style.visibility = nav ? 'visible' : 'hidden';
+            const isNow = A.mode === 'month' ? (A.y === now.getFullYear() && A.m === now.getMonth() + 1) : A.mode === 'year' ? A.y === now.getFullYear() : true;
+            document.getElementById('act-next').style.visibility = nav && !isNow ? 'visible' : 'hidden';
+            const rows = actFilter(all, A), chaps = rows.length, chars = rows.reduce((n, x) => n + x.n, 0), days = new Set(rows.map(x => x.d)).size, books = new Set(rows.map(x => x.bid)).size;
+            const card = (lab, val) => '<div class="bg-white border border-woodBorder rounded-xl p-2 shadow-xs"><span class="text-[10px] text-softMuted block">' + lab + '</span><span class="text-sm font-bold text-softText">' + val + '</span></div>';
+            document.getElementById('act-summary').innerHTML = card('読んだ話', chaps.toLocaleString() + ' 話') + card('作品', books + ' 冊') + card('読んだ日', days + ' 日') + card('文字数', chars.toLocaleString() + ' 字');
+            const prev = actPrevRange(A); let msg = '';
+            if (!all.length) msg = 'まだ記録がありません。話を、最後まで読むと、その日の記録が、ここに残ります（この機能を入れた日から）。';
+            else if (prev) { const pc = actFilter(all, prev).length, diff = chaps - pc; msg = (A.mode === 'month' ? '前の月' : '前の年') + 'より、' + (diff === 0 ? '同じ数です。' : Math.abs(diff) + ' 話、' + (diff > 0 ? '多いです。' : '少ないです。')) + '（前は ' + pc + ' 話）'; }
+            else msg = 'これまでに、' + chaps.toLocaleString() + ' 話、' + days + ' 日、読みました。';
+            document.getElementById('act-msg').textContent = msg;
+            const cal = document.getElementById('act-cal'), bars = document.getElementById('act-bars');
+            if (state.actChart) { state.actChart.destroy(); state.actChart = null; }
+            if (A.mode === 'month') {
+                bars.classList.add('hidden'); cal.classList.remove('hidden');
+                const first = new Date(A.y, A.m - 1, 1), nd = new Date(A.y, A.m, 0).getDate(), lead = first.getDay(), per = {};
+                rows.forEach(x => { per[x.d] = (per[x.d] || 0) + 1; });
+                let h = '<div class="grid grid-cols-7 gap-1 text-center text-[10px] text-softMuted mb-1">' + ['日', '月', '火', '水', '木', '金', '土'].map(w => '<span>' + w + '</span>').join('') + '</div><div class="grid grid-cols-7 gap-1">';
+                for (let i = 0; i < lead; i++) h += '<span></span>';
+                for (let d = 1; d <= nd; d++) {
+                    const key = A.y + '-' + String(A.m).padStart(2, '0') + '-' + String(d).padStart(2, '0'), n = per[key] || 0;
+                    const bg = n >= 6 ? '#23594e' : n >= 3 ? '#5b9279' : n >= 1 ? '#bcd8c6' : '#f3eee3', fg = n >= 3 ? '#fff' : '#6b5f55';
+                    h += '<button type="button" data-act-day="' + key + '" class="rounded-lg text-[11px] font-bold" style="height:34px;background:' + bg + ';color:' + fg + ';' + (A.day === key ? 'outline:2px solid #6f5a47;' : '') + '">' + d + (n ? '<span class="block text-[8px] font-normal leading-none">' + n + '</span>' : '') + '</button>';
+                }
+                cal.innerHTML = h + '</div><p class="text-[10px] text-softMuted mt-2">日をタップすると、その日の記録が出ます。色が濃いほど、たくさん読んだ日です。</p>';
+            } else {
+                cal.classList.add('hidden'); bars.classList.remove('hidden');
+                let labels = [], data = [];
+                if (A.mode === 'year') { labels = Array.from({ length: 12 }, (_, i) => (i + 1) + '月'); data = labels.map((_, i) => rows.filter(x => Number(x.d.slice(5, 7)) === i + 1).length); }
+                else { const ys = [...new Set(all.map(x => x.d.slice(0, 4)))].sort(); labels = ys.length ? ys.map(y => y + '年') : [now.getFullYear() + '年']; data = (ys.length ? ys : [String(now.getFullYear())]).map(y => all.filter(x => x.d.startsWith(y)).length); }
+                state.actChart = new Chart(document.getElementById('actBarChart').getContext('2d'), { type: 'bar', data: { labels, datasets: [{ label: '読んだ話', data, backgroundColor: '#5b9279', borderRadius: 6 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0, font: { family: 'Hiragino Sans', size: 10 } } }, x: { ticks: { font: { family: 'Hiragino Sans', size: 10 } } } } } });
+            }
+            // ランキング：作品・ジャンル・作家（読んだ話の数）
+            const top = (map, unit) => Object.entries(map).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([k, v], i) => '<div class="flex items-center justify-between p-1.5 bg-kinari rounded-lg border border-woodBorder"><div class="flex items-center space-x-1.5 min-w-0"><span class="w-4 h-4 rounded-full bg-kinariDark border border-woodBorder flex items-center justify-center font-bold text-[9px] text-woodAccentDark flex-none">' + (i + 1) + '</span><span class="font-bold text-softText truncate">' + escapeHtml(k) + '</span></div><span class="text-[10px] font-bold text-woodAccentDark flex-none">' + v + ' ' + unit + '</span></div>').join('') || '<div class="text-[10px] text-softMuted py-1 text-center">記録がありません</div>';
+            const byBook = {}, byGenre = {}, byAuthor = {};
+            rows.forEach(x => { byBook[x.bt] = (byBook[x.bt] || 0) + 1; x.tags.forEach(t => { byGenre[t] = (byGenre[t] || 0) + 1; }); byAuthor[x.author || '作者名'] = (byAuthor[x.author || '作者名'] || 0) + 1; });
+            const box = (title, body) => '<div class="bg-white border border-woodBorder rounded-2xl p-3.5 space-y-1.5 shadow-xs text-xs"><span class="text-[11px] font-bold text-softText block border-b border-woodBorder/50 pb-1.5">' + title + '</span>' + body + '</div>';
+            document.getElementById('act-rank').innerHTML = rows.length ? box('よく読んだ作品', top(byBook, '話')) + box('よく読んだジャンル', top(byGenre, '話')) + box('よく読んだ作家', top(byAuthor, '話')) : '';
+            // 日ごとの記録（新しい日から。月のカレンダーで、日を選んだら、その日だけ）
+            let list = rows; if (A.mode === 'month' && A.day) list = rows.filter(x => x.d === A.day);
+            const byDay = {}; list.forEach(x => { (byDay[x.d] = byDay[x.d] || []).push(x); });
+            const days2 = Object.keys(byDay).sort().reverse(), wd = d => ['日', '月', '火', '水', '木', '金', '土'][new Date(d.slice(0, 4), Number(d.slice(5, 7)) - 1, Number(d.slice(8, 10))).getDay()];
+            const dayHtml = d => { const g = {}; byDay[d].forEach(x => { (g[x.bid + '\u0001' + x.bt] = g[x.bid + '\u0001' + x.bt] || []).push(x); }); return '<div class="bg-white border border-woodBorder rounded-xl p-2.5 shadow-xs text-xs"><div class="font-bold text-softText mb-1">' + Number(d.slice(5, 7)) + '/' + Number(d.slice(8, 10)) + '（' + wd(d) + '）<span class="font-normal text-softMuted">　' + byDay[d].length + ' 話</span></div>' + Object.values(g).map(arr => '<button type="button" data-act-open="' + escapeHtml(arr[0].bid) + '|' + escapeHtml(arr[arr.length - 1].c) + '" class="block w-full text-left py-1"><span class="font-bold text-woodAccentDark">' + escapeHtml(arr[0].bt) + '</span><span class="text-softMuted">　' + arr.map(x => escapeHtml(x.t || '話')).join('、') + '</span></button>').join('') + '</div>'; };
+            document.getElementById('act-list').innerHTML = rows.length ? (A.mode === 'month' && A.day ? '<div class="text-[11px] text-softMuted">' + Number(A.day.slice(5, 7)) + '月' + Number(A.day.slice(8, 10)) + '日の記録　<button type="button" data-act-day="" class="underline">月ぜんぶを見る</button></div>' : '<div class="text-[11px] font-bold text-softText">日ごとの記録</div>') + (days2.length ? days2.map(dayHtml).join('') : '<div class="text-[10px] text-softMuted py-2 text-center">この日の記録は、ありません</div>') : '';
+        }
         // 数え方：冊で数える（1冊＝1）か、話で数える（その作品の話の数）か
         function statUnit() { return state.statUnit === 'chap' ? 'chap' : 'book'; }
         function chapCountOf(b) { let n = 0; (b.parts || []).forEach(p => { n += (p.chapters || []).length; (p.volumes || []).forEach(v => { n += (v.chapters || []).length; }); }); return n; }
@@ -9078,6 +9192,17 @@ function setupPaging(){
             document.getElementById('tab-stat-time').addEventListener('click', () => switchStatTab('time'));
             document.getElementById('tab-stat-genre').addEventListener('click', () => switchStatTab('genre'));
             document.getElementById('tab-stat-author').addEventListener('click', () => switchStatTab('author'));
+            document.getElementById('tab-stat-activity').addEventListener('click', () => switchStatTab('activity'));
+            for (const m of ['month', 'year', 'all']) document.getElementById('act-p-' + m).addEventListener('click', () => { const A = actState(); A.mode = m; A.day = ''; renderActivity(); });
+            document.getElementById('act-prev').addEventListener('click', () => { const A = actState(); if (A.mode === 'month') { if (A.m === 1) { A.y--; A.m = 12; } else A.m--; } else if (A.mode === 'year') A.y--; A.day = ''; renderActivity(); });
+            document.getElementById('act-next').addEventListener('click', () => { const A = actState(); if (A.mode === 'month') { if (A.m === 12) { A.y++; A.m = 1; } else A.m++; } else if (A.mode === 'year') A.y++; A.day = ''; renderActivity(); });
+            document.getElementById('stat-panel-activity').addEventListener('click', e => {
+                const dayBtn = e.target.closest('[data-act-day]'); if (dayBtn) { const A = actState(); A.day = A.day === dayBtn.dataset.actDay ? '' : dayBtn.dataset.actDay; renderActivity(); return; }
+                const op = e.target.closest('[data-act-open]'); if (!op) return;
+                const [bid, cid] = op.dataset.actOpen.split('|'), book = state.books.find(b => b.id === bid), ent = book && getFlatChapters(book).find(f => f.chap.id === cid); if (!ent) { toast('この話は、もう、ありません'); return; }
+                document.getElementById('modal-stats').classList.add('hidden'); state.currentBookId = bid;
+                if (ent.volId) openReaderForVolumeChapter(ent.volId, cid, ent.partIdx); else openReader(cid, ent.partIdx);
+            });
 
             for (const [id, u] of [['btn-stat-unit-book', 'book'], ['btn-stat-unit-chap', 'chap']]) document.getElementById(id).addEventListener('click', () => { state.statUnit = u; try { localStorage.setItem('yomimono_stat_unit', u); } catch (e) {} switchStatTab(state.statTab || 'time'); });
             try { state.statUnit = localStorage.getItem('yomimono_stat_unit') === 'chap' ? 'chap' : 'book'; } catch (e) {}
