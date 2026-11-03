@@ -161,9 +161,7 @@
             padding: 1px 2px;
             transition: background-color 0.2s ease;
         }
-        .tts-sentence:hover {
-            background-color: rgba(223, 177, 99, 0.15);
-        }
+        @media (hover: hover) { .tts-sentence:hover { background-color: rgba(223, 177, 99, 0.15); } }   /* タッチの端末では、タップした文に色が残って、選んだ範囲のように見えるので、マウスのときだけ */
         /* 仮のアシスタント（AIなし）と仮Wiki：Tailwindに頼らず単体で表示できるように自前で指定 */
         #assist-btn { position: fixed; right: 16px; bottom: 96px; z-index: 45; width: 40px; height: 40px; border-radius: 999px;
             background: #5f5345; color: #fff; font-size: 19px; line-height: 1; box-shadow: 0 6px 18px #0005; border: none; }
@@ -7679,17 +7677,22 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             add(last, raw.length);
             return { text, map };
         }
-        function partialLocate(content, selText, occurrence) {
-            const needle = String(selText).replace(/\s+/g, ''); if (!needle) return null;
-            const { text, map } = partialProject(content);
+        function partialLocate(content, book, selText, dom) {
+            const NL = String.fromCharCode(10), needle = String(selText).replace(/\s+/g, ''); if (!needle) return null;
+            const raw = content.split(NL), disp = raw.map(l => localizeText(l, book)), joined = disp.join(NL);   // 読む画面と同じ置き換えをした本文で、合わせる
+            const { text, map } = partialProject(joined);
             const hits = []; for (let p = text.indexOf(needle); p >= 0; p = text.indexOf(needle, p + 1)) hits.push(p);
             if (!hits.length) return null;
-            const p = hits[Math.min(occurrence, hits.length - 1)];
-            const rawStart = map[p], rawEnd = map[p + needle.length - 1] + 1;
-            const starts = [0]; for (let i = 0; i < content.length; i++) if (content[i] === '\n') starts.push(i + 1);
+            // 同じ言葉が何か所もあるときは、前後の字がいちばん合うものにする（同点なら、数えた順）
+            const score = p => { let x = 0, y = 0; while (x < 40 && p - 1 - x >= 0 && dom.before[dom.before.length - 1 - x] === text[p - 1 - x]) x++; while (y < 40 && text[p + needle.length + y] !== undefined && text[p + needle.length + y] === dom.after[y]) y++; return x + y; };
+            const top = Math.max(...hits.map(score)), cands = hits.map((p, i) => [p, i]).filter(([p]) => score(p) === top);
+            const want = Math.min(dom.occ, hits.length - 1), p = cands.reduce((best, c) => Math.abs(c[1] - want) < Math.abs(best[1] - want) ? c : best, cands[0])[0];
+            const starts = [0]; for (let i = 0; i < joined.length; i++) if (joined[i] === NL) starts.push(i + 1);
             const lineOf = pos => { let k = 0; while (k + 1 < starts.length && starts[k + 1] <= pos) k++; return k; };
-            const li0 = lineOf(rawStart), li1 = lineOf(Math.max(rawStart, rawEnd - 1));
-            return { li0, li1, selFrom: rawStart - starts[li0], selTo: rawEnd - starts[li0], hits: hits.length };
+            const dStart = map[p], dEnd = map[p + needle.length - 1] + 1;
+            const li0 = lineOf(dStart), li1 = lineOf(Math.max(dStart, dEnd - 1));
+            const same = raw.slice(li0, li1 + 1).join(NL) === disp.slice(li0, li1 + 1).join(NL);   // 名前を置き換えた行は、字の位置がずれるので、色はつけない
+            return { li0, li1, selFrom: same ? dStart - starts[li0] : 0, selTo: same ? dEnd - starts[li0] : 0 };
         }
         // 読む画面：文字を選ぶと、「ここだけ直す」が出る。編集画面を開かずに、その段落だけを直せる
         function readerPartialOpen() {
@@ -7702,7 +7705,9 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             const pre = document.createRange(); pre.selectNodeContents(box); pre.setEnd(range.startContainer, range.startOffset);
             const before = norm(pre.toString()), needle = norm(selText); let occ = 0;
             if (needle) for (let p = before.indexOf(needle); p >= 0; p = before.indexOf(needle, p + 1)) occ++;
-            const content = ref.chap.content || '', loc = partialLocate(content, selText, occ);
+            const post = document.createRange(); post.selectNodeContents(box); post.setStart(range.endContainer, range.endOffset);
+            const dom = { before: before.slice(-60), after: norm(post.toString()).slice(0, 60), occ };
+            const content = ref.chap.content || '', loc = partialLocate(content, ref.book, selText, dom);
             if (!loc) { toast('この文は、見つかりませんでした。編集ボタンから、直してください'); return; }
             const lines = content.split(String.fromCharCode(10)), block = lines.slice(loc.li0, loc.li1 + 1).join(String.fromCharCode(10));
             partialCtx = { reader: true, bookId: state.currentBookId, chapId: state.currentChapterId, li0: loc.li0, li1: loc.li1, before: block };
@@ -7733,6 +7738,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             const editing = !document.getElementById('reader-editor-box').classList.contains('hidden');
             const ok = sel && !sel.isCollapsed && sel.anchorNode && box && box.getClientRects().length > 0 && !document.getElementById('view-reader').classList.contains('hidden') && box.contains(sel.anchorNode) && box.contains(sel.focusNode) && !editing && !document.getElementById('partial-dialog').open && String(sel).trim().length > 0;
             chip.hidden = !ok;
+            clearTimeout(partialChipPaint._poll); if (ok) partialChipPaint._poll = setTimeout(partialChipPaint, 500);   // 出ているあいだは、500ミリ秒ごとに見直す（画面を移ったのに残るのを防ぐ）
         }
         const partialChipSoon = () => { clearTimeout(partialChipPaint._t); partialChipPaint._t = setTimeout(partialChipPaint, 120); };
         // 画面を移ったとき（選んだままでも）、ボタンが残らないように、タップ・スクロール・画面の切り替えのたびに、見直す
