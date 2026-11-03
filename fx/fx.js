@@ -125,7 +125,7 @@ function inline(text){
 const BR={
   PC:(a,L)=>`<div class="blk pc" data-fx="PC" data-a="${encA(a)}" data-lines="${encA(L)}"><div class="scr"><div class="bar">● ● ●　memo.txt</div><pre>${esc(L.join('\n'))}<span class="cur"></span></pre></div></div>`,
   '掲示板':(a,L)=>`<div class="blk bbs" data-fx="掲示板" data-a="${encA(a)}"><div class="bh"><div class="bn">${esc(a.板||'掲示板')}</div><div class="bt">${esc(a.題||'')}</div></div>${L.map(l=>{const m=l.match(/^(\d+)\s+([^：]+)：(.*)$/);if(!m)return`<div class="po"><div class="pb">${inline(l)}</div></div>`;const id=Math.random().toString(36).slice(2,10);return`<div class="po"><div class="pm">${m[1]}：<b>${esc(m[2])}</b>　03:33:${String(10+ +m[1]*7).slice(-2)} ID:${id}</div><div class="pb">${inline(m[3])}</div></div>`}).join('')}</div>`,
-  '電光掲示板':(a,L)=>`<div class="blk led" data-fx="電光掲示板" data-a="${encA(a)}" data-text="${esc(L.join('　'))}"><canvas></canvas></div>`,
+  '電光掲示板':(a,L)=>`<div class="blk led" data-fx="電光掲示板" data-a="${encA(a)}" data-text="${esc(L.join('　'))}" data-lines="${encA(L)}"><canvas></canvas></div>`,
   '手紙':(a,L)=>`<div class="blk letter" data-fx="手紙" data-a="${encA(a)}" data-body="${encA(L)}"><div class="lo">${L.map(l=>`<div>${inline(l)||'&nbsp;'}</div>`).join('')}<div class="from">${esc(a.差出人||'')}</div></div></div>`,
   'カルテ':(a,L)=>`<div class="blk chart"><div class="chd">診療録</div><dl>${L.map(l=>{const i=l.indexOf('：');return i<0?`<dt></dt><dd>${inline(l)}</dd>`:`<dt>${esc(l.slice(0,i))}</dt><dd>${inline(l.slice(i+1))}</dd>`}).join('')}</dl></div>`
 };
@@ -346,10 +346,60 @@ function ledDraw(L,off,glitch){
   for(let c=0;c<cols;c++){const sx=((Math.floor(off)+c)%data.len+data.len)%data.len;
     for(let r=0;r<16;r++){const lit=glitch?Math.random()<.18:data.bits[sx*16+r];x.fillStyle=lit?L.color:L.dim;x.fillRect(c*p+.4,r*p+.4,p-1.1,p-1.1)}}
 }
+
+/* ===== 電光掲示板（色・背景・複数行・折り返しつき） =====
+   ［電光掲示板 背景=黒 文字=橙 速さ=ふつう 折り返し］ の下に、文を1行ずつ。1行が、右から左へ流れる
+   文字ごとの色：［赤］…［／赤］（赤 橙 黄 緑 青 水色 紫 桃 白 黒 灰）／［色=#ff0000］…［／色］
+   文字ごとの背景：［地=黄］…［／地］  行の途中で次の行へ：［改行］
+   折り返し：長い文を、幅に合わせて何行かに分け、右から入ってきて止まる（流れ続けない） */
+const LEDC={'赤':'#ff4a3a','橙':'#ffb02e','オレンジ':'#ffb02e','黄':'#ffe44d','緑':'#4dff7a','青':'#4aa8ff','水色':'#5ee6ff','紫':'#c78bff','桃':'#ff8fc8','白':'#f4f4f4','黒':'#101010','灰':'#8a8a8a'};
+const ledCol=v=>{v=String(v||'').trim();return LEDC[v]||(/^#[0-9a-fA-F]{6}$/.test(v)?v:'')};
+const ledMix=(h,t,k)=>{const n=x=>parseInt(h.slice(x,x+2),16),m=x=>parseInt(t.slice(x,x+2),16),q=x=>Math.round(n(x)+(m(x)-n(x))*k).toString(16).padStart(2,'0');return'#'+q(1)+q(3)+q(5)};
+function ledIsNew(el,a){let L=[];try{L=JSON.parse(el.dataset.lines||'[]')}catch(e){}
+  return !!(a.背景||a.文字||a.速さ||a.args.includes('折り返し')||a.折り返し!=null||L.some(l=>/［(\/|／)?(色|地|改行|赤|橙|オレンジ|黄|緑|青|水色|紫|桃|白|黒|灰)/.test(l)))}
+/* 1行を、色つきの切れ（文字・文字色・背景色）にする */
+function ledSegs(line,base){const segs=[],fg=[base],bg=[''];let last=0,m;const re=/［(／?)(色|地|赤|橙|オレンジ|黄|緑|青|水色|紫|桃|白|黒|灰)(?:[=＝:：]([^］]*))?］/g;
+  const push=t=>{if(t)segs.push({t,fg:fg[fg.length-1],bg:bg[bg.length-1]})};
+  while((m=re.exec(line))){push(line.slice(last,m.index));last=re.lastIndex;const close=!!m[1],nm=m[2];
+    if(nm==='地'){if(close){if(bg.length>1)bg.pop()}else bg.push(ledCol(m[3])||'')}
+    else if(close){if(fg.length>1)fg.pop()}
+    else fg.push(nm==='色'?(ledCol(m[3])||base):LEDC[nm])}
+  push(line.slice(last));return segs}
+const LEDFONT='700 15px "DotGothic16","Zen Maru Gothic",sans-serif';
+let _ledCtx;const ledCtx=()=>_ledCtx||(_ledCtx=document.createElement('canvas').getContext('2d',{willReadFrequently:true}));
+/* 幅に合わせて、何行かに分ける */
+function ledWrap(segs,maxW){const o=ledCtx();o.font=LEDFONT;const rows=[[]];let w=0;
+  for(const sg of segs)for(const ch of sg.t){const cw=o.measureText(ch).width;if(w+cw>maxW&&w>0){rows.push([]);w=0}w+=cw;const r=rows[rows.length-1],p=r[r.length-1];if(p&&p.fg===sg.fg&&p.bg===sg.bg)p.t+=ch;else r.push({t:ch,fg:sg.fg,bg:sg.bg})}
+  return rows}
+/* 色つきの点の絵：lit[x*16+y] = 色（なければ0） */
+function ledBitsC(segs,pad){const o=ledCtx();o.font=LEDFONT;let w=0;const ws=segs.map(sg=>{const x=Math.ceil(o.measureText(sg.t).width);w+=x;return x});
+  const W=Math.max(1,w+(pad||0));o.canvas.width=W;o.canvas.height=16;o.font=LEDFONT;o.textBaseline='alphabetic';o.clearRect(0,0,W,16);
+  let x=0;segs.forEach((sg,i)=>{if(sg.bg){o.fillStyle=sg.bg;o.fillRect(x,0,ws[i],16)}o.fillStyle=sg.fg;o.fillText(sg.t,x,13.5);x+=ws[i]});
+  const d=o.getImageData(0,0,W,16).data,cols=new Array(W*16);
+  for(let X=0;X<W;X++)for(let Y=0;Y<16;Y++){const k=(Y*W+X)*4;cols[X*16+Y]=d[k+3]>100?'rgb('+d[k]+','+d[k+1]+','+d[k+2]+')':0}
+  return{cols,len:W}}
+function ledSetupN(el,a){
+  const cv=el.querySelector('canvas'),dpr=Math.min(2,devicePixelRatio||1),Wc=(el.clientWidth-14)||300,p=3,nc=Math.floor(Wc/p);
+  const base=ledCol(a.文字)||'#ffb02e',board=ledCol(a.背景)||'#0b0807',dim=ledMix(board,'#ffffff',.09);
+  let lines=[];try{lines=JSON.parse(el.dataset.lines||'[]')}catch(e){}
+  const wrap=a.args.includes('折り返し')||a.折り返し!=null;let rows=[];
+  lines.forEach(l=>String(l).split(/［改行］/).forEach(part=>{if(!part.trim())return;const sg=ledSegs(part,base);if(wrap)ledWrap(sg,nc*p>0?nc:80).forEach(r=>rows.push(r));else rows.push(sg)}));
+  if(!rows.length)rows=[ledSegs(el.dataset.text||'',base)];
+  rows=rows.slice(0,8);const gap=2,H=rows.length*16*p+(rows.length-1)*gap*p;
+  cv.width=Wc*dpr;cv.height=H*dpr;cv.style.height=H+'px';el.style.background=board;const x=cv.getContext('2d');x.scale(dpr,dpr);
+  const sp=({'おそい':14,'遅い':14,'ふつう':22,'はやい':36,'速い':36}[a.速さ])||parseFloat(a.速さ)||22;
+  return el._led={x,cols:nc,p,Wc,H,rows:rows.map(r=>ledBitsC(r,wrap?0:40)),dim,speed:sp,wrap,gap}}
+function ledDrawN(L,off,t){const{x,cols,p,rows,dim,gap}=L;x.clearRect(0,0,L.Wc,L.H);
+  rows.forEach((R,ri)=>{const y0=ri*(16+gap)*p;
+    const o=L.wrap?Math.min(0,-cols+((t==null?9e9:t)-ri*.6)*L.speed):off;   // 折り返し：右から入って、左端で止まる
+    for(let c=0;c<cols;c++){let sx=Math.floor(o)+c;if(L.wrap){if(sx<0||sx>=R.len){for(let r=0;r<16;r++){x.fillStyle=dim;x.fillRect(c*p+.4,y0+r*p+.4,p-1.1,p-1.1)}continue}}else sx=((sx%R.len)+R.len)%R.len;
+      for(let r=0;r<16;r++){const col=R.cols[sx*16+r];x.fillStyle=col||dim;x.fillRect(c*p+.4,y0+r*p+.4,p-1.1,p-1.1)}}})}
 D['電光掲示板']={
-  prep(el){ledDraw(ledSetup(el),-8)},
-  still(el){ledDraw(ledSetup(el),-4)},
+  prep(el,a){a=a||JSON.parse(el.dataset.a||"{\"args\":[]}");if(ledIsNew(el,a))ledDrawN(ledSetupN(el,a),-8,0);else ledDraw(ledSetup(el),-8)},
+  still(el,a){a=a||JSON.parse(el.dataset.a||"{\"args\":[]}");if(ledIsNew(el,a))ledDrawN(ledSetupN(el,a),-4,9e9);else ledDraw(ledSetup(el),-4)},
   async run(el,a,c){
+    if(ledIsNew(el,a)){const L=ledSetupN(el,a);let off=-L.cols,last=performance.now();const t0=last;
+      c.raf(t=>{const dt=Math.min(.05,(t-last)/1000);last=t;off+=L.speed*dt;ledDrawN(L,off,(t-t0)/1000)});return}
     /* 地の文の中ではなく、背景の中（画面の上の方）にぼんやり浮かぶ。そのあいだ地の文は薄くなる */
     const H=c.under('');H.style.cssText='top:7%;bottom:auto;height:auto;left:5%;right:5%';H.appendChild(el);el.style.margin='0';
     el.style.boxShadow='0 0 40px rgba(255,150,40,.25)';
