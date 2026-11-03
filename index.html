@@ -7728,7 +7728,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             if (!chip) {
                 chip = document.createElement('button'); chip.type = 'button'; chip.id = 'reader-partial-chip'; chip.hidden = true;
                 chip.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4l10.5-10.5-4-4L4 16z"/><path d="m13 7 4 4"/></svg> ここだけ直す';
-                chip.style.cssText = 'position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 84px);z-index:60;display:inline-flex;align-items:center;gap:6px;padding:10px 16px;border-radius:999px;background:#23594e;color:#fff;font-weight:700;font-size:13px;box-shadow:0 4px 14px rgba(0,0,0,.3);border:0';
+                chip.style.cssText = 'position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 84px);z-index:60;display:none;align-items:center;gap:6px;padding:10px 16px;border-radius:999px;background:#23594e;color:#fff;font-weight:700;font-size:13px;box-shadow:0 4px 14px rgba(0,0,0,.3);border:0';
                 chip.onpointerdown = e => e.preventDefault(); chip.onmousedown = e => e.preventDefault();
                 chip.onclick = () => { chip.hidden = true; readerPartialOpen(); };
                 document.body.appendChild(chip);
@@ -7745,7 +7745,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                     shown = !!(el && box.contains(el));
                 } catch (e) { shown = false; }
             }
-            chip.hidden = !shown;
+            chip.hidden = !shown; chip.style.display = shown ? 'inline-flex' : 'none';
             clearTimeout(partialChipPaint._poll); if (shown || (sel && !sel.isCollapsed && sel.anchorNode && box && box.contains(sel.anchorNode))) partialChipPaint._poll = setTimeout(partialChipPaint, shown ? 500 : 900);   // 出ているあいだは、500ミリ秒ごとに見直す（画面を移ったのに残るのを防ぐ）
         }
         const partialChipSoon = () => { clearTimeout(partialChipPaint._t); partialChipPaint._t = setTimeout(partialChipPaint, 120); };
