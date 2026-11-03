@@ -1658,7 +1658,7 @@
                                 <i class="fa-solid fa-chart-pie text-woodAccent"></i>
                                 <span id="time-sub-genre-title">この期間に読んだジャンル比率</span>
                             </span>
-                            <div class="w-full h-36 relative flex items-center justify-center">
+                            <div class="w-full h-56 relative flex items-center justify-center">
                                 <canvas id="timeSubGenreChart"></canvas>
                             </div>
                         </div>
@@ -1675,7 +1675,7 @@
                     <div id="stat-panel-genre" class="hidden space-y-3">
                         <div class="bg-white border border-woodBorder rounded-2xl p-3.5 space-y-2 shadow-xs">
                             <span class="text-[11px] font-bold text-softMuted block">全作品のジャンル読書比率</span>
-                            <div class="w-full h-48 relative flex items-center justify-center">
+                            <div class="w-full h-60 relative flex items-center justify-center">
                                 <canvas id="genreChart"></canvas>
                             </div>
                         </div>
@@ -1825,6 +1825,7 @@
                         <span class="font-bold text-softMuted block mb-1">更新履歴</span>
                         <div id="changelog" class="text-[11px] text-softMuted leading-relaxed">
 <div class="mb-1.5"><b class="text-softText">2026-11-03（6）</b><br>編集の道具：「画面の枠」を「特殊演出」にして（動く人のマーク）、右端に固定した（「原文」のボタンはなくした）。「特殊な文字」（回転の矢印と星のマーク）を足して、縦書き（この部分だけ）・ななめ・左右反転・上下反転・回転・逆さを入れられるようにした（編集画面で、ルビや色と同じように、その場で見える。選ばないときは、いまの行ぜんぶ）。文字色の「カスタム」に「この色にする」を足して、選んだ色が本文と「A」の線に出るようにした。OCRのボタンのマークを変えた。特殊演出に、電光掲示板（右から左へ流れる・文字ごとの色・背景の色・折り返し）、駅の発車案内、空港の出発案内、文字化けするシステム画面、文字が崩れる配信コメント、ページがめくれない、ページが巻き戻る、を足した（🎬の演出ビューで動く）。作品のメニューに、Googleドキュメントへの書き出し（本文のみ）を足した。Driveの自動同期は、はじめは切にして、「いま同期する」で手動にできるようにした。Driveのフォルダ名とアプリ名を「読書リーダー(仮)」にした。</div>
+<div class="mb-1.5"><b class="text-softText">2026-11-04（4）</b><br>読書グラフ＆統計：中身のない作品（箱だけ。本文のある話が1つもない作品）は、数えないようにした（冊も話も、グラフも、ランキングも）。ジャンル比率のグラフは、上位6つと「その他」にまとめて、名前に割合（％）をつけ、凡例を下に並べて、長い名前が切れないようにした。</div>
 <div class="mb-1.5"><b class="text-softText">2026-11-04（3）</b><br>「記録」のタブに、「パワポで書き出す」「エクセルで書き出す」を足した。いま見ている期間（月・年・全期間）の記録を、ファイルにする。パワポ（.pptx）：表紙（読んだ話・作品・日・文字数）、読んだ話の数のグラフ、文字数のグラフ、よく読んだ作品・ジャンル・作家、日ごとの記録の表。グラフは、パワポの中で直せる本物のグラフ。エクセル（.xlsx）：「記録」（1行ずつ）、「集計」（グラフ2つつき）、「ランキング」の3つのシート。書き出すときは、部品をネットから取るので、ネットが要る。</div>
 <div class="mb-1.5"><b class="text-softText">2026-11-04（2）</b><br>読書グラフ＆統計に、「記録」のタブを足した（アクティビティ）。話を最後まで読むと、その日の記録が残る（ページめくりは最後のページ、スクロールは一番下。短い話は、全部見えたとき）。「月」「年」「全期間」を切り替えて、「2026年11月」のところを、‹ › で変えられる。月は、日ごとの色のカレンダー（日を押すと、その日の記録）。ほかに、読んだ話・作品・読んだ日・文字数、前の月・年との比べ、よく読んだ作品・ジャンル・作家、日ごとの一覧（押すと、その話が開く）が出る。記録は、この機能を入れた日から。作品といっしょに、同期・バックアップに入る。</div>
 <div class="mb-1.5"><b class="text-softText">2026-11-04</b><br>読書グラフ＆統計を直した。月別は、いまの月まで（直近6か月）を出すようにした（これまでは、5〜10月に決まっていて、11月の作品が出なかった）。「冊で数える」「話で数える」の切り替えを足した。話にすると、年別・月別のグラフ、ジャンル比率、作家別が、話の数で出る。総登録作品のところにも、「4 冊・14 話」と、話の数を出す。</div>
@@ -8927,7 +8928,9 @@ function setupPaging(){
         }
         // 数え方：冊で数える（1冊＝1）か、話で数える（その作品の話の数）か
         function statUnit() { return state.statUnit === 'chap' ? 'chap' : 'book'; }
-        function chapCountOf(b) { let n = 0; (b.parts || []).forEach(p => { n += (p.chapters || []).length; (p.volumes || []).forEach(v => { n += (v.chapters || []).length; }); }); return n; }
+        // 本文のある話の数（本文が空の話は、数えない）。1つもない作品は、箱だけなので、統計に入れない
+        function chapCountOf(b) { let n = 0; const has = c => String((c && c.content) || '').trim().length > 0; (b.parts || []).forEach(p => { n += (p.chapters || []).filter(has).length; (p.volumes || []).forEach(v => { n += (v.chapters || []).filter(has).length; }); }); return n; }
+        function statBooks() { return state.books.filter(b => chapCountOf(b) > 0); }
         function statW(b) { return statUnit() === 'chap' ? chapCountOf(b) : 1; }
         function statUnitWord() { return statUnit() === 'chap' ? '話' : '冊'; }
         function paintStatUnit() {
@@ -8942,12 +8945,17 @@ function setupPaging(){
             return out;
         }
         function bookMonthKey(b) { const d = new Date(); return (b.year || d.getFullYear()) + '-' + (b.month || (d.getMonth() + 1)); }
+        function genreSlices(counts, max = 6) {
+            const e = Object.entries(counts).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]), total = e.reduce((n, x) => n + x[1], 0) || 1;
+            const top = e.slice(0, max), rest = e.slice(max).reduce((n, x) => n + x[1], 0); if (rest) top.push(['その他', rest]);
+            return { labels: top.map(([k, v]) => k + '　' + Math.round(v * 100 / total) + '%'), values: top.map(x => x[1]) };
+        }
         function renderGlobalSummaryStats() {
-            const totalBooks = state.books.length;
+            const totalBooks = statBooks().length;
             let totalChars = 0;
             const statusCounts = { '読書中': 0, '読了': 0, '未読': 0, '下車': 0, '再開': 0 };
 
-            state.books.forEach(b => {
+            statBooks().forEach(b => {
                 if (statusCounts[b.status] !== undefined) statusCounts[b.status]++;
                 b.parts?.forEach(p => {
                     p.chapters?.forEach(c => totalChars += (c.content ? c.content.length : 0));
@@ -8958,7 +8966,7 @@ function setupPaging(){
             });
 
             paintStatUnit();
-            document.getElementById('stat-total-books').textContent = `${totalBooks} 冊・${state.books.reduce((n, b) => n + chapCountOf(b), 0).toLocaleString()} 話`;
+            document.getElementById('stat-total-books').textContent = `${totalBooks} 冊・${statBooks().reduce((n, b) => n + chapCountOf(b), 0).toLocaleString()} 話`;
             document.getElementById('stat-total-chars').textContent = `${totalChars.toLocaleString()} 字`;
 
             document.getElementById('stat-status-chips').innerHTML = Object.entries(statusCounts).map(([st, cnt]) => `
@@ -8992,10 +9000,10 @@ function setupPaging(){
         function renderTimeYearStats() {
             const ctx = document.getElementById('timeBarChart').getContext('2d');
             const yearCounts = {};
-            const years = [...new Set(state.books.map(b => b.year || 2026))].sort((a,b) => a - b);
+            const years = [...new Set(statBooks().map(b => b.year || 2026))].sort((a,b) => a - b);
             
             years.forEach(y => yearCounts[`${y}年`] = 0);
-            state.books.forEach(b => {
+            statBooks().forEach(b => {
                 const y = b.year || 2026;
                 yearCounts[`${y}年`] = (yearCounts[`${y}年`] || 0) + statW(b);
             });
@@ -9024,13 +9032,13 @@ function setupPaging(){
                 }
             });
 
-            renderSubPeriodGenreAndAuthor(state.books);
+            renderSubPeriodGenreAndAuthor(statBooks());
         }
 
         function renderTimeMonthStats() {
             const ctx = document.getElementById('timeBarChart').getContext('2d');
             const months = recentMonths(6), counts = {}; months.forEach(m => { counts[m.key] = 0; });
-            state.books.forEach(b => { const k = bookMonthKey(b); if (counts[k] !== undefined) counts[k] += statW(b); });
+            statBooks().forEach(b => { const k = bookMonthKey(b); if (counts[k] !== undefined) counts[k] += statW(b); });
 
             if (state.timeBarChartInstance) state.timeBarChartInstance.destroy();
 
@@ -9056,8 +9064,8 @@ function setupPaging(){
                 }
             });
 
-            const keys = new Set(months.map(m => m.key)), recent = state.books.filter(b => keys.has(bookMonthKey(b)));
-            renderSubPeriodGenreAndAuthor(recent.length > 0 ? recent : state.books);
+            const keys = new Set(months.map(m => m.key)), recent = statBooks().filter(b => keys.has(bookMonthKey(b)));
+            renderSubPeriodGenreAndAuthor(recent.length > 0 ? recent : statBooks());
         }
 
         function renderSubPeriodGenreAndAuthor(targetBooks) {
@@ -9067,9 +9075,8 @@ function setupPaging(){
 
             if (state.timeSubGenreChartInstance) state.timeSubGenreChartInstance.destroy();
 
-            const labels = Object.keys(genreCounts);
-            const values = Object.values(genreCounts);
-            const chartColors = ['#dfb163', '#5b9279', '#7b8c6e', '#c97064', '#d4883b', '#8f8375'];
+            const sl = genreSlices(genreCounts), labels = sl.labels, values = sl.values;
+            const chartColors = ['#dfb163', '#5b9279', '#7b8c6e', '#c97064', '#d4883b', '#8f8375', '#b8aea0'];
 
             state.timeSubGenreChartInstance = new Chart(subCtx, {
                 type: 'doughnut',
@@ -9086,7 +9093,7 @@ function setupPaging(){
                     responsive: true,
                     maintainAspectRatio: false,
                     plugins: {
-                        legend: { position: 'right', labels: { boxWidth: 8, font: { family: 'Hiragino Sans', size: 9 } } }
+                        legend: { position: 'bottom', labels: { boxWidth: 10, padding: 8, font: { family: 'Hiragino Sans', size: 10 } } }
                     }
                 }
             });
@@ -9112,13 +9119,12 @@ function setupPaging(){
         function renderGenreDoughnutChart() {
             const ctx = document.getElementById('genreChart').getContext('2d');
             const genreCounts = {};
-            state.books.forEach(b => (b.tags || []).forEach(t => genreCounts[t] = (genreCounts[t] || 0) + statW(b)));
+            statBooks().forEach(b => (b.tags || []).forEach(t => genreCounts[t] = (genreCounts[t] || 0) + statW(b)));
 
             if (state.genreChartInstance) state.genreChartInstance.destroy();
 
-            const labels = Object.keys(genreCounts);
-            const values = Object.values(genreCounts);
-            const chartColors = ['#dfb163', '#5b9279', '#7b8c6e', '#c97064', '#d4883b', '#8f8375', '#a89f91'];
+            const sl = genreSlices(genreCounts), labels = sl.labels, values = sl.values;
+            const chartColors = ['#dfb163', '#5b9279', '#7b8c6e', '#c97064', '#d4883b', '#8f8375', '#b8aea0'];
 
             state.genreChartInstance = new Chart(ctx, {
                 type: 'doughnut',
@@ -9142,7 +9148,7 @@ function setupPaging(){
         function renderAuthorStats() {
             const listEl = document.getElementById('stat-author-list');
             const authorCounts = {};
-            state.books.forEach(b => {
+            statBooks().forEach(b => {
                 const name = b.author || '作者名';
                 authorCounts[name] = (authorCounts[name] || 0) + statW(b);
             });
