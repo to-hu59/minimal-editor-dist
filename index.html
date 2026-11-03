@@ -8951,8 +8951,8 @@ function setupPaging(){
                 if (D.dayRows) {
                     sheets.push({ name: '日ごと', xml: sheetXml([['日', '読んだ話', '文字数']].concat(D.dayRows), { header: true, widths: [10, 12, 12] }) });
                     const lv = n => n >= 6 ? 4 : n >= 3 ? 3 : n >= 1 ? 2 : 5, calRows = [['日', '月', '火', '水', '木', '金', '土']];
-                    D.cal.forEach(line => calRows.push(line.map(c => c ? { v: c.d + '日' + (c.n ? String.fromCharCode(10) + c.n + '話' : ''), s: lv(c.n) } : { v: '', s: 0 })));
-                    sheets.push({ name: 'カレンダー', xml: sheetXml(calRows, { header: true, widths: [12, 12, 12, 12, 12, 12, 12], rowH: [22].concat(D.cal.map(() => 40)) }) });
+                    D.cal.forEach(line => { calRows.push(line.map(c => c ? { v: c.d, s: lv(c.n) } : { v: '', s: 0 })); calRows.push(line.map(c => c ? { v: c.n ? c.n + '話' : '', s: lv(c.n) } : { v: '', s: 0 })); });   // 1週＝2行：上は日、下は読んだ話の数
+                    sheets.push({ name: 'カレンダー', xml: sheetXml(calRows, { header: true, widths: [12, 12, 12, 12, 12, 12, 12] }) });
                 }
                 sheets.push({ name: 'ランキング', xml: sheetXml(rk, { header: true, widths: [30, 6, 3, 18, 6, 3, 18, 6], drawing: true }) });
                 const rkIdx = sheets.length, nb = D.rankBook.length, ng = D.rankGenre.length, na = D.rankAuthor.length;
