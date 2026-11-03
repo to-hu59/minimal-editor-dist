@@ -582,8 +582,21 @@
 #ruby-apply { background:#23594e; color:white; } #ruby-apply:disabled { opacity:.45; }
 #btn-insert-ruby { min-height:44px; white-space:nowrap; }
 /* 画像から文字（OCR）：ルビの窓と同じ見た目 */
-#ocr-dialog, #partial-dialog { width:min(560px,calc(100vw - 24px)); max-height:calc(100dvh - 32px); margin:auto; padding:18px; border:1px solid #d9cfbf; border-radius:16px; background:#faf6ee; color:#453d34; overflow:auto; font:14px/1.6 sans-serif; }
-#ocr-dialog::backdrop, #partial-dialog::backdrop { background:#0006; }
+#ocr-dialog, #partial-dialog, #img-split-dialog { width:min(560px,calc(100vw - 24px)); max-height:calc(100dvh - 32px); margin:auto; padding:18px; border:1px solid #d9cfbf; border-radius:16px; background:#faf6ee; color:#453d34; overflow:auto; font:14px/1.6 sans-serif; }
+#ocr-dialog::backdrop, #partial-dialog::backdrop, #img-split-dialog::backdrop { background:#0006; }
+#img-split-dialog h2 { font-size:16px; font-weight:bold; margin:0 0 8px; }
+#img-split-dialog .isd-count label { display:block; font-size:12px; margin-bottom:4px; }
+#img-split-dialog .isd-count > div { display:flex; gap:6px; }
+#isd-counts { flex:1; min-width:0; padding:8px; background:white; border:1px solid #b8aa96; border-radius:8px; font-size:14px; }
+#isd-apply { padding:0 14px; border-radius:8px; border:1px solid #b8aa96; background:#efe6d6; font-weight:700; font-size:12px; }
+#isd-list { max-height:44vh; overflow-y:auto; margin-top:10px; }
+#isd-list .isd-item { display:flex; align-items:center; gap:10px; padding:6px; margin:4px 0; background:white; border:1px solid #d9cdb8; border-radius:10px; }
+#isd-list .isd-item.start { border-color:#23594e; background:#eef6f2; }
+#isd-list img { width:44px; height:58px; object-fit:cover; border-radius:4px; flex:none; background:#ddd; }
+#isd-list .isd-name { flex:1; min-width:0; font-size:12px; word-break:break-all; }
+#isd-list .isd-chk { flex:none; display:flex; align-items:center; gap:4px; font-size:11px; font-weight:700; color:#23594e; }
+#isd-list .isd-chk input { width:20px; height:20px; accent-color:#23594e; }
+#isd-run { background:#23594e; color:white; } #isd-run:disabled, #isd-cancel:disabled { opacity:.5; }
 #partial-dialog h2 { font-size:16px; font-weight:bold; margin:0 0 8px; }
 #partial-text { width:100%; min-height:30vh; padding:8px; background:white; border:1px solid #b8aa96; border-radius:8px; font:14px/1.7 sans-serif; }
 #partial-apply { background:#23594e; color:white; }
@@ -1782,6 +1795,7 @@
                         <span class="font-bold text-softMuted block mb-1">更新履歴</span>
                         <div id="changelog" class="text-[11px] text-softMuted leading-relaxed">
 <div class="mb-1.5"><b class="text-softText">2026-11-03（6）</b><br>編集の道具：「画面の枠」を「特殊演出」にして（動く人のマーク）、右端に固定した（「原文」のボタンはなくした）。「特殊な文字」（回転の矢印と星のマーク）を足して、縦書き（この部分だけ）・ななめ・左右反転・上下反転・回転・逆さを入れられるようにした（編集画面で、ルビや色と同じように、その場で見える。選ばないときは、いまの行ぜんぶ）。文字色の「カスタム」に「この色にする」を足して、選んだ色が本文と「A」の線に出るようにした。OCRのボタンのマークを変えた。特殊演出に、電光掲示板（右から左へ流れる・文字ごとの色・背景の色・折り返し）、駅の発車案内、空港の出発案内、文字化けするシステム画面、文字が崩れる配信コメント、ページがめくれない、ページが巻き戻る、を足した（🎬の演出ビューで動く）。作品のメニューに、Googleドキュメントへの書き出し（本文のみ）を足した。Driveの自動同期は、はじめは切にして、「いま同期する」で手動にできるようにした。Driveのフォルダ名とアプリ名を「読書リーダー(仮)」にした。</div>
+<div class="mb-1.5"><b class="text-softText">2026-11-03（11）</b><br>「ファイルから」（話を足す・「＋」の「ファイルから作る」）で、画像（.png .jpg など）も、何枚でも、まとめて選べるようにした。画像は、ファイルの名前の順に並び、「1話ごとの枚数」（例：3,4,3／3枚ずつなら 3）か、画像ごとの「新しい話」のチェックで、どこから新しい話にするかを決められる。決めたあと、1枚ずつ、画像から文字を読み取って（日本語の横書き。最初はネットが必要）、話にする。</div>
 <div class="mb-1.5"><b class="text-softText">2026-11-03（10）</b><br>本棚の上のバーのボタンを、まとまりのある順に並べ直した（左から：検索・表示切り替え・グラフ・Drive、右の2つは固定：コピー（印刷・書き出し）・設定）。全体設定に「Wiki（作品ごと）」を足した。開くと、Wikiのある作品が、作品ごとに並ぶページが出る。「作品順」と「ジャンル別」に並べ替えられて、作品ごとに「隠す」「戻す」ができる（本棚の作品は、そのまま）。押すと、その作品のWikiが開く。</div>
 <div class="mb-1.5"><b class="text-softText">2026-11-03（9）</b><br>作品を消すと、その作品のWikiと、魚（アシスタント）が拾った言葉・仮登録も、一緒に消えるようにした（作品の削除・まとめて削除・別の端末で消えたとき）。いま、持ち主の作品がもうない言葉が残っていたら、アプリを開いたときに片づける。「新しい言葉が○件あります」の知らせは、出さないようにして、魚のボタンに、赤い点をつけるだけにした（中身は、魚のメニューの「新しい言葉」）。本棚（TOP）の魚のメニューに、「Wiki（作品ごと）」を足した。Wikiのある作品が並び、押すと、その作品のWikiが開く。</div>
 <div class="mb-1.5"><b class="text-softText">2026-11-03（8）</b><br>「ファイルから」で、「第1話」「1話」「# 3」「プロローグ」などの行や、Wordの見出し・Markdownの#・HTMLの見出しを見つけて、話に分けて取り込めるようにした（2話以上に分けられるときは、聞く）。本棚の「＋」の作品登録にも、「ファイルから作る」を足した（上で決めたタイプA〜Dで作品を作り、いちばん上の部に取り込む。題名が空ならファイルの名前）。話を足す「ファイルから」で、Wordのファイル（.docx）と、Googleドキュメントを「Microsoft Word（.docx）」でダウンロードしたファイル、ウェブページ（.html）も、取り込めるようにした。文字コードがShift_JISのテキストも、読める。Wordのルビは、｜漢字《かんじ》の形になる。古い形式（.doc）は、.docxにしてから。</div>
@@ -1958,6 +1972,15 @@
 
 
     <dialog id="partial-dialog" aria-labelledby="partial-title"><h2 id="partial-title">ここだけ編集</h2><p id="partial-hint" style="font-size:12px;margin:0 0 8px"></p><textarea id="partial-text" aria-label="選んだ文字"></textarea><div class="ruby-actions"><button id="partial-cancel" type="button">取消</button><button id="partial-apply" type="button">なおす</button></div></dialog>
+    <dialog id="img-split-dialog" aria-labelledby="isd-title">
+        <h2 id="isd-title">画像から話を作る</h2>
+        <p style="font-size:12px;margin:0 0 8px">画像を、ファイルの名前の順に並べました。どの画像から「新しい話」になるかを、決めてください。文字は、画像から読み取ります（日本語の横書き）。</p>
+        <div class="isd-count"><label for="isd-counts">1話ごとの枚数（例：3,4,3　／　3枚ずつなら 3）</label><div><input id="isd-counts" type="text" inputmode="numeric" autocomplete="off" placeholder="3,4,3"><button id="isd-apply" type="button">そろえる</button></div></div>
+        <div id="isd-list"></div>
+        <p id="isd-summary" style="font-size:12px;font-weight:700;margin:8px 0 0"></p>
+        <p id="isd-status" style="font-size:12px;margin:6px 0 0" aria-live="polite"></p>
+        <div class="ruby-actions"><button id="isd-cancel" type="button">取消</button><button id="isd-run" type="button">読み取って取り込む</button></div>
+    </dialog>
     <dialog id="ocr-dialog" aria-labelledby="ocr-dialog-title">
         <h2 id="ocr-dialog-title">画像から文字</h2>
         <p id="ocr-status" aria-live="polite"></p>
@@ -4291,23 +4314,69 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             heads.forEach((h, k) => out.push({ title: lines[h].t.trim().replace(/^#+\s*/, '').slice(0, 60) || ('第' + (k + 1) + '話'), content: join(h + 1, k + 1 < heads.length ? heads[k + 1] : lines.length) }));
             return out;
         }
+        // 画像（何枚も）：名前の順に並べて、どの画像から新しい話にするかを決めてもらい、1枚ずつ読み取って、話にする
+        const isImageFile = f => /^image\//.test(f.type) || /\.(png|jpe?g|webp|gif|bmp)$/i.test(f.name);
+        function parseImageCounts(text, total) {
+            const nums = String(text).replace(/[０-９]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0)).split(/[^0-9]+/).filter(Boolean).map(Number).filter(n => n > 0);
+            if (!nums.length) return null;
+            const starts = new Set([0]); let pos = 0, i = 0;
+            while (pos < total) { pos += nums[Math.min(i, nums.length - 1)]; if (pos < total) starts.add(pos); i++; }
+            return starts;
+        }
+        function imagesToChapters(images) {
+            return new Promise(resolve => {
+                const dlg = document.getElementById('img-split-dialog'), list = document.getElementById('isd-list'), sum = document.getElementById('isd-summary'), st = document.getElementById('isd-status');
+                const files = [...images].sort((x, y) => x.name.localeCompare(y.name, 'ja', { numeric: true })), urls = files.map(f => URL.createObjectURL(f));
+                const starts = new Set([0]); let busy = false;
+                if (files.length <= 1) starts.add(0);
+                const paint = () => {
+                    list.innerHTML = files.map((f, i) => '<div class="isd-item' + (starts.has(i) ? ' start' : '') + '"><img src="' + urls[i] + '" alt=""><span class="isd-name">' + (i + 1) + '. ' + escapeHtml(f.name) + '</span><label class="isd-chk"><input type="checkbox" data-i="' + i + '"' + (starts.has(i) ? ' checked' : '') + (i === 0 ? ' disabled' : '') + '>新しい話</label></div>').join('');
+                    const idx = [...starts].sort((x, y) => x - y), sizes = idx.map((p, k) => (idx[k + 1] === undefined ? files.length : idx[k + 1]) - p);
+                    sum.textContent = '全部で ' + idx.length + '話（' + sizes.map((n, k) => (k + 1) + '話＝' + n + '枚').join('、') + '）';
+                };
+                const close = res => { urls.forEach(u => URL.revokeObjectURL(u)); document.getElementById('isd-run').onclick = null; dlg.close(); resolve(res); };
+                st.textContent = ''; document.getElementById('isd-counts').value = ''; document.getElementById('isd-run').disabled = false; document.getElementById('isd-cancel').disabled = false;   // 前に使ったあと、押せないままにならないように
+                list.onchange = e => { const i = Number(e.target.dataset.i); if (!busy && Number.isFinite(i) && i > 0) { if (e.target.checked) starts.add(i); else starts.delete(i); paint(); } };
+                document.getElementById('isd-apply').onclick = () => { if (busy) return; const r = parseImageCounts(document.getElementById('isd-counts').value, files.length); if (!r) { toast('枚数を、数字で入れてください（例：3,4,3）'); return; } starts.clear(); r.forEach(x => starts.add(x)); paint(); };
+                document.getElementById('isd-cancel').onclick = () => { if (!busy) close(null); };
+                dlg.oncancel = e => { if (busy) e.preventDefault(); };
+                document.getElementById('isd-run').onclick = async () => {
+                    if (busy) return; busy = true;
+                    const run = document.getElementById('isd-run'), can = document.getElementById('isd-cancel'); run.disabled = can.disabled = true;
+                    const texts = [];
+                    for (let i = 0; i < files.length; i++) {
+                        st.textContent = (i + 1) + ' / ' + files.length + ' 枚を読んでいます…' + (i === 0 && !window.Tesseract ? '（初めてのときは、準備に少し時間がかかります。ネットが必要です）' : '');
+                        try { texts.push(ocrClean(await ocrRead(files[i]), true)); }
+                        catch (err) { st.textContent = '文字を読めませんでした（' + (i + 1) + '枚目）。通信を確かめて、もう一度、押してください'; busy = false; run.disabled = can.disabled = false; return; }
+                    }
+                    const idx = [...starts].sort((x, y) => x - y);
+                    close(idx.map((p, k) => ({ title: (k + 1) + '話', content: texts.slice(p, idx[k + 1] === undefined ? files.length : idx[k + 1]).filter(Boolean).join(String.fromCharCode(10)) })));
+                };
+                paint(); dlg.showModal();
+            });
+        }
+        function addChaptersToPart(part, chaps) {
+            let list;
+            if (part.formatType === 'ebook') {
+                if (!part.volumes) part.volumes = [];
+                let vol = part.volumes[0];
+                if (!vol) { vol = { id: 'vol_' + Math.random().toString(36).substring(2, 9), title: '1巻', chapters: [] }; part.volumes.push(vol); }
+                list = vol.chapters;
+            } else { if (!part.chapters) part.chapters = []; list = part.chapters; }
+            chaps.forEach(c => list.push({ id: 'chap_' + Math.random().toString(36).substring(2, 9), title: c.title, favorite: false, content: c.content }));
+        }
         // 取り込む：part（部）に、話を足す。2話以上に分けられるときは、聞く
         async function importFilesIntoPart(book, part, files) {
             let added = 0, toastTail = '';
+            const images = files.filter(isImageFile); files = files.filter(f => !isImageFile(f));
+            if (images.length) { const chaps = await imagesToChapters(images); if (chaps && chaps.length) { addChaptersToPart(part, chaps); added += chaps.length; } }
             for (const file of files) {
                 let lines;
                 try { lines = await fileToLines(file); }
                 catch (err) { toast(err.code === 'doc' ? '古い形式（.doc）は読めません。Wordで「名前を付けて保存」から、.docx にして、取り込んでください' : '「' + file.name + '」を取り込めませんでした。Googleドキュメントは、「ファイル → ダウンロード → Microsoft Word（.docx）」で保存してから、選んでください'); continue; }
                 const fileTitle = file.name.replace(/\.[^/.]+$/, ''); let chaps = splitIntoChapters(lines, fileTitle);
                 if (chaps.length >= 2 && !confirm('「' + file.name + '」を、' + chaps.length + '話に分けて取り込みますか？\n\n' + chaps.slice(0, 12).map((c, i) => (i + 1) + '. ' + c.title).join('\n') + (chaps.length > 12 ? '\n…' : '') + '\n\nOK：分ける　／　キャンセル：1つの話にする')) chaps = [{ title: fileTitle, content: lines.map(l => l.t).join(String.fromCharCode(10)).replace(/^\s*\n+|\n+\s*$/g, '') }];
-                let list;
-                if (part.formatType === 'ebook') {
-                    if (!part.volumes) part.volumes = [];
-                    let vol = part.volumes[0];
-                    if (!vol) { vol = { id: 'vol_' + Math.random().toString(36).substring(2, 9), title: '1巻', chapters: [] }; part.volumes.push(vol); }
-                    list = vol.chapters;
-                } else { if (!part.chapters) part.chapters = []; list = part.chapters; }
-                chaps.forEach(c => list.push({ id: 'chap_' + Math.random().toString(36).substring(2, 9), title: c.title, favorite: false, content: c.content }));
+                addChaptersToPart(part, chaps);
                 added += chaps.length; toastTail = chaps.length >= 2 ? '' : '「' + chaps[0].title + '」';
             }
             return { added, toastTail };
@@ -4315,7 +4384,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         window.importFileForPart = function(partIdx) {
             const input = document.createElement('input');
             input.type = 'file'; input.multiple = true;
-            input.accept = '.txt,.md,.docx,.html,.htm';
+            input.accept = '.txt,.md,.docx,.html,.htm,image/*';
             input.onchange = async (e) => {
                 const files = [...e.target.files]; if (!files.length) return;
                 const book = state.books.find(b => b.id === state.currentBookId), part = book && book.parts[partIdx]; if (!part) return;
@@ -9905,7 +9974,7 @@ function setupPaging(){
         }
         function newBookFromFile() {
             const input = document.createElement('input');
-            input.type = 'file'; input.multiple = true; input.accept = '.txt,.md,.docx,.html,.htm';
+            input.type = 'file'; input.multiple = true; input.accept = '.txt,.md,.docx,.html,.htm,image/*';
             input.onchange = async () => {
                 const files = [...input.files]; if (!files.length) return;
                 const ti = document.getElementById('new-book-title'); if (!ti.value.trim()) ti.value = files[0].name.replace(/\.[^/.]+$/, '');
