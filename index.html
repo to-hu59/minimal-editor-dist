@@ -1753,7 +1753,7 @@
                         <span class="font-bold text-softMuted block mb-1">更新履歴</span>
                         <div id="changelog" class="text-[11px] text-softMuted leading-relaxed">
 <div class="mb-1.5"><b class="text-softText">2026-11-03（6）</b><br>編集の道具：「画面の枠」を「特殊演出」にして（動く人のマーク）、右端に固定した（「原文」のボタンはなくした）。「特殊な文字」（回転の矢印と星のマーク）を足して、縦書き（この部分だけ）・ななめ・左右反転・上下反転・回転・逆さを入れられるようにした（編集画面で、ルビや色と同じように、その場で見える。選ばないときは、いまの行ぜんぶ）。文字色の「カスタム」に「この色にする」を足して、選んだ色が本文と「A」の線に出るようにした。OCRのボタンのマークを変えた。特殊演出に、電光掲示板（右から左へ流れる・文字ごとの色・背景の色・折り返し）、駅の発車案内、空港の出発案内、文字化けするシステム画面、文字が崩れる配信コメント、ページがめくれない、ページが巻き戻る、を足した（🎬の演出ビューで動く）。作品のメニューに、Googleドキュメントへの書き出し（本文のみ）を足した。Driveの自動同期は、はじめは切にして、「いま同期する」で手動にできるようにした。Driveのフォルダ名とアプリ名を「読書リーダー(仮)」にした。</div>
-<div class="mb-1.5"><b class="text-softText">2026-11-03（9）</b><br>作品を消すと、その作品のWikiと、魚（アシスタント）が拾った言葉・仮登録も、一緒に消えるようにした（作品の削除・まとめて削除・別の端末で消えたとき）。いま、持ち主の作品がもうない言葉が残っていたら、アプリを開いたときに片づける。「新しい言葉が○件あります」の知らせは、出さないようにして、魚のボタンに、赤い点をつけるだけにした（中身は、魚のメニューの「新しい言葉」）。</div>
+<div class="mb-1.5"><b class="text-softText">2026-11-03（9）</b><br>作品を消すと、その作品のWikiと、魚（アシスタント）が拾った言葉・仮登録も、一緒に消えるようにした（作品の削除・まとめて削除・別の端末で消えたとき）。いま、持ち主の作品がもうない言葉が残っていたら、アプリを開いたときに片づける。「新しい言葉が○件あります」の知らせは、出さないようにして、魚のボタンに、赤い点をつけるだけにした（中身は、魚のメニューの「新しい言葉」）。本棚（TOP）の魚のメニューに、「Wiki（作品ごと）」を足した。Wikiのある作品が並び、押すと、その作品のWikiが開く。</div>
 <div class="mb-1.5"><b class="text-softText">2026-11-03（8）</b><br>「ファイルから」で、「第1話」「1話」「# 3」「プロローグ」などの行や、Wordの見出し・Markdownの#・HTMLの見出しを見つけて、話に分けて取り込めるようにした（2話以上に分けられるときは、聞く）。本棚の「＋」の作品登録にも、「ファイルから作る」を足した（上で決めたタイプA〜Dで作品を作り、いちばん上の部に取り込む。題名が空ならファイルの名前）。話を足す「ファイルから」で、Wordのファイル（.docx）と、Googleドキュメントを「Microsoft Word（.docx）」でダウンロードしたファイル、ウェブページ（.html）も、取り込めるようにした。文字コードがShift_JISのテキストも、読める。Wordのルビは、｜漢字《かんじ》の形になる。古い形式（.doc）は、.docxにしてから。</div>
 <div class="mb-1.5"><b class="text-softText">2026-11-03（7）</b><br>「ここだけ直す」を足した。読む画面で、直したい文字を選ぶと、下に「ここだけ直す」が出る。押すと、その段落だけが窓で開き、直せる（編集ボタンで、本文ぜんぶを開いて、直す場所を探さなくてよい。ルビや書式の印も、そのまま書き換えられる）。編集画面の道具にも、えんぴつのマークで「ここだけ編集」（選んだ文字だけ）を足した。</div>
 <div class="mb-1.5"><b class="text-softText">2026-11-03（5）</b><br>文字サイズを8pxまで、行の間隔を1.0まで、小さくできるようにした。ページめくりで、ホームの帯を出したとき、最後の1行が帯に隠れるのを直した（ページの下に、空きをとった）。ページめくりで、枠（システム画面・ステータス・掲示板など）が、前のページと次のページに分かれないようにした（入りきらないときは、枠ぜんぶを次のページに送る）。本棚の「詳細絞り込みリボン」を、🔍検索の中に入れた（言葉・作者・レーベル・年・評価・状態で、その場で絞り込める。条件は本棚に残り、上のバッジで解除できる）。ライセンスのページに、昔々ふぉんと・したたる明朝初号・装甲明朝を足した。</div>
@@ -6659,7 +6659,17 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             wikiState = { view: view || 'list', editId: null, draft: null, pendingName: null, revealed: {}, confirmDel: false, filter: 'all', q: '', closed: {} };
             wikiRender();
         }
-        function wikiClose() { document.getElementById('wiki-proto-sheet').classList.remove('open'); }
+        // 本棚から、作品ごとのWikiを開く（Wikiは「いま開いている作品」のものを出す作りなので、そのあいだだけ切り替えて、閉じたら戻す）
+        let wikiShelfPrev = null;
+        function wikiOpenForBook(bookId) {
+            if (!state.books.some(b => b.id === bookId)) return;
+            if (!wikiShelfPrev) wikiShelfPrev = { id: state.currentBookId };
+            state.currentBookId = bookId; wikiOpen('list');
+        }
+        function wikiClose() {
+            document.getElementById('wiki-proto-sheet').classList.remove('open');
+            if (wikiShelfPrev) { state.currentBookId = wikiShelfPrev.id; wikiShelfPrev = null; }
+        }
         function wikiReadDraft() {
             const d = wikiState.draft; if (!d) return;
             const n = document.getElementById('wk-name'), c = document.getElementById('wk-cat'), b = document.getElementById('wk-basic');
@@ -7046,6 +7056,11 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                     h += '<button type="button" class="a-btn" data-act="search">🔎 探す（全体検索）</button>';
                     h += '<button type="button" class="a-btn" data-act="stats">今年の読んだ数</button>';
                     h += '<button type="button" class="a-btn" data-act="genres">ジャンル別の冊数</button>';
+                    {   // Wiki：作品ごとに並べて、押すと、その作品のWikiが開く
+                        const rows = state.books.map(bk => { const i = termsBook(bk.id).inbox; return { bk, n: wikiEntries(bk.id).length, k: i.words.length + i.statuses.length }; }).filter(r => r.n || r.k);
+                        h += '<div class="a-msg" style="margin-top:8px;font-weight:700">📖 Wiki（作品ごと）</div>';
+                        h += rows.length ? '<div style="max-height:38vh;overflow-y:auto">' + rows.map(r => '<button type="button" class="a-btn" data-act="wiki-book:' + wEsc(r.bk.id) + '">' + wEsc(r.bk.title) + '　' + r.n + '件' + (r.k ? '　●新しい言葉' : '') + '</button>').join('') + '</div>' : '<div class="a-msg">まだ、Wikiのある作品は、ありません。</div>';
+                    }
                 } else if (screen === 'read') {
                     const n = wikiPending(bookId).length, inbox = termsBook(bookId).inbox, fresh = inbox.words.length + inbox.statuses.length;
                     if (assistState.missing) h += `<button type="button" class="a-btn a-main" data-act="add-pending">「${wEsc(assistState.missing)}」を仮登録する</button>`;
@@ -7071,6 +7086,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         function assistAct(act) {
             const bookId = state.currentBookId, click = id => document.getElementById(id)?.click();
             if (act === 'close') { assistOpen(false); return; }
+            if (act.startsWith('wiki-book:')) { assistOpen(false); wikiOpenForBook(act.slice(10)); return; }
             if (act === 'back' || act === 'ask-no') { assistState = { view: 'menu', entryId: null, spoiler: false, msg: '' }; assistRender(); return; }
             if (act === 'add') { assistOpen(false); click('btn-add-new-book'); return; }
             if (act === 'stats') {
