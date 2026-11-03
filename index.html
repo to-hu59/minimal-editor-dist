@@ -7730,7 +7730,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                 chip.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4l10.5-10.5-4-4L4 16z"/><path d="m13 7 4 4"/></svg> ここだけ直す';
                 chip.style.cssText = 'position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 84px);z-index:60;display:none;align-items:center;gap:6px;padding:10px 16px;border-radius:999px;background:#23594e;color:#fff;font-weight:700;font-size:13px;box-shadow:0 4px 14px rgba(0,0,0,.3);border:0';
                 chip.onpointerdown = e => e.preventDefault(); chip.onmousedown = e => e.preventDefault();
-                chip.onclick = () => { chip.hidden = true; readerPartialOpen(); };
+                chip.onclick = () => { chip.hidden = true; chip.style.display = 'none'; readerPartialOpen(); };
                 document.body.appendChild(chip);
             }
             const sel = getSelection(), box = document.getElementById('reader-content-text');
@@ -7773,6 +7773,10 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         { const pe = document.getElementById('editor-partial'); pe.onmousedown = e => e.preventDefault(); pe.onclick = partialOpen; }
         document.getElementById('partial-cancel').onclick = () => { partialCtx = null; document.getElementById('partial-dialog').close(); };
         document.getElementById('partial-apply').onclick = partialApply;
+        document.getElementById('partial-dialog').addEventListener('close', () => {
+            if (document.getElementById('reader-editor-box').classList.contains('hidden')) { const sl = getSelection(); if (sl) sl.removeAllRanges(); }
+            partialChipPaint();
+        });
         document.getElementById('editor-ocr').onclick = ocrStart;
         document.getElementById('ocr-input').onchange = e => ocrRun(e.target.files);
         document.getElementById('ocr-join').onchange = ocrShow;
