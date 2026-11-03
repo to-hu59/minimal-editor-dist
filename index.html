@@ -1725,6 +1725,12 @@
                     <div class="pt-3 border-t border-woodBorder">
                         <span class="font-bold text-softMuted block mb-1">Google Drive</span>
                         <p id="drive-status-text" class="text-[11px] text-softMuted mb-1.5">つないでいません。本棚の ☁ からつなげます</p>
+                        <div class="mb-2">
+                            <label class="block text-[11px] text-softMuted mb-1">クライアントID（自分で作ったもの）</label>
+                            <input id="drive-cid" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="1234567890-xxxx.apps.googleusercontent.com" class="w-full px-2 py-2 border border-woodBorder rounded-xl bg-white text-[11px]">
+                            <button id="drive-cid-save" class="mt-1.5 w-full py-2 bg-kinariDark text-softText hover:bg-kinari border border-woodBorder rounded-xl font-bold active:scale-95 transition">IDを保存する</button>
+                            <p class="text-[10px] text-softMuted leading-relaxed mt-1">Google Cloud で作った「クライアントID」を貼ります。作り方は、手順書（docs/drive-setup.md）にあります。IDは、この端末の中にだけ保存されます。</p>
+                        </div>
                         <div id="drive-account-actions" hidden class="space-y-1.5">
                             <label class="flex items-center gap-2 text-[11px]"><input type="checkbox" id="drive-auto"> <span>自動で同期する（切ると、電池の減りがおだやかになります）</span></label>
                             <button id="btn-drive-now" class="w-full py-2 bg-woodAccent text-white border border-woodBorder rounded-xl font-bold active:scale-95 transition">いま同期する（上げる・取ってくる）</button>
@@ -2357,7 +2363,8 @@ MP 22/22
         // ===== Google Drive を本体にする =====
         // Drive の「読書リーダー(仮)」フォルダに作品ごと1ファイル（本文＋Wiki）。端末の中身はすぐ表示し、Drive とは裏で合わせる。
         // 両方で変わっていたら新しい方を使い、もう片方は「控え」として Drive に残す。トークンはメモリだけ（保存しない）。
-        const DRIVE_CLIENT_ID = '';   // ここに、自分のクライアントIDを貼る（手順は docs/drive-setup.md）
+        const DRIVE_CLIENT_ID_FIXED = '';   // 自分で置く人は、ここに、自分のクライアントIDを入れてもよい（手順書：docs/drive-setup.md）。入れなければ、設定の欄から入れる
+let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_CLIENT_ID = (localStorage.getItem('yomimono_drive_cid') || '').trim(); } catch (e) {}
         const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
         const DRIVE_META_KEY = 'yomimono_drive_v1';
         const DRIVE_API = 'https://www.googleapis.com/drive/v3/';
@@ -2377,7 +2384,7 @@ MP 22/22
             const label = { off: 'Driveにつなぐ', ok: 'Drive：保存済み', sync: 'Drive：同期中', tap: 'Drive：タップで同期', offline: 'Drive：オフライン（あとで同期）', error: 'Drive：同期できませんでした' }[st];
             if (btn) { btn.dataset.state = st; btn.title = label; btn.setAttribute('aria-label', label); }
             const p = document.getElementById('drive-status-text');
-            if (p) p.textContent = st === 'off' ? (DRIVE_CLIENT_ID ? 'つないでいません。本棚の ☁ からつなげます' : 'この版では、ドライブにつなぐ設定がされていません。手順書（docs/drive-setup.md）のとおりに設定すると、使えます') : (text || label) + (driveMeta.who ? '（' + driveMeta.who + '）' : '');
+            if (p) p.textContent = st === 'off' ? (DRIVE_CLIENT_ID ? 'つないでいません。本棚の ☁ からつなげます' : 'クライアントIDが、まだ入っていません。下の欄に貼ると、つなげます（手順書：docs/drive-setup.md）') : (text || label) + (driveMeta.who ? '（' + driveMeta.who + '）' : '');
             const acts = document.getElementById('drive-account-actions');
             if (acts) acts.hidden = st === 'off';
         }
@@ -2388,7 +2395,7 @@ MP 22/22
         }
         // prompt: 'select_account'（最初）／''（2回目以降。許可済みならすぐ閉じる）
         async function driveAuthorize(prompt) {
-            if (!DRIVE_CLIENT_ID) throw Error('この版では、ドライブにつなぐ設定がされていません（手順書：docs/drive-setup.md）');
+            if (!DRIVE_CLIENT_ID) throw Error('クライアントIDが、まだ入っていません。設定の「Google Drive」の欄に、貼ってください（手順書：docs/drive-setup.md）');
             await driveLoadGis();
             const r = await new Promise((resolve, reject) => google.accounts.oauth2.initTokenClient({
                 client_id: DRIVE_CLIENT_ID, scope: DRIVE_SCOPE,
@@ -2618,6 +2625,7 @@ MP 22/22
             driveSetState(driveMeta.connected ? (driveHasToken() ? 'ok' : 'tap') : 'off');
             if (driveMeta.connected && !driveAutoOn()) driveSetState(driveMeta.pending || !driveHasToken() ? 'tap' : 'ok', '自動同期は切ってあります' + (driveMeta.pending ? '。まだ送っていない変更があります' : '') + '（☁を押すと同期）');
             if (driveMeta.connected && driveHasToken() && driveAutoOn()) setTimeout(() => { driveSync(); driveFetchWho(); }, 800);
+            const cidIn = document.getElementById('drive-cid'); if (cidIn) { cidIn.value = DRIVE_CLIENT_ID; document.getElementById('drive-cid-save').addEventListener('click', () => { const v = cidIn.value.trim(); if (v && !/^[0-9]+-[a-z0-9]+.apps.googleusercontent.com$/i.test(v)) { toast('IDの形が違います（…apps.googleusercontent.com で終わる文字です）'); return; } try { if (v) localStorage.setItem('yomimono_drive_cid', v); else localStorage.removeItem('yomimono_drive_cid'); } catch (e) {} DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED || v; if (driveMeta.connected) { driveLogout(); } driveSetState('off'); toast(v ? 'IDを保存しました。本棚の ☁ からつなげます' : 'IDを消しました'); }); if (DRIVE_CLIENT_ID_FIXED) { cidIn.value = '（コードの中に入っています）'; cidIn.disabled = true; } }
             const auto = document.getElementById('drive-auto'); if (auto) { auto.checked = driveAutoOn(); auto.addEventListener('change', () => { driveMeta.auto = auto.checked; driveSaveMeta(); if (auto.checked) { toast('自動で同期します'); driveSync(); } else { driveSetState(driveMeta.pending ? 'tap' : 'ok', '自動同期は切ってあります' + (driveMeta.pending ? '。まだ送っていない変更があります' : '') + '（☁を押すと同期）'); toast('自動同期を切りました。☁を押したときだけ同期します'); } }); }
             document.getElementById('btn-drive-now')?.addEventListener('click', () => driveConnect());
             document.getElementById('btn-drive').addEventListener('click', e => { e.stopPropagation(); driveConnect(); });
