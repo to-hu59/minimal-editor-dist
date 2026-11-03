@@ -1779,6 +1779,7 @@
                             <p class="text-[10px] text-softMuted leading-relaxed mt-1">Google Cloud で作った「クライアントID」を貼ります。作り方は、手順書（docs/drive-setup.md）にあります。IDは、この端末の中にだけ保存されます。</p>
                         </div>
                         <div id="drive-account-actions" hidden class="space-y-1.5">
+                            <label class="flex items-center gap-2 text-[11px]"><input type="checkbox" id="drive-relogin"> <span>ログインが切れたら、さわったときに自動でやり直す（小さな窓が、一瞬ひらきます）</span></label>
                             <label class="flex items-center gap-2 text-[11px]"><input type="checkbox" id="drive-auto"> <span>自動で同期する（切ると、電池の減りがおだやかになります）</span></label>
                             <button id="btn-drive-now" class="w-full py-2 bg-woodAccent text-white border border-woodBorder rounded-xl font-bold active:scale-95 transition">いま同期する（上げる・取ってくる）</button>
                             <button id="btn-drive-switch" class="w-full py-2 bg-kinariDark text-softText hover:bg-kinari border border-woodBorder rounded-xl font-bold active:scale-95 transition">別のGoogleアカウントに切り替える</button>
@@ -1795,6 +1796,7 @@
                         <span class="font-bold text-softMuted block mb-1">更新履歴</span>
                         <div id="changelog" class="text-[11px] text-softMuted leading-relaxed">
 <div class="mb-1.5"><b class="text-softText">2026-11-03（6）</b><br>編集の道具：「画面の枠」を「特殊演出」にして（動く人のマーク）、右端に固定した（「原文」のボタンはなくした）。「特殊な文字」（回転の矢印と星のマーク）を足して、縦書き（この部分だけ）・ななめ・左右反転・上下反転・回転・逆さを入れられるようにした（編集画面で、ルビや色と同じように、その場で見える。選ばないときは、いまの行ぜんぶ）。文字色の「カスタム」に「この色にする」を足して、選んだ色が本文と「A」の線に出るようにした。OCRのボタンのマークを変えた。特殊演出に、電光掲示板（右から左へ流れる・文字ごとの色・背景の色・折り返し）、駅の発車案内、空港の出発案内、文字化けするシステム画面、文字が崩れる配信コメント、ページがめくれない、ページが巻き戻る、を足した（🎬の演出ビューで動く）。作品のメニューに、Googleドキュメントへの書き出し（本文のみ）を足した。Driveの自動同期は、はじめは切にして、「いま同期する」で手動にできるようにした。Driveのフォルダ名とアプリ名を「読書リーダー(仮)」にした。</div>
+<div class="mb-1.5"><b class="text-softText">2026-11-03（12）</b><br>Driveのログイン（Googleの許可）は、約1時間で切れるので、切れたあと、最初に画面をタップしたときに、自動でやり直すようにした（許可ずみなら、小さな窓が一瞬ひらいて、すぐ閉じる）。設定のGoogle Driveの欄の、「ログインが切れたら、さわったときに自動でやり直す」で、入り切りできる（はじめは入）。</div>
 <div class="mb-1.5"><b class="text-softText">2026-11-03（11）</b><br>「ファイルから」（話を足す・「＋」の「ファイルから作る」）で、画像（.png .jpg など）も、何枚でも、まとめて選べるようにした。画像は、ファイルの名前の順に並び、「1話ごとの枚数」（例：3,4,3／3枚ずつなら 3）か、画像ごとの「新しい話」のチェックで、どこから新しい話にするかを決められる。決めたあと、1枚ずつ、画像から文字を読み取って（日本語の横書き。最初はネットが必要）、話にする。</div>
 <div class="mb-1.5"><b class="text-softText">2026-11-03（10）</b><br>本棚の上のバーのボタンを、まとまりのある順に並べ直した（左から：検索・表示切り替え・グラフ・Drive、右の2つは固定：コピー（印刷・書き出し）・設定）。全体設定に「Wiki（作品ごと）」を足した。開くと、Wikiのある作品が、作品ごとに並ぶページが出る。「作品順」と「ジャンル別」に並べ替えられて、作品ごとに「隠す」「戻す」ができる（本棚の作品は、そのまま）。押すと、その作品のWikiが開く。</div>
 <div class="mb-1.5"><b class="text-softText">2026-11-03（9）</b><br>作品を消すと、その作品のWikiと、魚（アシスタント）が拾った言葉・仮登録も、一緒に消えるようにした（作品の削除・まとめて削除・別の端末で消えたとき）。いま、持ち主の作品がもうない言葉が残っていたら、アプリを開いたときに片づける。「新しい言葉が○件あります」の知らせは、出さないようにして、魚のボタンに、赤い点をつけるだけにした（中身は、魚のメニューの「新しい言葉」）。本棚（TOP）の魚のメニューに、「Wiki（作品ごと）」を足した。Wikiのある作品が並び、押すと、その作品のWikiが開く。</div>
@@ -2692,6 +2694,13 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             driveSetState(driveMeta.connected ? (driveHasToken() ? 'ok' : 'tap') : 'off');
             if (driveMeta.connected && !driveAutoOn()) driveSetState(driveMeta.pending || !driveHasToken() ? 'tap' : 'ok', '自動同期は切ってあります' + (driveMeta.pending ? '。まだ送っていない変更があります' : '') + '（☁を押すと同期）');
             if (driveMeta.connected && driveHasToken() && driveAutoOn()) setTimeout(() => { driveSync(); driveFetchWho(); }, 800);
+            const rel = document.getElementById('drive-relogin'); if (rel) { rel.checked = driveMeta.relogin !== false; rel.addEventListener('change', () => { driveMeta.relogin = rel.checked; driveSaveMeta(); toast(rel.checked ? '切れたら、さわったときに、自動でやり直します' : '自動でやり直すのを、やめました。☁を押すと、つなぎ直せます'); }); }
+            let driveReloginAt = 0;
+            document.addEventListener('click', () => {   // タップ（クリック）のなかで窓を開くので、ブラウザに止められない
+                if (!driveMeta.connected || driveMeta.relogin === false || driveHasToken() || driveAuthorizing || !DRIVE_CLIENT_ID || !navigator.onLine) return;
+                if (Date.now() - driveReloginAt < 45000) return; driveReloginAt = Date.now();
+                driveEnsureToken('').then(() => { driveSetState(driveMeta.pending && !driveAutoOn() ? 'tap' : 'ok', driveMeta.pending && !driveAutoOn() ? '自動同期は切ってあります。まだ送っていない変更があります（☁を押すと同期）' : undefined); driveFetchWho(); if (driveAutoOn()) driveSync(); }).catch(() => {});
+            }, true);
             const cidIn = document.getElementById('drive-cid'); if (cidIn) { cidIn.value = DRIVE_CLIENT_ID; document.getElementById('drive-cid-save').addEventListener('click', () => { const v = cidIn.value.trim(); if (v && !/^[0-9]+-[a-z0-9]+.apps.googleusercontent.com$/i.test(v)) { toast('IDの形が違います（…apps.googleusercontent.com で終わる文字です）'); return; } try { if (v) localStorage.setItem('yomimono_drive_cid', v); else localStorage.removeItem('yomimono_drive_cid'); } catch (e) {} DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED || v; if (driveMeta.connected) { driveLogout(); } driveSetState('off'); toast(v ? 'IDを保存しました。本棚の ☁ からつなげます' : 'IDを消しました'); }); if (DRIVE_CLIENT_ID_FIXED) { cidIn.value = '（コードの中に入っています）'; cidIn.disabled = true; } }
             const auto = document.getElementById('drive-auto'); if (auto) { auto.checked = driveAutoOn(); auto.addEventListener('change', () => { driveMeta.auto = auto.checked; driveSaveMeta(); if (auto.checked) { toast('自動で同期します'); driveSync(); } else { driveSetState(driveMeta.pending ? 'tap' : 'ok', '自動同期は切ってあります' + (driveMeta.pending ? '。まだ送っていない変更があります' : '') + '（☁を押すと同期）'); toast('自動同期を切りました。☁を押したときだけ同期します'); } }); }
             document.getElementById('btn-drive-now')?.addEventListener('click', () => driveConnect());
