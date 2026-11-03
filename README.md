@@ -2,6 +2,8 @@
 
 A browser-based reading app made for personal use. It is a work in progress.
 
+All text in this README and the manuals was written by AI.
+
 **[Open the app](https://to-hu59.github.io/minimal-editor-dist/)**
 
 ## What you can do
