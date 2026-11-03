@@ -20,6 +20,8 @@ All text in this README and the manuals was written by AI.
 
 The manuals below are in Japanese. Open a PDF to read it, or download a Word file.
 
+Tip: In Word for Windows, turn on View → Navigation Pane to browse the manuals more easily using the heading list.
+
 - Getting started: [Read PDF](README.pdf) / [Download Word](https://raw.githubusercontent.com/to-hu59/minimal-editor-dist/main/README.docx)
 - Google Drive setup: [Quick guide PDF](docs/drive-setup-easy.pdf) / [Word](https://raw.githubusercontent.com/to-hu59/minimal-editor-dist/main/docs/drive-setup-easy.docx)
 - Google Drive setup in detail: [Illustrated PDF](docs/drive-setup-detail.pdf) / [Word](https://raw.githubusercontent.com/to-hu59/minimal-editor-dist/main/docs/drive-setup-detail.docx)
