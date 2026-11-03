@@ -1752,7 +1752,7 @@
                         <span class="font-bold text-softMuted block mb-1">更新履歴</span>
                         <div id="changelog" class="text-[11px] text-softMuted leading-relaxed">
 <div class="mb-1.5"><b class="text-softText">2026-11-03（6）</b><br>編集の道具：「画面の枠」を「特殊演出」にして（動く人のマーク）、右端に固定した（「原文」のボタンはなくした）。「特殊な文字」（回転の矢印と星のマーク）を足して、縦書き（この部分だけ）・ななめ・左右反転・上下反転・回転・逆さを入れられるようにした（編集画面で、ルビや色と同じように、その場で見える。選ばないときは、いまの行ぜんぶ）。文字色の「カスタム」に「この色にする」を足して、選んだ色が本文と「A」の線に出るようにした。OCRのボタンのマークを変えた。特殊演出に、電光掲示板（右から左へ流れる・文字ごとの色・背景の色・折り返し）、駅の発車案内、空港の出発案内、文字化けするシステム画面、文字が崩れる配信コメント、ページがめくれない、ページが巻き戻る、を足した（🎬の演出ビューで動く）。作品のメニューに、Googleドキュメントへの書き出し（本文のみ）を足した。Driveの自動同期は、はじめは切にして、「いま同期する」で手動にできるようにした。Driveのフォルダ名とアプリ名を「読書リーダー(仮)」にした。</div>
-<div class="mb-1.5"><b class="text-softText">2026-11-03（8）</b><br>話を足す「ファイルから」で、Wordのファイル（.docx）と、Googleドキュメントを「Microsoft Word（.docx）」でダウンロードしたファイル、ウェブページ（.html）も、取り込めるようにした。文字コードがShift_JISのテキストも、読める。Wordのルビは、｜漢字《かんじ》の形になる。古い形式（.doc）は、.docxにしてから。</div>
+<div class="mb-1.5"><b class="text-softText">2026-11-03（8）</b><br>「ファイルから」で、「第1話」「1話」「# 3」「プロローグ」などの行や、Wordの見出し・Markdownの#・HTMLの見出しを見つけて、話に分けて取り込めるようにした（2話以上に分けられるときは、聞く）。本棚の「＋」の作品登録にも、「ファイルから作る」を足した（上で決めたタイプA〜Dで作品を作り、いちばん上の部に取り込む。題名が空ならファイルの名前）。話を足す「ファイルから」で、Wordのファイル（.docx）と、Googleドキュメントを「Microsoft Word（.docx）」でダウンロードしたファイル、ウェブページ（.html）も、取り込めるようにした。文字コードがShift_JISのテキストも、読める。Wordのルビは、｜漢字《かんじ》の形になる。古い形式（.doc）は、.docxにしてから。</div>
 <div class="mb-1.5"><b class="text-softText">2026-11-03（7）</b><br>「ここだけ直す」を足した。読む画面で、直したい文字を選ぶと、下に「ここだけ直す」が出る。押すと、その段落だけが窓で開き、直せる（編集ボタンで、本文ぜんぶを開いて、直す場所を探さなくてよい。ルビや書式の印も、そのまま書き換えられる）。編集画面の道具にも、えんぴつのマークで「ここだけ編集」（選んだ文字だけ）を足した。</div>
 <div class="mb-1.5"><b class="text-softText">2026-11-03（5）</b><br>文字サイズを8pxまで、行の間隔を1.0まで、小さくできるようにした。ページめくりで、ホームの帯を出したとき、最後の1行が帯に隠れるのを直した（ページの下に、空きをとった）。ページめくりで、枠（システム画面・ステータス・掲示板など）が、前のページと次のページに分かれないようにした（入りきらないときは、枠ぜんぶを次のページに送る）。本棚の「詳細絞り込みリボン」を、🔍検索の中に入れた（言葉・作者・レーベル・年・評価・状態で、その場で絞り込める。条件は本棚に残り、上のバッジで解除できる）。ライセンスのページに、昔々ふぉんと・したたる明朝初号・装甲明朝を足した。</div>
 <div class="mb-1.5"><b class="text-softText">2026-11-03（4）</b><br>ウィキ：カテゴリ（重要人物・勢力・第1部など）を自分で作って、1つの項目にいくつでもつけられるようにした（一覧はカテゴリごとにまとまり、開閉・絞り込み・検索ができる）。項目ごとに、ステータス・所持品・スキル・関係などの欄を足せる（使うものだけ。行ごとに「何話から見えるか」も決められる）。本文で、ウィキに登録した言葉にうっすら色がつき、押すと小さなカードで見られる（読んだ話までの内容だけ出して、先の設定は🔒で伏せる。設定の「特殊演出」でON／OFF）。本文の演出に、［着信］［バイブ］［怒鳴り］［ジジッ］［頭痛］［どくん（心臓）］を足した（次の行、または［ここまで］までの文字だけが、ゆれる・ブレる・脈打つ。音と振動は、設定の「音を出す」「振動する」がONのとき。編集の「音・振動」から入れられる）。掲示板はタイプライターのカタカタ音にして、1つ書き終わるとチンと鳴る。ページの左右の余白をつめた。</div>
@@ -1839,6 +1839,10 @@
                             <button type="button" role="radio" data-type="C" aria-checked="false">C 単話＋ebook（タブで切替）</button>
                             <button type="button" role="radio" data-type="D" aria-checked="true">D 部ごとに単話／ebook</button>
                         </div>
+                    </div>
+                    <div>
+                        <button type="button" id="btn-new-book-from-file" class="w-full py-2.5 rounded-xl border border-dashed border-woodBorder bg-white text-xs font-bold text-woodAccentDark active:scale-95 transition">ファイルから作る（Word・テキスト・MD・HTML）</button>
+                        <p class="text-[10px] text-softMuted mt-1">上で決めたタイプ（A〜D）で作品を作り、いちばん上の部に、ファイルを取り込みます。「第1話」「1話」などの見出しがあれば、話に分けられます。題名が空のときは、ファイルの名前になります。</p>
                     </div>
                     <div>
                         <label class="block font-bold text-softText mb-1">ジャンル（言葉を拾う目印・複数可）</label>
@@ -4168,6 +4172,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         };
 
         // ファイルから話を足す：.txt .md .docx（Word・Googleドキュメントを「Microsoft Word」でダウンロードしたもの）.html
+        // 見出し（第1話・1話・# 3・Wordの見出し・Markdownの#・HTMLのh1〜）を見つけて、話に分ける
         async function unzipEntry(buf, wanted) {
             const u8 = new Uint8Array(buf), dv = new DataView(buf);
             let e = -1; for (let i = u8.length - 22; i >= Math.max(0, u8.length - 65557); i--) if (dv.getUint32(i, true) === 0x06054b50) { e = i; break; }
@@ -4187,10 +4192,18 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             }
             return null;
         }
-        async function docxToText(buf) {
+        // 行の一覧 [{ t: 文字, h: 見出しの段（なければ0） }] にする
+        async function docxToLines(buf) {
             const xml = await unzipEntry(buf, 'word/document.xml'); if (!xml) throw new Error('docx');
             const W = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
-            const doc = new DOMParser().parseFromString(new TextDecoder().decode(xml), 'application/xml');
+            const parse = u8 => new DOMParser().parseFromString(new TextDecoder().decode(u8), 'application/xml');
+            const doc = parse(xml), styles = {};
+            const sx = await unzipEntry(buf, 'word/styles.xml');
+            if (sx) for (const st of parse(sx).getElementsByTagNameNS(W, 'style')) {
+                const id = st.getAttributeNS(W, 'styleId'), nm = (st.getElementsByTagNameNS(W, 'name')[0] || { getAttributeNS: () => '' }).getAttributeNS(W, 'val') || '';
+                const ol = st.getElementsByTagNameNS(W, 'outlineLvl')[0], m = nm.match(/^(?:heading|見出し)\s*([1-9])$/i);
+                styles[id] = ol ? Number(ol.getAttributeNS(W, 'val')) + 1 : (m ? Number(m[1]) : 0);
+            }
             const walk = n => {
                 let t = '';
                 for (const c of n.childNodes) {
@@ -4204,54 +4217,78 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                 }
                 return t;
             };
-            return [...doc.getElementsByTagNameNS(W, 'p')].map(walk).join(String.fromCharCode(10)).replace(/\s+$/, '');
+            return [...doc.getElementsByTagNameNS(W, 'p')].map(p => {
+                const pp = p.getElementsByTagNameNS(W, 'pPr')[0], ps = pp && pp.getElementsByTagNameNS(W, 'pStyle')[0], ol = pp && pp.getElementsByTagNameNS(W, 'outlineLvl')[0];
+                const h = ol ? Number(ol.getAttributeNS(W, 'val')) + 1 : (ps ? (styles[ps.getAttributeNS(W, 'val')] || 0) : 0);
+                return { t: walk(p), h: h > 0 && h < 10 ? h : 0 };
+            });
         }
-        function htmlToText(html) {
-            const d = new DOMParser().parseFromString(html, 'text/html'), NL = String.fromCharCode(10);
+        function htmlToLines(html) {
+            const d = new DOMParser().parseFromString(html, 'text/html'), NL = String.fromCharCode(10), blocks = 'p,div,li,h1,h2,h3,h4,h5,h6,tr,blockquote,pre';
             d.querySelectorAll('script,style').forEach(x => x.remove());
             d.querySelectorAll('br').forEach(x => x.replaceWith(NL));
-            d.querySelectorAll('p,div,li,h1,h2,h3,h4,h5,h6,tr').forEach(x => x.append(NL));
-            return (d.body ? d.body.textContent : '').replace(/\n{3,}/g, NL + NL).trim();
+            const out = []; [...d.querySelectorAll(blocks)].filter(x => !x.querySelector(blocks)).forEach(x => { const m = x.tagName.match(/^H([1-6])$/); out.push({ t: x.textContent, h: m ? Number(m[1]) : 0 }); });
+            return out.length ? out : [{ t: d.body ? d.body.textContent : '', h: 0 }];
+        }
+        function textToLines(text, md) {
+            return String(text).split(/\r?\n/).map(t => { const m = md && t.match(/^(#{1,6})\s+(.*)$/); return m ? { t: m[2], h: m[1].length } : { t, h: 0 }; });
         }
         function decodeText(buf) {
             try { return new TextDecoder('utf-8', { fatal: true }).decode(buf); } catch (e) { try { return new TextDecoder('shift_jis').decode(buf); } catch (e2) { return new TextDecoder().decode(buf); } }
         }
+        async function fileToLines(file) {
+            const buf = await file.arrayBuffer(), ext = ((file.name.match(/\.([^.]+)$/) || [])[1] || '').toLowerCase();
+            if (ext === 'docx') return docxToLines(buf);
+            if (ext === 'html' || ext === 'htm') return htmlToLines(decodeText(buf));
+            if (ext === 'doc') throw Object.assign(new Error('doc'), { code: 'doc' });
+            return textToLines(decodeText(buf), ext === 'md');
+        }
+        // 話に分ける。見出しが2つ以上あるときだけ（「第1話」「1話」「#3」「プロローグ」などの行／なければ、Wordの見出し・#・h1〜）
+        function splitIntoChapters(lines, fileTitle) {
+            const NL = String.fromCharCode(10), PAT = /^\s*(?:第?\s*[0-9０-９一二三四五六七八九十百]+\s*(?:話|章|節|回|幕)|#\s*[0-9０-９]+|(?:Episode|Chapter|EP|Ep)\.?\s*[0-9０-９]+|プロローグ|エピローグ|序章|終章|番外編?)/i;
+            let heads = []; lines.forEach((l, i) => { const t = l.t.trim(); if (t && t.length <= 60 && PAT.test(t)) heads.push(i); });
+            if (heads.length < 2) {
+                heads = []; const cnt = {}; lines.forEach(l => { if (l.h && l.t.trim()) cnt[l.h] = (cnt[l.h] || 0) + 1; });
+                const lv = Object.keys(cnt).map(Number).sort((x, y) => x - y).find(k => cnt[k] >= 2);
+                if (lv) lines.forEach((l, i) => { if (l.h === lv && l.t.trim()) heads.push(i); });
+            }
+            const join = (from, to) => lines.slice(from, to).map(l => l.t).join(NL).replace(/^\s*\n+|\n+\s*$/g, '');
+            if (heads.length < 2) return [{ title: fileTitle, content: join(0, lines.length) }];
+            const out = [], pre = join(0, heads[0]);
+            if (pre.replace(/\s/g, '').length > 20) out.push({ title: 'はじめに', content: pre });
+            heads.forEach((h, k) => out.push({ title: lines[h].t.trim().replace(/^#+\s*/, '').slice(0, 60) || ('第' + (k + 1) + '話'), content: join(h + 1, k + 1 < heads.length ? heads[k + 1] : lines.length) }));
+            return out;
+        }
+        // 取り込む：part（部）に、話を足す。2話以上に分けられるときは、聞く
+        async function importFilesIntoPart(book, part, files) {
+            let added = 0, toastTail = '';
+            for (const file of files) {
+                let lines;
+                try { lines = await fileToLines(file); }
+                catch (err) { toast(err.code === 'doc' ? '古い形式（.doc）は読めません。Wordで「名前を付けて保存」から、.docx にして、取り込んでください' : '「' + file.name + '」を取り込めませんでした。Googleドキュメントは、「ファイル → ダウンロード → Microsoft Word（.docx）」で保存してから、選んでください'); continue; }
+                const fileTitle = file.name.replace(/\.[^/.]+$/, ''); let chaps = splitIntoChapters(lines, fileTitle);
+                if (chaps.length >= 2 && !confirm('「' + file.name + '」を、' + chaps.length + '話に分けて取り込みますか？\n\n' + chaps.slice(0, 12).map((c, i) => (i + 1) + '. ' + c.title).join('\n') + (chaps.length > 12 ? '\n…' : '') + '\n\nOK：分ける　／　キャンセル：1つの話にする')) chaps = [{ title: fileTitle, content: lines.map(l => l.t).join(String.fromCharCode(10)).replace(/^\s*\n+|\n+\s*$/g, '') }];
+                let list;
+                if (part.formatType === 'ebook') {
+                    if (!part.volumes) part.volumes = [];
+                    let vol = part.volumes[0];
+                    if (!vol) { vol = { id: 'vol_' + Math.random().toString(36).substring(2, 9), title: '1巻', chapters: [] }; part.volumes.push(vol); }
+                    list = vol.chapters;
+                } else { if (!part.chapters) part.chapters = []; list = part.chapters; }
+                chaps.forEach(c => list.push({ id: 'chap_' + Math.random().toString(36).substring(2, 9), title: c.title, favorite: false, content: c.content }));
+                added += chaps.length; toastTail = chaps.length >= 2 ? '' : '「' + chaps[0].title + '」';
+            }
+            return { added, toastTail };
+        }
         window.importFileForPart = function(partIdx) {
             const input = document.createElement('input');
-            input.type = 'file';
+            input.type = 'file'; input.multiple = true;
             input.accept = '.txt,.md,.docx,.html,.htm';
             input.onchange = async (e) => {
-                const file = e.target.files[0];
-                if (!file) return;
-                try {
-                    const buf = await file.arrayBuffer(), ext = (file.name.match(/\.([^.]+)$/) || [])[1] || '';
-                    let text;
-                    if (/^docx$/i.test(ext)) text = await docxToText(buf);
-                    else if (/^(html?)$/i.test(ext)) text = htmlToText(decodeText(buf));
-                    else if (/^doc$/i.test(ext)) { toast('古い形式（.doc）は読めません。Wordで「名前を付けて保存」から、.docx にして、取り込んでください'); return; }
-                    else text = decodeText(buf);
-                    const title = file.name.replace(/\.[^/.]+$/, "");
-                    const book = state.books.find(b => b.id === state.currentBookId);
-                    const part = book.parts[partIdx];
-                    if (part.formatType === 'ebook') {
-                        if (!part.volumes) part.volumes = [];
-                        let vol = part.volumes[0];
-                        if (!vol) {
-                            vol = { id: 'vol_' + Math.random().toString(36).substring(2, 9), title: '1巻', chapters: [] };
-                            part.volumes.push(vol);
-                        }
-                        vol.chapters.push({ id: 'chap_' + Math.random().toString(36).substring(2, 9), title, favorite: false, content: text });
-                    } else {
-                        if (!part.chapters) part.chapters = [];
-                        part.chapters.push({ id: 'chap_' + Math.random().toString(36).substring(2, 9), title, favorite: false, content: text });
-                    }
-                    save();
-                    updateDetailStats();
-                    renderDetailAccordion();
-                    toast('「' + title + '」を取り込みました（' + text.length + '字）');
-                } catch (err) {
-                    toast('取り込めませんでした。Googleドキュメントは、「ファイル → ダウンロード → Microsoft Word（.docx）」で保存してから、選んでください');
-                }
+                const files = [...e.target.files]; if (!files.length) return;
+                const book = state.books.find(b => b.id === state.currentBookId), part = book && book.parts[partIdx]; if (!part) return;
+                const r = await importFilesIntoPart(book, part, files);
+                if (r.added) { save(); updateDetailStats(); renderDetailAccordion(); toast(r.added + '話を取り込みました'); }
             };
             input.click();
         };
@@ -9438,7 +9475,8 @@ function setupPaging(){
             });
             document.getElementById('btn-close-book-modal').addEventListener('click', () => document.getElementById('modal-new-book').classList.add('hidden'));
             document.getElementById('btn-cancel-new-book').addEventListener('click', () => document.getElementById('modal-new-book').classList.add('hidden'));
-            document.getElementById('btn-confirm-new-book').addEventListener('click', handleCreateNewBook);
+            document.getElementById('btn-confirm-new-book').addEventListener('click', () => handleCreateNewBook());
+            document.getElementById('btn-new-book-from-file').addEventListener('click', newBookFromFile);
         }
 
         function openNotebookModal() {
@@ -9733,7 +9771,7 @@ function setupPaging(){
              if (t === 'C') return { structureType: 'mixed_type', parts: [part('単話', 'simple'), part('ebook', 'ebook')] };
              return { structureType: 'mixed_parts', parts: [part(name, 'simple')] };
          }
-        function handleCreateNewBook() {
+        function handleCreateNewBook(opts) {
             const title = document.getElementById('new-book-title').value.trim();
             if (!title) return toast('タイトルを入力してください');
 
@@ -9767,8 +9805,23 @@ function setupPaging(){
             renderYearOptions();
             renderShelf();
             document.getElementById('modal-new-book').classList.add('hidden');
+            if (opts && opts.noOpen) return newBook;
             toast('新しい作品を登録しました');
             openDetail(newBook.id);
+        }
+        function newBookFromFile() {
+            const input = document.createElement('input');
+            input.type = 'file'; input.multiple = true; input.accept = '.txt,.md,.docx,.html,.htm';
+            input.onchange = async () => {
+                const files = [...input.files]; if (!files.length) return;
+                const ti = document.getElementById('new-book-title'); if (!ti.value.trim()) ti.value = files[0].name.replace(/\.[^/.]+$/, '');
+                const nb = handleCreateNewBook({ noOpen: true }); if (!nb) return;
+                const r = await importFilesIntoPart(nb, nb.parts[0], files);
+                save(); driveSoon(); renderShelf();
+                toast('新しい作品を登録しました' + (r.added ? '（' + r.added + '話を取り込みました）' : ''));
+                openDetail(nb.id);
+            };
+            input.click();
         }
 
         function escapeHtml(str) {
