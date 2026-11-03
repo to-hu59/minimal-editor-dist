@@ -167,6 +167,7 @@
             background: #5f5345; color: #fff; font-size: 19px; line-height: 1; box-shadow: 0 6px 18px #0005; border: none; }
         #assist-btn[hidden] { display: none; }
         #assist-btn { touch-action: none; }
+        #assist-btn[data-badge]::after { content:''; position:absolute; top:-2px; right:-2px; width:12px; height:12px; border-radius:50%; background:#d0453a; border:2px solid #fff; box-sizing:border-box; }
         #assist-btn.assist-moved { right: auto !important; bottom: auto !important; transform: none !important; }
         #assist-btn.assist-shelf { bottom: 24px; right: 22px; }
         #assist-btn.assist-read { bottom: 40px; right: 8px; }
@@ -1752,6 +1753,7 @@
                         <span class="font-bold text-softMuted block mb-1">更新履歴</span>
                         <div id="changelog" class="text-[11px] text-softMuted leading-relaxed">
 <div class="mb-1.5"><b class="text-softText">2026-11-03（6）</b><br>編集の道具：「画面の枠」を「特殊演出」にして（動く人のマーク）、右端に固定した（「原文」のボタンはなくした）。「特殊な文字」（回転の矢印と星のマーク）を足して、縦書き（この部分だけ）・ななめ・左右反転・上下反転・回転・逆さを入れられるようにした（編集画面で、ルビや色と同じように、その場で見える。選ばないときは、いまの行ぜんぶ）。文字色の「カスタム」に「この色にする」を足して、選んだ色が本文と「A」の線に出るようにした。OCRのボタンのマークを変えた。特殊演出に、電光掲示板（右から左へ流れる・文字ごとの色・背景の色・折り返し）、駅の発車案内、空港の出発案内、文字化けするシステム画面、文字が崩れる配信コメント、ページがめくれない、ページが巻き戻る、を足した（🎬の演出ビューで動く）。作品のメニューに、Googleドキュメントへの書き出し（本文のみ）を足した。Driveの自動同期は、はじめは切にして、「いま同期する」で手動にできるようにした。Driveのフォルダ名とアプリ名を「読書リーダー(仮)」にした。</div>
+<div class="mb-1.5"><b class="text-softText">2026-11-03（9）</b><br>作品を消すと、その作品のWikiと、魚（アシスタント）が拾った言葉・仮登録も、一緒に消えるようにした（作品の削除・まとめて削除・別の端末で消えたとき）。いま、持ち主の作品がもうない言葉が残っていたら、アプリを開いたときに片づける。「新しい言葉が○件あります」の知らせは、出さないようにして、魚のボタンに、赤い点をつけるだけにした（中身は、魚のメニューの「新しい言葉」）。</div>
 <div class="mb-1.5"><b class="text-softText">2026-11-03（8）</b><br>「ファイルから」で、「第1話」「1話」「# 3」「プロローグ」などの行や、Wordの見出し・Markdownの#・HTMLの見出しを見つけて、話に分けて取り込めるようにした（2話以上に分けられるときは、聞く）。本棚の「＋」の作品登録にも、「ファイルから作る」を足した（上で決めたタイプA〜Dで作品を作り、いちばん上の部に取り込む。題名が空ならファイルの名前）。話を足す「ファイルから」で、Wordのファイル（.docx）と、Googleドキュメントを「Microsoft Word（.docx）」でダウンロードしたファイル、ウェブページ（.html）も、取り込めるようにした。文字コードがShift_JISのテキストも、読める。Wordのルビは、｜漢字《かんじ》の形になる。古い形式（.doc）は、.docxにしてから。</div>
 <div class="mb-1.5"><b class="text-softText">2026-11-03（7）</b><br>「ここだけ直す」を足した。読む画面で、直したい文字を選ぶと、下に「ここだけ直す」が出る。押すと、その段落だけが窓で開き、直せる（編集ボタンで、本文ぜんぶを開いて、直す場所を探さなくてよい。ルビや書式の印も、そのまま書き換えられる）。編集画面の道具にも、えんぴつのマークで「ここだけ編集」（選んだ文字だけ）を足した。</div>
 <div class="mb-1.5"><b class="text-softText">2026-11-03（5）</b><br>文字サイズを8pxまで、行の間隔を1.0まで、小さくできるようにした。ページめくりで、ホームの帯を出したとき、最後の1行が帯に隠れるのを直した（ページの下に、空きをとった）。ページめくりで、枠（システム画面・ステータス・掲示板など）が、前のページと次のページに分かれないようにした（入りきらないときは、枠ぜんぶを次のページに送る）。本棚の「詳細絞り込みリボン」を、🔍検索の中に入れた（言葉・作者・レーベル・年・評価・状態で、その場で絞り込める。条件は本棚に残り、上のバッジで解除できる）。ライセンスのページに、昔々ふぉんと・したたる明朝初号・装甲明朝を足した。</div>
@@ -2548,7 +2550,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                 const meta = driveMeta.books[book.id], text = drivePack(book);
                 if (meta && meta.hash === driveHash(text)) {
                     // 別の端末で消された作品
-                    state.books = state.books.filter(b => b.id !== book.id); delete driveMeta.books[book.id]; changedLocal = true; removed++; continue;
+                    state.books = state.books.filter(b => b.id !== book.id); delete driveMeta.books[book.id]; try { purgeBookData([book.id]); } catch (e) {} changedLocal = true; removed++; continue;
                 }
                 record(book.id, await driveUpload(null, { name: driveFileName(book), parents: [folderId], appProperties: { yomimonoBook: book.id } }, text), text);
             }
@@ -6476,6 +6478,17 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             const t = termsAll()[bookId] || {};
             return { pending: t.pending || {}, dismissed: t.dismissed || {}, inbox: t.inbox || { words: [], statuses: [] }, scanned: t.scanned || {}, enabled: typeof t.enabled === 'boolean' ? t.enabled : undefined };
         }
+        // 作品を消したとき：その作品の Wiki と、魚が拾った言葉・仮登録も消す
+        function purgeBookData(ids) {
+            const list = [...ids]; if (!list.length) return 0; let n = 0;
+            for (const key of [WIKI_KEY, TERMS_KEY]) { const all = wJson(key, {}); let ch = false; for (const id of list) if (id in all) { delete all[id]; ch = true; n++; } if (ch) wSave(key, all); }
+            return n;
+        }
+        function purgeOrphanBookData() {   // 持ち主の作品がもうない Wiki・言葉を片づける（作品が1冊もないときは、何もしない）
+            if (!state.books.length) return 0; const alive = new Set(state.books.map(b => b.id)), gone = new Set();
+            for (const key of [WIKI_KEY, TERMS_KEY]) Object.keys(wJson(key, {})).forEach(id => { if (!alive.has(id)) gone.add(id); });
+            return purgeBookData(gone);
+        }
         function termsSave(bookId, t) { const all = termsAll(); all[bookId] = t; return wSave(TERMS_KEY, all); }
         function termPlainText(content) {
             // ルビ（｜漢字《かな》・漢字《かな》）は読みを外す。残った《》は本文の記号として扱う
@@ -7118,17 +7131,17 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             for (const id of ['view-reader', 'view-detail']) screenObserver.observe(document.getElementById(id), { attributes: true, attributeFilter: ['class'] });
             assistDragInit();
             assistApply();
+            setTimeout(() => { try { purgeOrphanBookData(); } catch (e) {} }, 1200);   // 消した作品のWiki・言葉が残っていたら、片づける
         }
         // 話の終わり・戻る・本の終わりで、読み終えた話から言葉を拾い、件数を小さく知らせる。読書は止めない
+        function assistBadge(on) { const b = document.getElementById('assist-btn'); if (!b) return; if (on) b.dataset.badge = '1'; else delete b.dataset.badge; }
         function candNotify(scan = true) {
             const box = document.getElementById('cand-notice'), bookId = state.currentBookId;
-            if (!bookId || !termsEnabledFor(bookId)) { box.hidden = true; return; }
+            if (!bookId || !termsEnabledFor(bookId)) { box.hidden = true; assistBadge(false); return; }
             if (scan) scanChapterTerms(bookId, state.currentChapterId);
             const inbox = termsBook(bookId).inbox, words = inbox.words.length, statuses = inbox.statuses.length;
-            if (!words && !statuses) { box.hidden = true; return; }
-            const parts = [words ? `新しい言葉が${words}件` : '', statuses ? `ステータスが${statuses}件` : ''].filter(Boolean).join('、');
-            box.innerHTML = `<div class="cn-msg">${parts}あります</div><button type="button" class="cn-main" data-cn="open">見る</button><button type="button" data-cn="close">あとで</button>`;
-            box.hidden = false; assistPlaceNear(box);
+            if (!words && !statuses) { box.hidden = true; assistBadge(false); return; }
+            box.hidden = true; assistBadge(true);   // 知らせは出さない。魚のボタンに、赤い点をつけるだけ（中身は、魚のメニューの「新しい言葉」）
         }
         function candNoticeAct(act) {
             document.getElementById('cand-notice').hidden = true;
@@ -8942,7 +8955,9 @@ function setupPaging(){
                     '作品の一括削除確認',
                     `選択した <strong class="text-rose-500">${count} 件</strong> の作品を本当に削除しますか？<br>この操作は取り消せません。`,
                     () => {
+                        const goneIds = [...state.selectedBookIds];
                         state.books = state.books.filter(b => !state.selectedBookIds.has(b.id));
+                        purgeBookData(goneIds);
                         save();
                         exitSelectMode();
                         renderYearOptions();
@@ -9056,6 +9071,7 @@ function setupPaging(){
                     `「<strong class="text-softText">${escapeHtml(book.title)}</strong>」を本当に削除しますか？<br>この操作は取り消せません。`,
                     () => {
                         state.books = state.books.filter(b => b.id !== book.id);
+                        purgeBookData([book.id]);
                         save();
                         document.getElementById('view-detail').classList.add('hidden');
                         document.getElementById('view-detail').classList.remove('flex');
