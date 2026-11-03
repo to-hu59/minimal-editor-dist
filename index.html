@@ -1776,8 +1776,9 @@
                         <span class="font-bold text-softMuted block mb-1">バックアップとデータ移行</span>
                         <button id="btn-export-json" class="w-full py-2.5 bg-white hover:bg-kinariDark text-softText border border-woodBorder rounded-xl font-bold flex items-center justify-center space-x-2 shadow-xs mb-2 active:scale-95 transition">
                             <i class="fa-solid fa-download text-woodAccent"></i>
-                            <span>全データをJSONで書き出し保存</span>
+                            <span>作品・Wiki・設定をJSONで書き出し保存</span>
                         </button>
+                        <p class="text-[10px] text-softMuted mb-1">追加したフォントと、Googleのログイン情報は、入りません。</p>
                         <label class="block text-[10px] text-softMuted mb-1">JSONファイルから復元:</label>
                         <input type="file" id="input-import-json" accept=".json" class="w-full text-xs text-softMuted file:mr-2 file:py-1 file:px-3 file:rounded-xl file:border-0 file:bg-white file:border-woodBorder file:text-softText file:font-bold">
                     </div>
@@ -1825,6 +1826,7 @@
                         <span class="font-bold text-softMuted block mb-1">更新履歴</span>
                         <div id="changelog" class="text-[11px] text-softMuted leading-relaxed">
 <div class="mb-1.5"><b class="text-softText">2026-11-03（6）</b><br>編集の道具：「画面の枠」を「特殊演出」にして（動く人のマーク）、右端に固定した（「原文」のボタンはなくした）。「特殊な文字」（回転の矢印と星のマーク）を足して、縦書き（この部分だけ）・ななめ・左右反転・上下反転・回転・逆さを入れられるようにした（編集画面で、ルビや色と同じように、その場で見える。選ばないときは、いまの行ぜんぶ）。文字色の「カスタム」に「この色にする」を足して、選んだ色が本文と「A」の線に出るようにした。OCRのボタンのマークを変えた。特殊演出に、電光掲示板（右から左へ流れる・文字ごとの色・背景の色・折り返し）、駅の発車案内、空港の出発案内、文字化けするシステム画面、文字が崩れる配信コメント、ページがめくれない、ページが巻き戻る、を足した（🎬の演出ビューで動く）。作品のメニューに、Googleドキュメントへの書き出し（本文のみ）を足した。Driveの自動同期は、はじめは切にして、「いま同期する」で手動にできるようにした。Driveのフォルダ名とアプリ名を「読書リーダー(仮)」にした。</div>
+<div class="mb-1.5"><b class="text-softText">2026-11-05（2）</b><br>バックアップの範囲を広げた。作品に加えて、Wiki・魚が拾った言葉・リーダーの設定・本棚の並び順なども、JSONに入る。復元すると、それらも戻る（古い形のファイルも読める）。追加したフォントと、Googleのログイン情報は、入らない。</div>
 <div class="mb-1.5"><b class="text-softText">2026-11-05</b><br>パワポ・エクセルの書き出しを直した。パワポは、作品と作家を表にして、数に単位をつけた（「27話」「3冊」）。冊のグラフにも、文字数の折れ線を重ねた。エクセルは、冊のグラフに文字数の折れ線を足し、ランキングのグラフを縦に並べた。日ごとの見出しは、話と冊を分けて出す（「28 話・1 冊」）。</div>
 <div class="mb-1.5"><b class="text-softText">2026-11-04（6）</b><br>「記録」のタブを、読んだ範囲がわかるようにした。日ごとの記録は、1日・1作品を1行にして、「30話〜50話、65話〜70話（27話）」「4巻（1冊）」のように出す（巻は、読んだ巻の数を冊で数える）。年と全期間は、月ごとに折りたたむ。「よく読んだ」は、上位5つと「ぜんぶ見る」。パワポは、話の棒と文字数の折れ線、読んだ冊数のグラフ、日ごとの表（同じ日の日付は1つ）、ぜんぶのランキングの表。エクセルは、「日ごとの記録」のシート（月ごとに折りたため、同じ日の日付は1つ）、集計の折れ線と冊のグラフ、枠とタイトルつきのカレンダー。</div>
 <div class="mb-1.5"><b class="text-softText">2026-11-04（5）</b><br>パワポ・エクセルの書き出しを、見やすくした。月の記録は、日ごとの細長い棒グラフ（31本）をやめて、週ごとの棒グラフ（4〜6本）にした。日ごとは、色つきのカレンダーの表で見せる。棒グラフには、数字を出す。パワポは、よく読んだ作品を横向きの棒グラフ、ジャンルをドーナツ、作家を横向きの棒グラフにした。エクセルは、「日ごと」「カレンダー（色つき）」のシートを足して、「ランキング」のシートに、グラフを3つ（作品の横棒・ジャンルのドーナツ・作家の横棒）足した。</div>
@@ -9528,8 +9530,25 @@ function setupPaging(){
             document.getElementById('btn-close-global-settings').addEventListener('click', () => {
                 document.getElementById('modal-global-settings').classList.add('hidden');
             });
+            // ===== バックアップ（作品・Wiki・言葉・設定）。追加フォントは、大きいうえ、配布の決まりがあるので、入れない =====
+            const BACKUP_SKIP = new Set(['yomimono_books_v11', 'yomimono_drive_tok', 'yomimono_drive_v1', 'yomimono_drive_cid', 'yomimono_sample_long_v1']);   // 作品は別に入れる／ログイン・Driveの対応表・サンプルの印は、別の端末に持ち込まない
+            function backupBuild() {
+                const data = {};
+                try { for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k && k.indexOf('yomimono_') === 0 && !BACKUP_SKIP.has(k)) data[k] = localStorage.getItem(k); } } catch (e) {}
+                return { app: 'yomimono', format: 2, exportedAt: new Date().toISOString(), books: state.books, data };
+            }
+            function backupRestore(parsed) {   // 古い形（作品の一覧だけ）も読める。戻り値：Wiki・設定などを戻した件数
+                const books = Array.isArray(parsed) ? parsed : (parsed && Array.isArray(parsed.books) ? parsed.books : null);
+                if (!books) return -1;
+                state.books = books; save();   // 先に作品を保存する（save は設定も書くので、そのあとで、バックアップの設定を上書きする）
+                let n = 0;
+                if (!Array.isArray(parsed) && parsed.data && typeof parsed.data === 'object') {
+                    for (const [k, v] of Object.entries(parsed.data)) { if (k.indexOf('yomimono_') !== 0 || BACKUP_SKIP.has(k) || typeof v !== 'string') continue; try { localStorage.setItem(k, v); n++; } catch (e) {} }
+                }
+                return n;
+            }
             document.getElementById('btn-export-json').addEventListener('click', () => {
-                const str = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state.books, null, 2));
+                const str = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backupBuild(), null, 2));
                 const a = document.createElement('a');
                 a.href = str;
                 a.download = `yomimono_backup_${new Date().toISOString().slice(0,10)}.json`;
@@ -9545,14 +9564,12 @@ function setupPaging(){
                 reader.onload = (evt) => {
                     try {
                         const parsed = JSON.parse(evt.target.result);
-                        if (Array.isArray(parsed)) {
-                            state.books = parsed;
-                            save();
-                            renderYearOptions();
-                            renderShelf();
+                        const restored = backupRestore(parsed);
+                        if (restored >= 0) {
                             document.getElementById('modal-global-settings').classList.add('hidden');
-                            toast('データを正常に読み込みました');
-                        }
+                            toast(restored ? 'データを読み込みました（Wiki・設定も戻します）' : 'データを正常に読み込みました');
+                            if (restored) setTimeout(() => location.reload(), 900); else { renderYearOptions(); renderShelf(); }   // Wiki・設定は、読み込み直しで、全部の画面に反映する
+                        } else toast('このファイルは、バックアップではないようです');
                     } catch(err) { toast('読み込みエラーが発生しました'); }
                 };
                 reader.readAsText(file);
