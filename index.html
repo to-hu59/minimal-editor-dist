@@ -1752,6 +1752,7 @@
                         <span class="font-bold text-softMuted block mb-1">更新履歴</span>
                         <div id="changelog" class="text-[11px] text-softMuted leading-relaxed">
 <div class="mb-1.5"><b class="text-softText">2026-11-03（6）</b><br>編集の道具：「画面の枠」を「特殊演出」にして（動く人のマーク）、右端に固定した（「原文」のボタンはなくした）。「特殊な文字」（回転の矢印と星のマーク）を足して、縦書き（この部分だけ）・ななめ・左右反転・上下反転・回転・逆さを入れられるようにした（編集画面で、ルビや色と同じように、その場で見える。選ばないときは、いまの行ぜんぶ）。文字色の「カスタム」に「この色にする」を足して、選んだ色が本文と「A」の線に出るようにした。OCRのボタンのマークを変えた。特殊演出に、電光掲示板（右から左へ流れる・文字ごとの色・背景の色・折り返し）、駅の発車案内、空港の出発案内、文字化けするシステム画面、文字が崩れる配信コメント、ページがめくれない、ページが巻き戻る、を足した（🎬の演出ビューで動く）。作品のメニューに、Googleドキュメントへの書き出し（本文のみ）を足した。Driveの自動同期は、はじめは切にして、「いま同期する」で手動にできるようにした。Driveのフォルダ名とアプリ名を「読書リーダー(仮)」にした。</div>
+<div class="mb-1.5"><b class="text-softText">2026-11-03（8）</b><br>話を足す「ファイルから」で、Wordのファイル（.docx）と、Googleドキュメントを「Microsoft Word（.docx）」でダウンロードしたファイル、ウェブページ（.html）も、取り込めるようにした。文字コードがShift_JISのテキストも、読める。Wordのルビは、｜漢字《かんじ》の形になる。古い形式（.doc）は、.docxにしてから。</div>
 <div class="mb-1.5"><b class="text-softText">2026-11-03（7）</b><br>「ここだけ直す」を足した。読む画面で、直したい文字を選ぶと、下に「ここだけ直す」が出る。押すと、その段落だけが窓で開き、直せる（編集ボタンで、本文ぜんぶを開いて、直す場所を探さなくてよい。ルビや書式の印も、そのまま書き換えられる）。編集画面の道具にも、えんぴつのマークで「ここだけ編集」（選んだ文字だけ）を足した。</div>
 <div class="mb-1.5"><b class="text-softText">2026-11-03（5）</b><br>文字サイズを8pxまで、行の間隔を1.0まで、小さくできるようにした。ページめくりで、ホームの帯を出したとき、最後の1行が帯に隠れるのを直した（ページの下に、空きをとった）。ページめくりで、枠（システム画面・ステータス・掲示板など）が、前のページと次のページに分かれないようにした（入りきらないときは、枠ぜんぶを次のページに送る）。本棚の「詳細絞り込みリボン」を、🔍検索の中に入れた（言葉・作者・レーベル・年・評価・状態で、その場で絞り込める。条件は本棚に残り、上のバッジで解除できる）。ライセンスのページに、昔々ふぉんと・したたる明朝初号・装甲明朝を足した。</div>
 <div class="mb-1.5"><b class="text-softText">2026-11-03（4）</b><br>ウィキ：カテゴリ（重要人物・勢力・第1部など）を自分で作って、1つの項目にいくつでもつけられるようにした（一覧はカテゴリごとにまとまり、開閉・絞り込み・検索ができる）。項目ごとに、ステータス・所持品・スキル・関係などの欄を足せる（使うものだけ。行ごとに「何話から見えるか」も決められる）。本文で、ウィキに登録した言葉にうっすら色がつき、押すと小さなカードで見られる（読んだ話までの内容だけ出して、先の設定は🔒で伏せる。設定の「特殊演出」でON／OFF）。本文の演出に、［着信］［バイブ］［怒鳴り］［ジジッ］［頭痛］［どくん（心臓）］を足した（次の行、または［ここまで］までの文字だけが、ゆれる・ブレる・脈打つ。音と振動は、設定の「音を出す」「振動する」がONのとき。編集の「音・振動」から入れられる）。掲示板はタイプライターのカタカタ音にして、1つ書き終わるとチンと鳴る。ページの左右の余白をつめた。</div>
@@ -4166,20 +4167,72 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             }
         };
 
+        // ファイルから話を足す：.txt .md .docx（Word・Googleドキュメントを「Microsoft Word」でダウンロードしたもの）.html
+        async function unzipEntry(buf, wanted) {
+            const u8 = new Uint8Array(buf), dv = new DataView(buf);
+            let e = -1; for (let i = u8.length - 22; i >= Math.max(0, u8.length - 65557); i--) if (dv.getUint32(i, true) === 0x06054b50) { e = i; break; }
+            if (e < 0) throw new Error('zip');
+            const count = dv.getUint16(e + 10, true); let p = dv.getUint32(e + 16, true);
+            for (let k = 0; k < count; k++) {
+                if (dv.getUint32(p, true) !== 0x02014b50) break;
+                const method = dv.getUint16(p + 10, true), csize = dv.getUint32(p + 20, true), nlen = dv.getUint16(p + 28, true), xlen = dv.getUint16(p + 30, true), clen = dv.getUint16(p + 32, true), off = dv.getUint32(p + 42, true);
+                const name = new TextDecoder().decode(u8.subarray(p + 46, p + 46 + nlen));
+                if (name === wanted) {
+                    const lh = 30 + dv.getUint16(off + 26, true) + dv.getUint16(off + 28, true), data = u8.subarray(off + lh, off + lh + csize);
+                    if (method === 0) return data;
+                    const out = await new Response(new Blob([data]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).arrayBuffer();
+                    return new Uint8Array(out);
+                }
+                p += 46 + nlen + xlen + clen;
+            }
+            return null;
+        }
+        async function docxToText(buf) {
+            const xml = await unzipEntry(buf, 'word/document.xml'); if (!xml) throw new Error('docx');
+            const W = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
+            const doc = new DOMParser().parseFromString(new TextDecoder().decode(xml), 'application/xml');
+            const walk = n => {
+                let t = '';
+                for (const c of n.childNodes) {
+                    if (c.nodeType !== 1) continue; const k = c.localName;
+                    if (k === 't') t += c.textContent;
+                    else if (k === 'tab') t += String.fromCharCode(9);
+                    else if (k === 'br' || k === 'cr') t += String.fromCharCode(10);
+                    else if (k === 'ruby') { const rt = c.getElementsByTagNameNS(W, 'rt')[0], rb = c.getElementsByTagNameNS(W, 'rubyBase')[0], base = rb ? walk(rb) : '', yomi = rt ? walk(rt) : ''; t += yomi ? '｜' + base + '《' + yomi + '》' : base; }
+                    else if (k === 'rPr' || k === 'pPr' || k === 'del' || k === 'delText' || k === 'instrText') continue;
+                    else t += walk(c);
+                }
+                return t;
+            };
+            return [...doc.getElementsByTagNameNS(W, 'p')].map(walk).join(String.fromCharCode(10)).replace(/\s+$/, '');
+        }
+        function htmlToText(html) {
+            const d = new DOMParser().parseFromString(html, 'text/html'), NL = String.fromCharCode(10);
+            d.querySelectorAll('script,style').forEach(x => x.remove());
+            d.querySelectorAll('br').forEach(x => x.replaceWith(NL));
+            d.querySelectorAll('p,div,li,h1,h2,h3,h4,h5,h6,tr').forEach(x => x.append(NL));
+            return (d.body ? d.body.textContent : '').replace(/\n{3,}/g, NL + NL).trim();
+        }
+        function decodeText(buf) {
+            try { return new TextDecoder('utf-8', { fatal: true }).decode(buf); } catch (e) { try { return new TextDecoder('shift_jis').decode(buf); } catch (e2) { return new TextDecoder().decode(buf); } }
+        }
         window.importFileForPart = function(partIdx) {
             const input = document.createElement('input');
             input.type = 'file';
-            input.accept = '.txt,.md';
-            input.onchange = (e) => {
+            input.accept = '.txt,.md,.docx,.html,.htm';
+            input.onchange = async (e) => {
                 const file = e.target.files[0];
                 if (!file) return;
-                const reader = new FileReader();
-                reader.onload = (evt) => {
-                    const text = evt.target.result;
+                try {
+                    const buf = await file.arrayBuffer(), ext = (file.name.match(/\.([^.]+)$/) || [])[1] || '';
+                    let text;
+                    if (/^docx$/i.test(ext)) text = await docxToText(buf);
+                    else if (/^(html?)$/i.test(ext)) text = htmlToText(decodeText(buf));
+                    else if (/^doc$/i.test(ext)) { toast('古い形式（.doc）は読めません。Wordで「名前を付けて保存」から、.docx にして、取り込んでください'); return; }
+                    else text = decodeText(buf);
                     const title = file.name.replace(/\.[^/.]+$/, "");
                     const book = state.books.find(b => b.id === state.currentBookId);
                     const part = book.parts[partIdx];
-
                     if (part.formatType === 'ebook') {
                         if (!part.volumes) part.volumes = [];
                         let vol = part.volumes[0];
@@ -4192,13 +4245,13 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                         if (!part.chapters) part.chapters = [];
                         part.chapters.push({ id: 'chap_' + Math.random().toString(36).substring(2, 9), title, favorite: false, content: text });
                     }
-
                     save();
                     updateDetailStats();
                     renderDetailAccordion();
-                    toast(`「${title}」を取り込みました`);
-                };
-                reader.readAsText(file);
+                    toast('「' + title + '」を取り込みました（' + text.length + '字）');
+                } catch (err) {
+                    toast('取り込めませんでした。Googleドキュメントは、「ファイル → ダウンロード → Microsoft Word（.docx）」で保存してから、選んでください');
+                }
             };
             input.click();
         };
