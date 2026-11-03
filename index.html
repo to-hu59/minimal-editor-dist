@@ -223,6 +223,23 @@
         #cand-notice button.cn-main { background: #fff; color: #23352c; border-color: #fff; font-weight: 700; }
         .wiki-sheet { position: fixed; inset: 0; z-index: 55; background: #f3ede0; display: none; flex-direction: column; font: 14px/1.6 sans-serif; color: #2a2118; }
         .wiki-sheet.open { display: flex; }
+        #modal-wiki-index .wi-panel { width:100%; max-width:430px; max-height:88vh; display:flex; flex-direction:column; background:#f3ede0; border-radius:22px 22px 0 0; padding:14px 14px 18px; font:14px/1.5 sans-serif; color:#2a2118; }
+        #modal-wiki-index .wi-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+        #modal-wiki-index .wi-head h3 { font-weight:800; font-size:15px; margin:0; }
+        #modal-wiki-index .wi-head button { font-size:22px; line-height:1; padding:4px 10px; color:#6b5f55; }
+        #modal-wiki-index .wi-seg { display:flex; gap:6px; margin-bottom:10px; }
+        #modal-wiki-index .wi-seg button { flex:1; padding:8px; border-radius:10px; border:1px solid #cdbf9f; background:#faf6ed; font-weight:700; font-size:12px; color:#6b5f55; }
+        #modal-wiki-index .wi-seg button[aria-pressed="true"] { background:#6f5a47; color:#fff; border-color:#6f5a47; }
+        #wi-body { overflow-y:auto; }
+        #wi-body .wi-row { display:flex; gap:6px; margin:6px 0; }
+        #wi-body .wi-main { flex:1; min-width:0; display:flex; flex-direction:column; align-items:flex-start; text-align:left; padding:10px 12px; background:#fff; border:1px solid #d9cdb8; border-radius:12px; }
+        #wi-body .wi-t { font-weight:700; font-size:13px; word-break:break-all; }
+        #wi-body .wi-n { font-size:11px; color:#8a7a68; } #wi-body .wi-n b { color:#c0392b; font-weight:700; }
+        #wi-body .wi-hide { flex:none; padding:0 12px; border-radius:12px; border:1px solid #d9cdb8; background:#efe6d6; font-size:12px; color:#6b5f55; }
+        #wi-body .wi-gh { display:flex; align-items:center; justify-content:space-between; margin:12px 2px 2px; font-weight:800; font-size:12px; color:#6f5a47; }
+        #wi-body .wi-gh span { font-weight:400; color:#8a7a68; }
+        #wi-body .wi-toggle { display:block; width:100%; text-align:left; margin-top:14px; padding:8px 4px; font-size:12px; font-weight:700; color:#8a7a68; }
+        #wi-body .wi-empty { padding:24px 8px; text-align:center; color:#8a7a68; font-size:12px; }
         .wiki-sheet .wk-head { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; border-bottom: 2px solid #b8923f; background: #23352c; }
         .wiki-sheet .wk-head button { min-width: 44px; min-height: 44px; border: none; background: transparent; font-size: 22px; }
         .wiki-sheet .wk-head h3 { margin: 0; font-size: 15px; color: #e3c783; letter-spacing: .08em; }
@@ -579,12 +596,13 @@
 #btn-drive[data-state="error"] .drive-dot { display:block; background:#c45a4a; }
 @keyframes drive-pulse { to { opacity:.3; } }
 #shelf-normal-header h1 { white-space:nowrap; }
+@media (max-width: 440px) { #shelf-header-btns { gap:2px; } #shelf-header-btns > * { margin:0 !important; width:26px; height:26px; } #shelf-normal-header h1 { font-size:12px; letter-spacing:0; white-space:nowrap; } #shelf-normal-header h1 + p { display:none; } #shelf-normal-header { padding-left:12px; padding-right:12px; } #shelf-normal-header > div:first-child { min-width:0; gap:8px; } }
 @media (max-width: 379px) {
   #shelf-normal-header { padding-left:12px; padding-right:12px; }
   #shelf-normal-header > div:first-child > div:first-child, #shelf-normal-header h1 + p { display:none; }
   #shelf-normal-header h1 { font-size:12px; }
-  #shelf-normal-header > div:last-child { gap:4px; }
-  #shelf-normal-header > div:last-child > * { margin:0 !important; width:30px; }
+  #shelf-normal-header > div:last-child { gap:2px; }
+  #shelf-normal-header > div:last-child > * { margin:0 !important; width:26px; }
 }
 @media (prefers-reduced-motion: reduce) { #btn-drive[data-state="sync"] .drive-dot { animation:none; } }
 #ocr-dialog h2 { font-size:16px; font-weight:bold; margin:0 0 8px; }
@@ -795,21 +813,24 @@
                         <p class="text-[10px] text-softMuted">日本語版はまだなのか</p>
                     </div>
                 </div>
-                <div class="flex items-center space-x-1.5">
-                    <button id="btn-drive" data-state="off" class="w-8 h-8 rounded-xl bg-kinariCard border border-woodBorder text-softMuted flex items-center justify-center active:scale-95 transition shadow-xs relative" title="Driveにつなぐ" aria-label="Driveにつなぐ">
-                        <i class="fa-solid fa-cloud text-xs"></i><span class="drive-dot" aria-hidden="true"></span>
+                <div class="flex items-center space-x-1.5" id="shelf-header-btns">
+                    <button id="btn-shelf-wiki" class="w-8 h-8 rounded-xl bg-kinariCard border border-woodBorder text-woodAccent flex items-center justify-center active:scale-95 transition shadow-xs" title="Wiki（作品ごと）" aria-label="Wiki（作品ごと）">
+                        <i class="fa-solid fa-book text-xs"></i>
                     </button>
-                    <button id="btn-toggle-stats" class="w-8 h-8 rounded-xl bg-kinariCard border border-woodBorder text-woodAccent flex items-center justify-center active:scale-95 transition shadow-xs" title="読書グラフ＆集計">
-                        <i class="fa-solid fa-chart-pie text-xs"></i>
-                    </button>
-                    <button id="btn-shelf-export-print" class="w-8 h-8 rounded-xl bg-kinariCard border border-woodBorder text-softMuted flex items-center justify-center active:scale-95 transition shadow-xs" title="印刷・書き出し">
-                        <i class="fa-solid fa-print text-xs"></i>
+                    <button id="btn-shelf-search" class="w-8 h-8 rounded-xl bg-kinariCard border border-woodBorder text-softMuted flex items-center justify-center active:scale-95 transition shadow-xs" title="検索（本文・コメント・Wiki・ノート）" aria-label="検索">
+                        <i class="fa-solid fa-magnifying-glass text-xs"></i>
                     </button>
                     <button id="btn-toggle-layout" class="w-8 h-8 rounded-xl bg-kinariCard border border-woodBorder text-softMuted flex items-center justify-center active:scale-95 transition shadow-xs" title="表示切り替え">
                         <i id="icon-layout" class="fa-solid fa-table-cells-large text-xs"></i>
                     </button>
-                    <button id="btn-shelf-search" class="w-8 h-8 rounded-xl bg-kinariCard border border-woodBorder text-softMuted flex items-center justify-center active:scale-95 transition shadow-xs" title="検索（本文・コメント・Wiki・ノート）" aria-label="検索">
-                        <i class="fa-solid fa-magnifying-glass text-xs"></i>
+                    <button id="btn-toggle-stats" class="w-8 h-8 rounded-xl bg-kinariCard border border-woodBorder text-woodAccent flex items-center justify-center active:scale-95 transition shadow-xs" title="読書グラフ＆集計">
+                        <i class="fa-solid fa-chart-pie text-xs"></i>
+                    </button>
+                    <button id="btn-drive" data-state="off" class="w-8 h-8 rounded-xl bg-kinariCard border border-woodBorder text-softMuted flex items-center justify-center active:scale-95 transition shadow-xs relative" title="Driveにつなぐ" aria-label="Driveにつなぐ">
+                        <i class="fa-solid fa-cloud text-xs"></i><span class="drive-dot" aria-hidden="true"></span>
+                    </button>
+                    <button id="btn-shelf-export-print" class="w-8 h-8 rounded-xl bg-kinariCard border border-woodBorder text-softMuted flex items-center justify-center active:scale-95 transition shadow-xs" title="印刷・書き出し">
+                        <i class="fa-solid fa-print text-xs"></i>
                     </button>
                     <button id="btn-shelf-global-settings" class="w-8 h-8 rounded-xl bg-kinariCard border border-woodBorder text-softMuted flex items-center justify-center active:scale-95 transition shadow-xs" title="全体設定">
                         <i class="fa-solid fa-gear text-xs"></i>
@@ -1696,6 +1717,13 @@
             <div class="wk-head"><button type="button" id="wiki-back" aria-label="戻る">‹</button><h3 id="wiki-title">Wiki</h3><button type="button" id="wiki-close" aria-label="閉じる">×</button></div>
             <div class="wk-body" id="wiki-body"></div>
         </div>
+        <div id="modal-wiki-index" class="hidden fixed inset-0 z-50 bg-black/40 flex items-end sm:items-center justify-center" role="dialog" aria-label="Wiki（作品ごと）">
+            <div class="wi-panel">
+                <div class="wi-head"><h3>Wiki（作品ごと）</h3><button type="button" id="wi-close" aria-label="閉じる">×</button></div>
+                <div class="wi-seg" role="group" aria-label="並べ方"><button type="button" data-wi="view:work">作品順</button><button type="button" data-wi="view:genre">ジャンル別</button></div>
+                <div id="wi-body"></div>
+            </div>
+        </div>
         <div id="modal-global-settings" class="hidden fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
             <div class="bg-kinari rounded-3xl w-full max-w-sm p-5 space-y-3.5 border border-woodBorder shadow-2xl font-sans overflow-y-auto" style="max-height:92vh;max-height:92dvh;-webkit-overflow-scrolling:touch;overscroll-behavior:contain">
                 <div class="flex items-center justify-between border-b border-woodBorder pb-2.5">
@@ -1753,6 +1781,7 @@
                         <span class="font-bold text-softMuted block mb-1">更新履歴</span>
                         <div id="changelog" class="text-[11px] text-softMuted leading-relaxed">
 <div class="mb-1.5"><b class="text-softText">2026-11-03（6）</b><br>編集の道具：「画面の枠」を「特殊演出」にして（動く人のマーク）、右端に固定した（「原文」のボタンはなくした）。「特殊な文字」（回転の矢印と星のマーク）を足して、縦書き（この部分だけ）・ななめ・左右反転・上下反転・回転・逆さを入れられるようにした（編集画面で、ルビや色と同じように、その場で見える。選ばないときは、いまの行ぜんぶ）。文字色の「カスタム」に「この色にする」を足して、選んだ色が本文と「A」の線に出るようにした。OCRのボタンのマークを変えた。特殊演出に、電光掲示板（右から左へ流れる・文字ごとの色・背景の色・折り返し）、駅の発車案内、空港の出発案内、文字化けするシステム画面、文字が崩れる配信コメント、ページがめくれない、ページが巻き戻る、を足した（🎬の演出ビューで動く）。作品のメニューに、Googleドキュメントへの書き出し（本文のみ）を足した。Driveの自動同期は、はじめは切にして、「いま同期する」で手動にできるようにした。Driveのフォルダ名とアプリ名を「読書リーダー(仮)」にした。</div>
+<div class="mb-1.5"><b class="text-softText">2026-11-03（10）</b><br>本棚の上のバーに、Wiki（本のマーク）を足して、ボタンの並びを、まとまりのある順にした（左から：Wiki・検索・表示切り替え・グラフ・Drive、右の2つは固定：コピー（印刷・書き出し）・設定）。Wikiのボタンを押すと、Wikiのある作品が、作品ごとに並ぶページが開く。「作品順」と「ジャンル別」に並べ替えられて、作品ごとに「隠す」「戻す」ができる（本棚の作品は、そのまま）。押すと、その作品のWikiが開く。</div>
 <div class="mb-1.5"><b class="text-softText">2026-11-03（9）</b><br>作品を消すと、その作品のWikiと、魚（アシスタント）が拾った言葉・仮登録も、一緒に消えるようにした（作品の削除・まとめて削除・別の端末で消えたとき）。いま、持ち主の作品がもうない言葉が残っていたら、アプリを開いたときに片づける。「新しい言葉が○件あります」の知らせは、出さないようにして、魚のボタンに、赤い点をつけるだけにした（中身は、魚のメニューの「新しい言葉」）。本棚（TOP）の魚のメニューに、「Wiki（作品ごと）」を足した。Wikiのある作品が並び、押すと、その作品のWikiが開く。</div>
 <div class="mb-1.5"><b class="text-softText">2026-11-03（8）</b><br>「ファイルから」で、「第1話」「1話」「# 3」「プロローグ」などの行や、Wordの見出し・Markdownの#・HTMLの見出しを見つけて、話に分けて取り込めるようにした（2話以上に分けられるときは、聞く）。本棚の「＋」の作品登録にも、「ファイルから作る」を足した（上で決めたタイプA〜Dで作品を作り、いちばん上の部に取り込む。題名が空ならファイルの名前）。話を足す「ファイルから」で、Wordのファイル（.docx）と、Googleドキュメントを「Microsoft Word（.docx）」でダウンロードしたファイル、ウェブページ（.html）も、取り込めるようにした。文字コードがShift_JISのテキストも、読める。Wordのルビは、｜漢字《かんじ》の形になる。古い形式（.doc）は、.docxにしてから。</div>
 <div class="mb-1.5"><b class="text-softText">2026-11-03（7）</b><br>「ここだけ直す」を足した。読む画面で、直したい文字を選ぶと、下に「ここだけ直す」が出る。押すと、その段落だけが窓で開き、直せる（編集ボタンで、本文ぜんぶを開いて、直す場所を探さなくてよい。ルビや書式の印も、そのまま書き換えられる）。編集画面の道具にも、えんぴつのマークで「ここだけ編集」（選んだ文字だけ）を足した。</div>
@@ -6661,6 +6690,38 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         }
         // 本棚から、作品ごとのWikiを開く（Wikiは「いま開いている作品」のものを出す作りなので、そのあいだだけ切り替えて、閉じたら戻す）
         let wikiShelfPrev = null;
+        // 本棚の上のバーの📖：Wikiのある作品を、作品ごとに並べる（ジャンル別にもできる。作品を隠せる）
+        const WIKI_HIDE_KEY = 'yomimono_wiki_hidden_v1', WIKI_INDEX_VIEW_KEY = 'yomimono_wiki_index_view_v1';
+        let wikiIndexShowHidden = false;
+        function wikiIndexRender() {
+            const body = document.getElementById('wi-body'); if (!body) return;
+            const view = wJson(WIKI_INDEX_VIEW_KEY, 'work') === 'genre' ? 'genre' : 'work', hidden = new Set(wJson(WIKI_HIDE_KEY, []));
+            document.querySelectorAll('#modal-wiki-index .wi-seg button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.wi === 'view:' + view)));
+            const rows = state.books.map(bk => { const i = termsBook(bk.id).inbox; return { bk, n: wikiEntries(bk.id).length, k: i.words.length + i.statuses.length }; }).filter(r => r.n || r.k);
+            const vis = rows.filter(r => !hidden.has(r.bk.id)), hid = rows.filter(r => hidden.has(r.bk.id));
+            const row = (r, isHidden) => '<div class="wi-row"><button type="button" class="wi-main" data-wi="open:' + wEsc(r.bk.id) + '"><span class="wi-t">' + wEsc(r.bk.title) + '</span><span class="wi-n">' + r.n + '件' + (r.k ? '　<b>●新しい言葉</b>' : '') + '</span></button><button type="button" class="wi-hide" data-wi="' + (isHidden ? 'show' : 'hide') + ':' + wEsc(r.bk.id) + '">' + (isHidden ? '戻す' : '隠す') + '</button></div>';
+            let h = '';
+            if (!vis.length) h += '<div class="wi-empty">' + (hid.length ? 'すべて隠してあります。' : 'まだ、Wikiのある作品は、ありません。') + '</div>';
+            else if (view === 'genre') {
+                const g = new Map(); vis.forEach(r => { const k = String(r.bk.genre || '').trim() || 'ジャンルなし'; if (!g.has(k)) g.set(k, []); g.get(k).push(r); });
+                h += [...g].map(([k, arr]) => '<div class="wi-gh">' + wEsc(k) + '<span>' + arr.length + '作品</span></div>' + arr.map(r => row(r, false)).join('')).join('');
+            } else h += vis.map(r => row(r, false)).join('');
+            if (hid.length) h += '<button type="button" class="wi-toggle" data-wi="toggle">' + (wikiIndexShowHidden ? '▾' : '▸') + ' 隠した作品（' + hid.length + '件）</button>' + (wikiIndexShowHidden ? hid.map(r => row(r, true)).join('') : '');
+            body.innerHTML = h;
+        }
+        function wikiIndexOpen() { wikiIndexRender(); document.getElementById('modal-wiki-index').classList.remove('hidden'); }
+        function wikiIndexClose() { document.getElementById('modal-wiki-index').classList.add('hidden'); }
+        document.addEventListener('click', e => {
+            if (e.target.closest && e.target.closest('#btn-shelf-wiki')) { wikiIndexOpen(); return; }
+            const m = document.getElementById('modal-wiki-index'); if (!m || m.classList.contains('hidden')) return;
+            if (e.target === m || (e.target.closest && e.target.closest('#wi-close'))) { wikiIndexClose(); return; }
+            const b = e.target.closest && e.target.closest('[data-wi]'); if (!b || !m.contains(b)) return;
+            const [act, id] = [b.dataset.wi.split(':')[0], b.dataset.wi.slice(b.dataset.wi.indexOf(':') + 1)];
+            if (act === 'view') { wSave(WIKI_INDEX_VIEW_KEY, id); wikiIndexRender(); }
+            else if (act === 'toggle') { wikiIndexShowHidden = !wikiIndexShowHidden; wikiIndexRender(); }
+            else if (act === 'hide' || act === 'show') { const set = new Set(wJson(WIKI_HIDE_KEY, [])); if (act === 'hide') set.add(id); else set.delete(id); wSave(WIKI_HIDE_KEY, [...set]); wikiIndexRender(); }
+            else if (act === 'open') wikiOpenForBook(id);
+        });
         function wikiOpenForBook(bookId) {
             if (!state.books.some(b => b.id === bookId)) return;
             if (!wikiShelfPrev) wikiShelfPrev = { id: state.currentBookId };
