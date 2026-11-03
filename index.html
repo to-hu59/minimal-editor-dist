@@ -1825,6 +1825,7 @@
                         <span class="font-bold text-softMuted block mb-1">更新履歴</span>
                         <div id="changelog" class="text-[11px] text-softMuted leading-relaxed">
 <div class="mb-1.5"><b class="text-softText">2026-11-03（6）</b><br>編集の道具：「画面の枠」を「特殊演出」にして（動く人のマーク）、右端に固定した（「原文」のボタンはなくした）。「特殊な文字」（回転の矢印と星のマーク）を足して、縦書き（この部分だけ）・ななめ・左右反転・上下反転・回転・逆さを入れられるようにした（編集画面で、ルビや色と同じように、その場で見える。選ばないときは、いまの行ぜんぶ）。文字色の「カスタム」に「この色にする」を足して、選んだ色が本文と「A」の線に出るようにした。OCRのボタンのマークを変えた。特殊演出に、電光掲示板（右から左へ流れる・文字ごとの色・背景の色・折り返し）、駅の発車案内、空港の出発案内、文字化けするシステム画面、文字が崩れる配信コメント、ページがめくれない、ページが巻き戻る、を足した（🎬の演出ビューで動く）。作品のメニューに、Googleドキュメントへの書き出し（本文のみ）を足した。Driveの自動同期は、はじめは切にして、「いま同期する」で手動にできるようにした。Driveのフォルダ名とアプリ名を「読書リーダー(仮)」にした。</div>
+<div class="mb-1.5"><b class="text-softText">2026-11-04（6）</b><br>「記録」のタブを、読んだ範囲がわかるようにした。日ごとの記録は、1日・1作品を1行にして、「30話〜50話、65話〜70話（27話）」「4巻（1冊）」のように出す（巻は、読んだ巻の数を冊で数える）。年と全期間は、月ごとに折りたたむ。「よく読んだ」は、上位5つと「ぜんぶ見る」。パワポは、話の棒と文字数の折れ線、読んだ冊数のグラフ、日ごとの表（同じ日の日付は1つ）、ぜんぶのランキングの表。エクセルは、「日ごとの記録」のシート（月ごとに折りたため、同じ日の日付は1つ）、集計の折れ線と冊のグラフ、枠とタイトルつきのカレンダー。</div>
 <div class="mb-1.5"><b class="text-softText">2026-11-04（5）</b><br>パワポ・エクセルの書き出しを、見やすくした。月の記録は、日ごとの細長い棒グラフ（31本）をやめて、週ごとの棒グラフ（4〜6本）にした。日ごとは、色つきのカレンダーの表で見せる。棒グラフには、数字を出す。パワポは、よく読んだ作品を横向きの棒グラフ、ジャンルをドーナツ、作家を横向きの棒グラフにした。エクセルは、「日ごと」「カレンダー（色つき）」のシートを足して、「ランキング」のシートに、グラフを3つ（作品の横棒・ジャンルのドーナツ・作家の横棒）足した。</div>
 <div class="mb-1.5"><b class="text-softText">2026-11-04（4）</b><br>読書グラフ＆統計：中身のない作品（箱だけ。本文のある話が1つもない作品）は、数えないようにした（冊も話も、グラフも、ランキングも）。ジャンル比率のグラフは、上位6つと「その他」にまとめて、名前に割合（％）をつけ、凡例を下に並べて、長い名前が切れないようにした。</div>
 <div class="mb-1.5"><b class="text-softText">2026-11-04（3）</b><br>「記録」のタブに、「パワポで書き出す」「エクセルで書き出す」を足した。いま見ている期間（月・年・全期間）の記録を、ファイルにする。パワポ（.pptx）：表紙（読んだ話・作品・日・文字数）、読んだ話の数のグラフ、文字数のグラフ、よく読んだ作品・ジャンル・作家、日ごとの記録の表。グラフは、パワポの中で直せる本物のグラフ。エクセル（.xlsx）：「記録」（1行ずつ）、「集計」（グラフ2つつき）、「ランキング」の3つのシート。書き出すときは、部品をネットから取るので、ネットが要る。</div>
@@ -8787,6 +8788,36 @@ function setupPaging(){
         function actState() { if (!state.act) { const n = new Date(); state.act = { mode: 'month', y: n.getFullYear(), m: n.getMonth() + 1, day: '' }; } return state.act; }
         function actFilter(all, A) { const p2 = n => String(n).padStart(2, '0'); const pre = A.mode === 'month' ? A.y + '-' + p2(A.m) : A.mode === 'year' ? String(A.y) : ''; return all.filter(x => x.d.startsWith(pre)); }
         function actPrevRange(A) { return A.mode === 'month' ? (A.m === 1 ? { ...A, y: A.y - 1, m: 12 } : { ...A, m: A.m - 1 }) : A.mode === 'year' ? { ...A, y: A.y - 1 } : null; }
+        let actRankAll = false;   // 「よく読んだ」を、ぜんぶ見るか（false＝上位5つ）
+        function actParse(items) {
+            let unit = '話';
+            const nums = items.map((x, i) => { const m = String((x && x.t) || '').replace(/[０-９]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0)).match(/(\d+)\s*([話巻章冊部幕])?/); if (m && m[2] && i === 0) unit = m[2]; return m ? Number(m[1]) : null; });
+            return { unit, nums, ok: items.length > 0 && !nums.some(n => n === null) };
+        }
+        function actRangeLabel(items, numericOnly) {
+            const P = actParse(items);
+            if (!P.ok) return numericOnly ? '' : items.map(x => (x && x.t) || '話').join('、');
+            const u = [...new Set(P.nums)].sort((a, b) => a - b), runs = []; let a = u[0], p = u[0];
+            for (const n of u.slice(1)) { if (n === p + 1) { p = n; continue; } runs.push([a, p]); a = n; p = n; } runs.push([a, p]);
+            return runs.map(([x, y]) => x === y ? x + P.unit : x + P.unit + '〜' + y + P.unit).join('、');
+        }
+        // 数：巻は「冊」で数える（1巻＝1冊）。話などは、そのまま
+        function actCountLabel(items) {
+            const P = actParse(items); if (!P.ok) return items.length + '話';
+            return new Set(P.nums).size + (P.unit === '巻' || P.unit === '冊' ? '冊' : P.unit);
+        }
+        // 1日・1作品を1つにまとめる（日付の古い順）
+        function actBookCount(items) {
+            const g = {}; items.forEach(x => { (g[x.bid] = g[x.bid] || []).push(x); });
+            return Object.values(g).reduce((n, a) => { const P = actParse(a); return n + (P.ok && (P.unit === '巻' || P.unit === '冊') ? new Set(P.nums).size : 1); }, 0);
+        }
+        // 1日の見出し：話は話、巻は冊で、分けて足す（例：27話・1冊）
+        function actDayTotal(groups) { const m = {}; groups.forEach(arr => { const x = /^([0-9]+)(.+)$/.exec(actCountLabel(arr)); if (x) m[x[2]] = (m[x[2]] || 0) + Number(x[1]); }); return Object.entries(m).map(([u, n]) => n + ' ' + u).join('・'); }
+        function actDayGroups(rows) {
+            const m = new Map(); rows.forEach(x => { const k = x.d + '\u0001' + x.bid; if (!m.has(k)) m.set(k, []); m.get(k).push(x); });
+            return [...m.values()].map(a => ({ d: a[0].d, bt: a[0].bt, range: actRangeLabel(a), count: actCountLabel(a), chars: a.reduce((n, x) => n + x.n, 0) })).sort((p, q) => p.d < q.d ? -1 : p.d > q.d ? 1 : (p.bt < q.bt ? -1 : 1));
+        }
+        const actMonthJa = d => d.slice(0, 4) + '年' + Number(d.slice(5, 7)) + '月';
         function renderActivity() {
             const A = actState(), all = readLogAll(), now = new Date();
             const on = 'flex-1 py-1 rounded-lg font-bold bg-white text-woodAccentDark shadow-xs transition', off = 'flex-1 py-1 rounded-lg font-bold text-softMuted hover:text-softText transition';
@@ -8825,35 +8856,38 @@ function setupPaging(){
                 state.actChart = new Chart(document.getElementById('actBarChart').getContext('2d'), { type: 'bar', data: { labels, datasets: [{ label: '読んだ話', data, backgroundColor: '#5b9279', borderRadius: 6 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0, font: { family: 'Hiragino Sans', size: 10 } } }, x: { ticks: { font: { family: 'Hiragino Sans', size: 10 } } } } } });
             }
             // ランキング：作品・ジャンル・作家（読んだ話の数）
-            const top = (map, unit) => Object.entries(map).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([k, v], i) => '<div class="flex items-center justify-between p-1.5 bg-kinari rounded-lg border border-woodBorder"><div class="flex items-center space-x-1.5 min-w-0"><span class="w-4 h-4 rounded-full bg-kinariDark border border-woodBorder flex items-center justify-center font-bold text-[9px] text-woodAccentDark flex-none">' + (i + 1) + '</span><span class="font-bold text-softText truncate">' + escapeHtml(k) + '</span></div><span class="text-[10px] font-bold text-woodAccentDark flex-none">' + v + ' ' + unit + '</span></div>').join('') || '<div class="text-[10px] text-softMuted py-1 text-center">記録がありません</div>';
+            const top = (map, unit) => Object.entries(map).sort((a, b) => b[1] - a[1]).slice(0, actRankAll ? 9999 : 5).map(([k, v], i) => '<div class="flex items-center justify-between p-1.5 bg-kinari rounded-lg border border-woodBorder"><div class="flex items-center space-x-1.5 min-w-0"><span class="w-4 h-4 rounded-full bg-kinariDark border border-woodBorder flex items-center justify-center font-bold text-[9px] text-woodAccentDark flex-none">' + (i + 1) + '</span><span class="font-bold text-softText truncate">' + escapeHtml(k) + '</span></div><span class="text-[10px] font-bold text-woodAccentDark flex-none">' + v + ' ' + unit + '</span></div>').join('') || '<div class="text-[10px] text-softMuted py-1 text-center">記録がありません</div>';
             const byBook = {}, byGenre = {}, byAuthor = {};
             rows.forEach(x => { byBook[x.bt] = (byBook[x.bt] || 0) + 1; x.tags.forEach(t => { byGenre[t] = (byGenre[t] || 0) + 1; }); byAuthor[x.author || '作者名'] = (byAuthor[x.author || '作者名'] || 0) + 1; });
             const box = (title, body) => '<div class="bg-white border border-woodBorder rounded-2xl p-3.5 space-y-1.5 shadow-xs text-xs"><span class="text-[11px] font-bold text-softText block border-b border-woodBorder/50 pb-1.5">' + title + '</span>' + body + '</div>';
-            document.getElementById('act-rank').innerHTML = rows.length ? box('よく読んだ作品', top(byBook, '話')) + box('よく読んだジャンル', top(byGenre, '話')) + box('よく読んだ作家', top(byAuthor, '話')) : '';
+            const rangeOf = {}; rows.forEach(x => { (rangeOf[x.bt] = rangeOf[x.bt] || []).push(x); });
+            const topBooks = Object.entries(byBook).sort((a, b) => b[1] - a[1]).slice(0, actRankAll ? 9999 : 5).map(([k, v], i) => { const r = actRangeLabel(rangeOf[k] || [], true); return '<div class="flex items-center justify-between p-1.5 bg-kinari rounded-lg border border-woodBorder"><div class="flex items-center space-x-1.5 min-w-0"><span class="w-4 h-4 rounded-full bg-kinariDark border border-woodBorder flex items-center justify-center font-bold text-[9px] text-woodAccentDark flex-none">' + (i + 1) + '</span><span class="min-w-0"><span class="font-bold text-softText block truncate">' + escapeHtml(k) + '</span>' + (r ? '<span class="text-[10px] text-softMuted block truncate">' + escapeHtml(r) + '</span>' : '') + '</span></div><span class="text-[10px] font-bold text-woodAccentDark flex-none">' + v + ' 話</span></div>'; }).join('') || '<div class="text-[10px] text-softMuted py-1 text-center">記録がありません</div>';
+            document.getElementById('act-rank').innerHTML = rows.length ? box('よく読んだ作品', topBooks) + box('よく読んだジャンル', top(byGenre, '話')) + box('よく読んだ作家', top(byAuthor, '話')) + ((Object.keys(byBook).length > 5 || Object.keys(byGenre).length > 5 || Object.keys(byAuthor).length > 5) ? '<button type="button" class="w-full text-[11px] text-woodAccentDark underline py-1" onclick="actRankAll=!actRankAll;renderActivity()">' + (actRankAll ? '上位5つだけにする' : 'ぜんぶ見る') + '</button>' : '') : '';
             // 日ごとの記録（新しい日から。月のカレンダーで、日を選んだら、その日だけ）
             let list = rows; if (A.mode === 'month' && A.day) list = rows.filter(x => x.d === A.day);
             const byDay = {}; list.forEach(x => { (byDay[x.d] = byDay[x.d] || []).push(x); });
             const days2 = Object.keys(byDay).sort().reverse(), wd = d => ['日', '月', '火', '水', '木', '金', '土'][new Date(d.slice(0, 4), Number(d.slice(5, 7)) - 1, Number(d.slice(8, 10))).getDay()];
-            const dayHtml = d => { const g = {}; byDay[d].forEach(x => { (g[x.bid + '\u0001' + x.bt] = g[x.bid + '\u0001' + x.bt] || []).push(x); }); return '<div class="bg-white border border-woodBorder rounded-xl p-2.5 shadow-xs text-xs"><div class="font-bold text-softText mb-1">' + Number(d.slice(5, 7)) + '/' + Number(d.slice(8, 10)) + '（' + wd(d) + '）<span class="font-normal text-softMuted">　' + byDay[d].length + ' 話</span></div>' + Object.values(g).map(arr => '<button type="button" data-act-open="' + escapeHtml(arr[0].bid) + '|' + escapeHtml(arr[arr.length - 1].c) + '" class="block w-full text-left py-1"><span class="font-bold text-woodAccentDark">' + escapeHtml(arr[0].bt) + '</span><span class="text-softMuted">　' + arr.map(x => escapeHtml(x.t || '話')).join('、') + '</span></button>').join('') + '</div>'; };
-            document.getElementById('act-list').innerHTML = rows.length ? (A.mode === 'month' && A.day ? '<div class="text-[11px] text-softMuted">' + Number(A.day.slice(5, 7)) + '月' + Number(A.day.slice(8, 10)) + '日の記録　<button type="button" data-act-day="" class="underline">月ぜんぶを見る</button></div>' : '<div class="text-[11px] font-bold text-softText">日ごとの記録</div>') + (days2.length ? days2.map(dayHtml).join('') : '<div class="text-[10px] text-softMuted py-2 text-center">この日の記録は、ありません</div>') : '';
+            const monthFold = (ds, fn) => { const ms = []; ds.forEach(d => { const k = d.slice(0, 7); if (!ms.length || ms[ms.length - 1].k !== k) ms.push({ k, ds: [] }); ms[ms.length - 1].ds.push(d); }); return ms.map((m, i) => '<details' + (i === 0 ? ' open' : '') + ' class="rounded-xl"><summary class="cursor-pointer text-[11px] font-bold text-softText py-1.5">' + actMonthJa(m.k + '-01') + '<span class="font-normal text-softMuted">　' + m.ds.length + '日・' + m.ds.reduce((n, d) => n + byDay[d].length, 0) + ' 話</span></summary><div class="space-y-2">' + m.ds.map(fn).join('') + '</div></details>').join(''); };
+            const dayHtml = d => { const g = {}; byDay[d].forEach(x => { (g[x.bid + '\u0001' + x.bt] = g[x.bid + '\u0001' + x.bt] || []).push(x); }); return '<div class="bg-white border border-woodBorder rounded-xl p-2.5 shadow-xs text-xs"><div class="font-bold text-softText mb-1">' + Number(d.slice(5, 7)) + '/' + Number(d.slice(8, 10)) + '（' + wd(d) + '）<span class="font-normal text-softMuted">　' + actDayTotal(Object.values(g)) + '</span></div>' + Object.values(g).map(arr => '<button type="button" data-act-open="' + escapeHtml(arr[0].bid) + '|' + escapeHtml(arr[arr.length - 1].c) + '" class="block w-full text-left py-1"><span class="font-bold text-woodAccentDark">' + escapeHtml(arr[0].bt) + '</span><span class="text-softMuted">　' + escapeHtml(actRangeLabel(arr)) + '（' + escapeHtml(actCountLabel(arr)) + '）</span></button>').join('') + '</div>'; };
+            document.getElementById('act-list').innerHTML = rows.length ? (A.mode === 'month' && A.day ? '<div class="text-[11px] text-softMuted">' + Number(A.day.slice(5, 7)) + '月' + Number(A.day.slice(8, 10)) + '日の記録　<button type="button" data-act-day="" class="underline">月ぜんぶを見る</button></div>' : '<div class="text-[11px] font-bold text-softText">日ごとの記録</div>') + (days2.length ? (A.mode === 'month' ? days2.map(dayHtml).join('') : monthFold(days2, dayHtml)) : '<div class="text-[10px] text-softMuted py-2 text-center">この日の記録は、ありません</div>') : '';
         }
         // ===== 読んだ記録の書き出し（パワポ・エクセル）：いま見ている期間 =====
         function activityData() {
             const A = actState(), all = readLogAll(), now = new Date(), rows = actFilter(all, A).sort((x, y) => x.d < y.d ? -1 : x.d > y.d ? 1 : 0);
             const title = A.mode === 'month' ? A.y + '年' + A.m + '月' : A.mode === 'year' ? A.y + '年' : '全期間';
-            let labels = [], chapters = [], chars = [], axis = '', cal = null, dayRows = null;
-            const bucket = (keyFn, keys) => { keys.forEach(k => { chapters.push(rows.filter(x => keyFn(x) === k).length); chars.push(rows.filter(x => keyFn(x) === k).reduce((n, x) => n + x.n, 0)); }); };
+            let labels = [], chapters = [], chars = [], bookCnt = [], axis = '', cal = null, dayRows = null;
+            const bucket = (keyFn, keys) => { keys.forEach(k => { bookCnt.push(actBookCount(rows.filter(x => keyFn(x) === k))); chapters.push(rows.filter(x => keyFn(x) === k).length); chars.push(rows.filter(x => keyFn(x) === k).reduce((n, x) => n + x.n, 0)); }); };
             if (A.mode === 'month') {
                 const nd = new Date(A.y, A.m, 0).getDate(), lead = new Date(A.y, A.m - 1, 1).getDay(), weekOf = d => Math.floor((d + lead - 1) / 7), nw = weekOf(nd) + 1, per = {}, perChars = {};
                 rows.forEach(x => { const d = Number(x.d.slice(8, 10)); per[d] = (per[d] || 0) + 1; perChars[d] = (perChars[d] || 0) + x.n; });
-                for (let w = 0; w < nw; w++) { const from = Math.max(1, w * 7 - lead + 1), to = Math.min(nd, w * 7 - lead + 7); labels.push(from + '〜' + to + '日'); let c = 0, n = 0; for (let d = from; d <= to; d++) { c += per[d] || 0; n += perChars[d] || 0; } chapters.push(c); chars.push(n); }
+                for (let w = 0; w < nw; w++) { const from = Math.max(1, w * 7 - lead + 1), to = Math.min(nd, w * 7 - lead + 7); labels.push(from + '〜' + to + '日'); let c = 0, n = 0; for (let d = from; d <= to; d++) { c += per[d] || 0; n += perChars[d] || 0; } chapters.push(c); chars.push(n); bookCnt.push(actBookCount(rows.filter(x => { const d = Number(x.d.slice(8, 10)); return d >= from && d <= to; }))); }
                 axis = '週ごと'; cal = []; for (let w = 0; w < nw; w++) { const line = []; for (let k = 0; k < 7; k++) { const d = w * 7 + k - lead + 1; line.push(d >= 1 && d <= nd ? { d, n: per[d] || 0 } : null); } cal.push(line); }
                 dayRows = Array.from({ length: nd }, (_, i) => [(i + 1) + '日', per[i + 1] || 0, perChars[i + 1] || 0]);
             }
             else if (A.mode === 'year') { const keys = Array.from({ length: 12 }, (_, i) => i + 1); labels = keys.map(m => m + '月'); bucket(x => Number(x.d.slice(5, 7)), keys); axis = '月ごと'; }
             else { const ys = [...new Set(all.map(x => x.d.slice(0, 4)))].sort(); const keys = ys.length ? ys : [String(now.getFullYear())]; labels = keys.map(y => y + '年'); bucket(x => x.d.slice(0, 4), keys); axis = '年ごと'; }
-            const rank = fn => { const m = {}; rows.forEach(x => fn(x).forEach(k => { m[k] = (m[k] || 0) + 1; })); return Object.entries(m).sort((a, b) => b[1] - a[1]).slice(0, 10); };
-            return { A, title, rows, labels, chapters, chars, axis, cal, dayRows, days: new Set(rows.map(x => x.d)).size, books: new Set(rows.map(x => x.bid)).size, totalChars: rows.reduce((n, x) => n + x.n, 0),
+            const rank = fn => { const m = {}; rows.forEach(x => fn(x).forEach(k => { m[k] = (m[k] || 0) + 1; })); return Object.entries(m).sort((a, b) => b[1] - a[1]); };
+            return { A, title, rows, labels, chapters, chars, bookCnt, axis, cal, dayRows, days: new Set(rows.map(x => x.d)).size, books: new Set(rows.map(x => x.bid)).size, totalChars: rows.reduce((n, x) => n + x.n, 0),
                 rankBook: rank(x => [x.bt]), rankGenre: rank(x => x.tags.length ? x.tags : ['（なし）']), rankAuthor: rank(x => [x.author || '作者名']) };
         }
         function loadScriptOnce(url, test) { if (test()) return Promise.resolve(); return new Promise((res, rej) => { const sc = document.createElement('script'); sc.src = url; sc.onload = res; sc.onerror = () => rej(new Error('部品を読み込めませんでした（ネットを確かめてください）')); document.head.append(sc); }); }
@@ -8876,8 +8910,11 @@ function setupPaging(){
                     sl.addText(val, { x: 0.8 + i * 3.0, y: 4.6, w: 2.8, h: 0.8, fontFace: FONT, fontSize: 24, bold: true, color: INK, align: 'center' });
                 });
                 sl.addText('読書リーダー(仮)で書き出し　' + new Date().toLocaleDateString('ja-JP'), { x: 0.8, y: 6.7, w: 11.5, h: 0.4, fontFace: FONT, fontSize: 12, color: SOFT });
-                sl = pptx.addSlide(); head(sl, '読んだ話の数（' + D.axis + '）');
-                sl.addChart(pptx.charts.BAR, [{ name: '読んだ話', labels: D.labels, values: D.chapters }], Object.assign({ x: 0.6, y: 1.3, w: 12.1, h: 5.6 }, barOpt('5B9279')));
+                sl = pptx.addSlide(); head(sl, '読んだ話の数と、文字数（' + D.axis + '）');
+                sl.addChart([
+                    { type: pptx.charts.BAR, data: [{ name: '読んだ話（左の目盛り）', labels: D.labels, values: D.chapters }], options: { chartColors: ['5B9279'], barGapWidthPct: 60, showValue: true, dataLabelFontSize: 14, dataLabelColor: 'FFFFFF', dataLabelFontBold: true, dataLabelPosition: 'inBase', dataLabelFormatCode: '0;;;' } },
+                    { type: pptx.charts.LINE, data: [{ name: '文字数（右の目盛り）', labels: D.labels, values: D.chars }], options: { chartColors: ['C97064'], secondaryValAxis: true, secondaryCatAxis: true, lineSize: 3, lineDataSymbolSize: 9 } }
+                ], { x: 0.6, y: 1.3, w: 12.1, h: 5.6, valAxes: [{ valAxisMinVal: 0, valAxisLabelFontSize: 12, valGridLine: { color: 'E5DDCE', size: 0.75 }, showValAxisTitle: true, valAxisTitle: '読んだ話', valAxisTitleFontSize: 12 }, { valAxisMinVal: 0, valAxisLabelFontSize: 12, valAxisLabelFormatCode: '#,##0', valGridLine: { style: 'none' }, showValAxisTitle: true, valAxisTitle: '文字数', valAxisTitleFontSize: 12 }], catAxes: [{ catAxisLabelFontFace: FONT, catAxisLabelFontSize: 14 }, { catAxisHidden: true }], showLegend: true, legendPos: 'b', legendFontFace: FONT, legendFontSize: 12 });
                 if (D.cal) {   // 月：日ごとは、カレンダーの表（読んだ話の数で、色の濃さが変わる）
                     sl = pptx.addSlide(); head(sl, D.title + 'のカレンダー（日ごとの、読んだ話の数）');
                     const fillOf = n => n >= 6 ? '23594E' : n >= 3 ? '5B9279' : n >= 1 ? 'BCD8C6' : 'F3EEE3', fgOf = n => n >= 3 ? 'FFFFFF' : INK;
@@ -8886,8 +8923,9 @@ function setupPaging(){
                     sl.addTable([wk].concat(body), { x: 0.6, y: 1.4, w: 12.1, colW: Array(7).fill(12.1 / 7), rowH: [0.45].concat(Array(D.cal.length).fill(0.85)), fontFace: FONT, fontSize: 14, border: { type: 'solid', color: 'FFFFFF', pt: 2 } });
                     sl.addText('色が濃いほど、たくさん読んだ日です（1〜2話・3〜5話・6話以上）。', { x: 0.6, y: 6.85, w: 12.1, h: 0.4, fontFace: FONT, fontSize: 12, color: SOFT });
                 }
-                sl = pptx.addSlide(); head(sl, '文字数（' + D.axis + '）');
-                sl.addChart(pptx.charts.BAR, [{ name: '文字数', labels: D.labels, values: D.chars }], Object.assign({ x: 0.6, y: 1.3, w: 12.1, h: 5.6 }, barOpt('DFB163', { dataLabelFormatCode: '#,##0' })));
+                sl = pptx.addSlide(); head(sl, '読んだ冊数（' + D.axis + '）');
+                sl.addChart(pptx.charts.BAR, [{ name: '読んだ冊数', labels: D.labels, values: D.bookCnt }], Object.assign({ x: 0.6, y: 1.3, w: 12.1, h: 5.2 }, barOpt('DFB163')));
+                sl.addText('巻の作品は、読んだ巻の数（1巻＝1冊）。話の作品は、1作品を1冊と数えます。', { x: 0.6, y: 6.6, w: 12.1, h: 0.4, fontFace: FONT, fontSize: 12, color: SOFT });
                 sl = pptx.addSlide(); head(sl, 'よく読んだ作品と、ジャンルの割合');
                 const bookTop = D.rankBook.slice(0, 8).reverse();
                 sl.addChart(pptx.charts.BAR, [{ name: '話', labels: bookTop.map(x => x[0]), values: bookTop.map(x => x[1]) }], Object.assign({ x: 0.5, y: 1.3, w: 7.0, h: 5.6 }, barOpt('5B9279', { barDir: 'bar', catAxisLabelFontSize: 13 })));
@@ -8896,11 +8934,27 @@ function setupPaging(){
                 sl = pptx.addSlide(); head(sl, 'よく読んだ作家');
                 const aut = D.rankAuthor.slice(0, 8).reverse();
                 sl.addChart(pptx.charts.BAR, [{ name: '話', labels: aut.map(x => x[0]), values: aut.map(x => x[1]) }], Object.assign({ x: 0.6, y: 1.3, w: 12.1, h: 5.6 }, barOpt('C97064', { barDir: 'bar', catAxisLabelFontSize: 14 })));
-                const per = 13, pages = Math.max(1, Math.ceil(D.rows.length / per));
-                for (let p = 0; p < pages; p++) {
-                    sl = pptx.addSlide(); head(sl, '日ごとの記録' + (pages > 1 ? '（' + (p + 1) + '/' + pages + '）' : ''));
-                    const body = D.rows.slice(p * per, p * per + per).map(x => [{ text: x.d }, { text: x.bt }, { text: x.t || '話' }, { text: x.n.toLocaleString(), options: { align: 'right' } }]);
-                    sl.addTable([[th('日付'), th('作品'), th('話'), th('文字数', 'right')]].concat(body), { x: 0.6, y: 1.35, w: 12.1, colW: [2.0, 5.6, 2.8, 1.7], fontFace: FONT, fontSize: 12, color: INK, border: { type: 'solid', color: 'D9CDB8', pt: 0.75 }, valign: 'middle' });
+                if (D.rankBook.length > 8 || D.rankGenre.length > 6 || D.rankAuthor.length > 8) {   // グラフに入りきらない分も、表でぜんぶ
+                    const n = Math.max(D.rankBook.length, D.rankGenre.length, D.rankAuthor.length), perR = 14, pagesR = Math.ceil(n / perR);
+                    for (let p = 0; p < pagesR; p++) {
+                        sl = pptx.addSlide(); head(sl, 'ランキング（ぜんぶ）' + (pagesR > 1 ? '（' + (p + 1) + '/' + pagesR + '）' : ''));
+                        const body = []; for (let i = p * perR; i < Math.min(n, p * perR + perR); i++) { const a = D.rankBook[i] || [], g = D.rankGenre[i] || [], w = D.rankAuthor[i] || []; body.push([{ text: String(i + 1) }, { text: a[0] || '' }, { text: a[1] == null ? '' : String(a[1]), options: { align: 'right' } }, { text: g[0] || '' }, { text: g[1] == null ? '' : String(g[1]), options: { align: 'right' } }, { text: w[0] || '' }, { text: w[1] == null ? '' : String(w[1]), options: { align: 'right' } }]); }
+                        sl.addTable([[th('順'), th('作品'), th('話', 'right'), th('ジャンル'), th('話', 'right'), th('作家'), th('話', 'right')]].concat(body), { x: 0.6, y: 1.35, w: 12.1, colW: [0.6, 3.6, 0.8, 2.6, 0.8, 3.0, 0.7], fontFace: FONT, fontSize: 11, color: INK, border: { type: 'solid', color: 'D9CDB8', pt: 0.75 }, valign: 'middle' });
+                    }
+                }
+                const dg = actDayGroups(D.rows), byM = []; dg.forEach(g => { const k = g.d.slice(0, 7); if (!byM.length || byM[byM.length - 1].k !== k) byM.push({ k, a: [] }); byM[byM.length - 1].a.push(g); });
+                const per = 12;
+                for (const M of byM) {
+                    const pages = Math.max(1, Math.ceil(M.a.length / per));
+                    for (let p = 0; p < pages; p++) {
+                        sl = pptx.addSlide(); head(sl, '日ごとの記録　' + actMonthJa(M.k + '-01') + (pages > 1 ? '（' + (p + 1) + '/' + pages + '）' : ''));
+                        const chunk = M.a.slice(p * per, p * per + per), body = chunk.map((g, i) => {   // 同じ日の行は、日付のマスを1つにまとめる
+                            const first = i === 0 || chunk[i - 1].d !== g.d, cells = [{ text: g.bt }, { text: g.range }, { text: g.count, options: { align: 'right' } }];
+                            if (first) { let n = 1; while (i + n < chunk.length && chunk[i + n].d === g.d) n++; cells.unshift({ text: Number(g.d.slice(5, 7)) + '月' + Number(g.d.slice(8, 10)) + '日', options: { rowspan: n, valign: 'middle', bold: true } }); }
+                            return cells;
+                        });
+                        sl.addTable([[th('日付'), th('作品'), th('読んだところ'), th('数', 'right')]].concat(body), { x: 0.6, y: 1.35, w: 12.1, colW: [1.8, 5.0, 3.6, 1.7], fontFace: FONT, fontSize: 12, color: INK, border: { type: 'solid', color: 'D9CDB8', pt: 0.75 }, valign: 'middle' });
+                    }
                 }
                 await pptx.writeFile({ fileName: '読書の記録_' + D.title + '.pptx' });
                 toast('パワポを書き出しました');
@@ -8915,9 +8969,9 @@ function setupPaging(){
                 const ref = ' r="' + colName(ci) + (ri + 1) + '"' + (s ? ' s="' + s + '"' : '');
                 return typeof v === 'number' ? '<c' + ref + '><v>' + v + '</v></c>' : '<c' + ref + ' t="inlineStr"><is><t xml:space="preserve">' + xmlEsc(v) + '</t></is></c>';
             };
-            const r = rows.map((row, ri) => '<row r="' + (ri + 1) + '"' + (opt.rowH && opt.rowH[ri] ? ' ht="' + opt.rowH[ri] + '" customHeight="1"' : '') + '>' + row.map((v, ci) => cellXml(v, ci, ri, ri === 0 && opt.header)).join('') + '</row>').join('');
+            const r = rows.map((row, ri) => '<row r="' + (ri + 1) + '"' + (opt.rowH && opt.rowH[ri] ? ' ht="' + opt.rowH[ri] + '" customHeight="1"' : '') + (opt.outline && opt.outline[ri] ? ' outlineLevel="1"' : '') + '>' + row.map((v, ci) => cellXml(v, ci, ri, ri === 0 && opt.header)).join('') + '</row>').join('');
             const cols = (opt.widths || []).map((w, i) => '<col min="' + (i + 1) + '" max="' + (i + 1) + '" width="' + w + '" customWidth="1"/>').join('');
-            return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">' + (cols ? '<cols>' + cols + '</cols>' : '') + '<sheetData>' + r + '</sheetData>' + (opt.drawing ? '<drawing r:id="rId1"/>' : '') + '</worksheet>';
+            return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">' + (opt.outline ? '<sheetPr><outlinePr summaryBelow="0"/></sheetPr><sheetFormatPr defaultRowHeight="15" outlineLevelRow="1"/>' : '') + (cols ? '<cols>' + cols + '</cols>' : '') + '<sheetData>' + r + '</sheetData>' + (opt.merges && opt.merges.length ? '<mergeCells count="' + opt.merges.length + '">' + opt.merges.map(m => '<mergeCell ref="' + m + '"/>').join('') + '</mergeCells>' : '') + (opt.drawing ? '<drawing r:id="rId1"/>' : '') + '</worksheet>';
         }
         function chartXml(title, sheet, n, serName, labels, values, color) {
             const q = "'" + sheet + "'!", cat = labels.map((l, i) => '<c:pt idx="' + i + '"><c:v>' + xmlEsc(l) + '</c:v></c:pt>').join(''), val = values.map((v, i) => '<c:pt idx="' + i + '"><c:v>' + v + '</c:v></c:pt>').join('');
@@ -8944,25 +8998,32 @@ function setupPaging(){
                 await loadScriptOnce('https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js', () => !!window.JSZip);
                 const z = new JSZip(), NS = 'http://schemas.openxmlformats.org/', RELS = NS + 'package/2006/relationships', OD = NS + 'officeDocument/2006/relationships';
                 const recs = [['日付', '作品', '作者', 'ジャンル（タグ）', '話', '文字数']].concat(D.rows.map(x => [x.d, x.bt, x.author, (x.tags || []).join('、'), x.t || '話', x.n]));
-                const sum = [[D.axis.replace('ごと', ''), '読んだ話', '文字数']].concat(D.labels.map((l, i) => [l, D.chapters[i], D.chars[i]]));
+                const sum = [[D.axis.replace('ごと', ''), '読んだ話', '文字数', '読んだ冊数']].concat(D.labels.map((l, i) => [l, D.chapters[i], D.chars[i], D.bookCnt[i]]));
                 const rk = [['作品', '話', '', 'ジャンル', '話', '', '作家', '話']];
-                for (let i = 0; i < 10; i++) { const a = D.rankBook[i] || [], g = D.rankGenre[i] || [], w = D.rankAuthor[i] || []; if (a.length || g.length || w.length) rk.push([a[0], a[1], '', g[0], g[1], '', w[0], w[1]]); }
-                const sheets = [{ name: '記録', xml: sheetXml(recs, { header: true, widths: [12, 30, 14, 22, 14, 10] }) }, { name: '集計', xml: sheetXml(sum, { header: true, widths: [14, 12, 12], drawing: true }), drawing: true }];
+                for (let i = 0, nmax = Math.max(D.rankBook.length, D.rankGenre.length, D.rankAuthor.length); i < nmax; i++) { const a = D.rankBook[i] || [], g = D.rankGenre[i] || [], w = D.rankAuthor[i] || []; if (a.length || g.length || w.length) rk.push([a[0], a[1], '', g[0], g[1], '', w[0], w[1]]); }
+                // 日ごとの記録：日・作品ごとに1行。月ごとに見出しの行をつくり、その下の行は折りたためる（年・全期間）
+                const dgx = actDayGroups(D.rows), dlines = [['日付', '作品', '読んだところ', '数', '文字数']], dout = [false];
+                if (D.A.mode === 'month') dgx.forEach(g => { dlines.push([g.d, g.bt, g.range, g.count, g.chars]); dout.push(false); });
+                else { let last = ''; dgx.forEach(g => { const k = g.d.slice(0, 7); if (k !== last) { last = k; const tot = dgx.filter(x => x.d.slice(0, 7) === k); dlines.push([{ v: actMonthJa(k + '-01'), s: 1 }, '', '', tot.length + '件', tot.reduce((n, x) => n + x.chars, 0)]); dout.push(false); } dlines.push([g.d, g.bt, g.range, g.count, g.chars]); dout.push(true); }); }
+                const sheets = [{ name: '記録', xml: sheetXml(recs, { header: true, widths: [12, 30, 14, 22, 14, 10] }) }, { name: '集計', xml: sheetXml(sum, { header: true, widths: [14, 12, 12, 12], drawing: true }), drawing: true }];
                 if (D.dayRows) {
                     sheets.push({ name: '日ごと', xml: sheetXml([['日', '読んだ話', '文字数']].concat(D.dayRows), { header: true, widths: [10, 12, 12] }) });
-                    const lv = n => n >= 6 ? 4 : n >= 3 ? 3 : n >= 1 ? 2 : 5, calRows = [['日', '月', '火', '水', '木', '金', '土']];
-                    D.cal.forEach(line => { calRows.push(line.map(c => c ? { v: c.d, s: lv(c.n) } : { v: '', s: 0 })); calRows.push(line.map(c => c ? { v: c.n ? c.n + '話' : '', s: lv(c.n) } : { v: '', s: 0 })); });   // 1週＝2行：上は日、下は読んだ話の数
-                    sheets.push({ name: 'カレンダー', xml: sheetXml(calRows, { header: true, widths: [12, 12, 12, 12, 12, 12, 12] }) });
+                    const lv = n => n >= 6 ? 4 : n >= 3 ? 3 : n >= 1 ? 2 : 5, calRows = [[{ v: D.title + '　読んだ話のカレンダー', s: 15 }], [], ['日', '月', '火', '水', '木', '金', '土'].map(w => ({ v: w, s: 14 }))];   // s=6〜9：上段（枠は上・左・右）／10〜13：下段（枠は下・左・右）／14：曜日／15：タイトル
+                    const sty = (n, low) => (low ? 10 : 6) + (n >= 6 ? 2 : n >= 3 ? 1 : n >= 1 ? 0 : 3);
+                    D.cal.forEach(line => { calRows.push(line.map(c => c ? { v: c.d, s: sty(c.n, false) } : { v: '', s: 0 })); calRows.push(line.map(c => c ? { v: c.n ? c.n + '話' : '', s: sty(c.n, true) } : { v: '', s: 0 })); });   // 1週＝2行：上は日、下は読んだ話の数
+                    sheets.push({ name: 'カレンダー', xml: sheetXml(calRows, { widths: [12, 12, 12, 12, 12, 12, 12] }) });
                 }
                 sheets.push({ name: 'ランキング', xml: sheetXml(rk, { header: true, widths: [30, 6, 3, 18, 6, 3, 18, 6], drawing: true }) });
-                const rkIdx = sheets.length, nb = D.rankBook.length, ng = D.rankGenre.length, na = D.rankAuthor.length;
+                const dmerge = []; for (let i = 1; i < dlines.length;) { let j = i; while (j + 1 < dlines.length && typeof dlines[i][0] === 'string' && dlines[j + 1][0] === dlines[i][0]) j++; if (j > i) { dmerge.push('A' + (i + 1) + ':A' + (j + 1)); for (let k = i + 1; k <= j; k++) dlines[k][0] = ''; } i = j + 1; }
+                sheets.push({ name: '日ごとの記録', xml: sheetXml(dlines, { header: true, widths: [12, 30, 22, 10, 10], outline: dout.some(Boolean) ? dout : null, merges: dmerge }) });
+                const rkIdx = sheets.findIndex(x => x.name === 'ランキング') + 1, nb = D.rankBook.length, ng = D.rankGenre.length, na = D.rankAuthor.length;
                 const ov = sheets.map((sh, i) => '<Override PartName="/xl/worksheets/sheet' + (i + 1) + '.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>').join('');
                 z.file('[Content_Types].xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="' + NS + 'package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>' + ov + '<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/><Override PartName="/xl/drawings/drawing1.xml" ContentType="application/vnd.openxmlformats-officedocument.drawing+xml"/><Override PartName="/xl/charts/chart1.xml" ContentType="application/vnd.openxmlformats-officedocument.drawingml.chart+xml"/><Override PartName="/xl/charts/chart2.xml" ContentType="application/vnd.openxmlformats-officedocument.drawingml.chart+xml"/><Override PartName="/xl/drawings/drawing2.xml" ContentType="application/vnd.openxmlformats-officedocument.drawing+xml"/><Override PartName="/xl/charts/chart3.xml" ContentType="application/vnd.openxmlformats-officedocument.drawingml.chart+xml"/><Override PartName="/xl/charts/chart4.xml" ContentType="application/vnd.openxmlformats-officedocument.drawingml.chart+xml"/><Override PartName="/xl/charts/chart5.xml" ContentType="application/vnd.openxmlformats-officedocument.drawingml.chart+xml"/></Types>');
                 z.file('_rels/.rels', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="' + RELS + '"><Relationship Id="rId1" Type="' + OD + '/officeDocument" Target="xl/workbook.xml"/></Relationships>');
                 z.file('xl/workbook.xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="' + NS + 'spreadsheetml/2006/main" xmlns:r="' + OD + '"><sheets>' + sheets.map((sh, i) => '<sheet name="' + sh.name + '" sheetId="' + (i + 1) + '" r:id="rId' + (i + 1) + '"/>').join('') + '</sheets></workbook>');
                 z.file('xl/_rels/workbook.xml.rels', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="' + RELS + '">' + sheets.map((sh, i) => '<Relationship Id="rId' + (i + 1) + '" Type="' + OD + '/worksheet" Target="worksheets/sheet' + (i + 1) + '.xml"/>').join('') + '<Relationship Id="rId' + (sheets.length + 1) + '" Type="' + OD + '/styles" Target="styles.xml"/></Relationships>');
-                const fill = c => '<fill><patternFill patternType="solid"><fgColor rgb="FF' + c + '"/><bgColor indexed="64"/></patternFill></fill>', ctr = '<alignment horizontal="center" vertical="center" wrapText="1"/>';
-                z.file('xl/styles.xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="' + NS + 'spreadsheetml/2006/main"><fonts count="3"><font><sz val="11"/><name val="Yu Gothic"/></font><font><b/><sz val="11"/><name val="Yu Gothic"/></font><font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Yu Gothic"/></font></fonts><fills count="6"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill>' + fill('BCD8C6') + fill('5B9279') + fill('23594E') + fill('F3EEE3') + '</fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="6"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/><xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1" applyAlignment="1">' + ctr + '</xf><xf numFmtId="0" fontId="2" fillId="3" borderId="0" xfId="0" applyFont="1" applyFill="1" applyAlignment="1">' + ctr + '</xf><xf numFmtId="0" fontId="2" fillId="4" borderId="0" xfId="0" applyFont="1" applyFill="1" applyAlignment="1">' + ctr + '</xf><xf numFmtId="0" fontId="0" fillId="5" borderId="0" xfId="0" applyFill="1" applyAlignment="1">' + ctr + '</xf></cellXfs></styleSheet>');
+                const fill = c => '<fill><patternFill patternType="solid"><fgColor rgb="FF' + c + '"/><bgColor indexed="64"/></patternFill></fill>', ctr = '<alignment horizontal="center" vertical="center" wrapText="1"/>', bd = x => '<border>' + x + '<diagonal/></border>';
+                z.file('xl/styles.xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="' + NS + 'spreadsheetml/2006/main"><fonts count="4"><font><sz val="11"/><name val="Yu Gothic"/></font><font><b/><sz val="11"/><name val="Yu Gothic"/></font><font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Yu Gothic"/></font><font><b/><sz val="16"/><name val="Yu Gothic"/></font></fonts><fills count="6"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill>' + fill('BCD8C6') + fill('5B9279') + fill('23594E') + fill('F3EEE3') + '</fills><borders count="4"><border><left/><right/><top/><bottom/><diagonal/></border>' + bd('<left style="thin"><color rgb="FFB8AEA0"/></left><right style="thin"><color rgb="FFB8AEA0"/></right><top style="thin"><color rgb="FFB8AEA0"/></top><bottom/>') + bd('<left style="thin"><color rgb="FFB8AEA0"/></left><right style="thin"><color rgb="FFB8AEA0"/></right><top/><bottom style="thin"><color rgb="FFB8AEA0"/></bottom>') + bd('<left style="thin"><color rgb="FFB8AEA0"/></left><right style="thin"><color rgb="FFB8AEA0"/></right><top style="thin"><color rgb="FFB8AEA0"/></top><bottom style="thin"><color rgb="FFB8AEA0"/></bottom>') + '</borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="16"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/><xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1" applyAlignment="1">' + ctr + '</xf><xf numFmtId="0" fontId="2" fillId="3" borderId="0" xfId="0" applyFont="1" applyFill="1" applyAlignment="1">' + ctr + '</xf><xf numFmtId="0" fontId="2" fillId="4" borderId="0" xfId="0" applyFont="1" applyFill="1" applyAlignment="1">' + ctr + '</xf><xf numFmtId="0" fontId="0" fillId="5" borderId="0" xfId="0" applyFill="1" applyAlignment="1">' + ctr + '</xf>' + [1, 2].map(b => [[1, 2], [2, 3], [2, 4], [0, 5]].map(([ft, fl]) => '<xf numFmtId="0" fontId="' + ft + '" fillId="' + fl + '" borderId="' + b + '" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1">' + ctr + '</xf>').join('')).join('') + '<xf numFmtId="0" fontId="2" fillId="4" borderId="3" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1">' + ctr + '</xf><xf numFmtId="0" fontId="3" fillId="0" borderId="0" xfId="0" applyFont="1"/></cellXfs></styleSheet>');
                 sheets.forEach((sh, i) => z.file('xl/worksheets/sheet' + (i + 1) + '.xml', sh.xml));
                 z.file('xl/worksheets/_rels/sheet2.xml.rels', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="' + RELS + '"><Relationship Id="rId1" Type="' + OD + '/drawing" Target="../drawings/drawing1.xml"/></Relationships>');
                 const anchor = (c0, r0, c1, r1, id, name, rid) => '<xdr:twoCellAnchor><xdr:from><xdr:col>' + c0 + '</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>' + r0 + '</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:from><xdr:to><xdr:col>' + c1 + '</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>' + r1 + '</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:to><xdr:graphicFrame macro=""><xdr:nvGraphicFramePr><xdr:cNvPr id="' + id + '" name="' + name + '"/><xdr:cNvGraphicFramePr/></xdr:nvGraphicFramePr><xdr:xfrm><a:off x="0" y="0"/><a:ext cx="0" cy="0"/></xdr:xfrm><a:graphic><a:graphicData uri="' + NS + 'drawingml/2006/chart"><c:chart xmlns:c="' + NS + 'drawingml/2006/chart" xmlns:r="' + OD + '" r:id="' + rid + '"/></a:graphicData></a:graphic></xdr:graphicFrame><xdr:clientData/></xdr:twoCellAnchor>';
@@ -8975,8 +9036,15 @@ function setupPaging(){
                 z.file('xl/charts/chart4.xml', rankChartXml('donut', 'ジャンルの割合', 'ランキング', 'D', 'E', D.rankGenre.map(x => x[0]), D.rankGenre.map(x => x[1])));
                 z.file('xl/charts/chart5.xml', rankChartXml('barH', 'よく読んだ作家（話）', 'ランキング', 'G', 'H', D.rankAuthor.map(x => x[0]), D.rankAuthor.map(x => x[1]), 'C97064'));
                 const n = D.labels.length;
-                z.file('xl/charts/chart1.xml', chartXml('読んだ話の数（' + D.axis + '）　' + D.title, '集計', n, '読んだ話', D.labels, D.chapters, '5B9279'));
-                z.file('xl/charts/chart2.xml', chartXml('文字数（' + D.axis + '）　' + D.title, '集計', n, '文字数', D.labels, D.chars, 'DFB163').split("$B$").join("$C$"));
+                {
+                    const q = "'集計'!", pt = a => a.map((v, i) => '<c:pt idx="' + i + '"><c:v>' + xmlEsc(v) + '</c:v></c:pt>').join('');
+                    const line = '<c:lineChart><c:grouping val="standard"/><c:varyColors val="0"/><c:ser><c:idx val="1"/><c:order val="1"/><c:tx><c:strRef><c:f>' + q + '$C$1</c:f><c:strCache><c:ptCount val="1"/><c:pt idx="0"><c:v>文字数（右の目盛り）</c:v></c:pt></c:strCache></c:strRef></c:tx><c:spPr><a:ln w="38100"><a:solidFill><a:srgbClr val="C97064"/></a:solidFill></a:ln></c:spPr><c:marker><c:symbol val="circle"/><c:size val="8"/><c:spPr><a:solidFill><a:srgbClr val="C97064"/></a:solidFill></c:spPr></c:marker><c:cat><c:strRef><c:f>' + q + '$A$2:$A$' + (n + 1) + '</c:f><c:strCache><c:ptCount val="' + n + '"/>' + pt(D.labels) + '</c:strCache></c:strRef></c:cat><c:val><c:numRef><c:f>' + q + '$C$2:$C$' + (n + 1) + '</c:f><c:numCache><c:formatCode>General</c:formatCode><c:ptCount val="' + n + '"/>' + pt(D.chars) + '</c:numCache></c:numRef></c:val><c:smooth val="0"/></c:ser><c:marker val="1"/><c:axId val="50010003"/><c:axId val="50010004"/></c:lineChart>';
+                    const axes2 = '<c:catAx><c:axId val="50010003"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:delete val="1"/><c:axPos val="b"/><c:majorTickMark val="none"/><c:minorTickMark val="none"/><c:tickLblPos val="nextTo"/><c:crossAx val="50010004"/><c:crosses val="autoZero"/><c:auto val="1"/><c:lblAlgn val="ctr"/><c:lblOffset val="100"/><c:noMultiLvlLbl val="0"/></c:catAx><c:valAx><c:axId val="50010004"/><c:scaling><c:orientation val="minMax"/><c:min val="0"/></c:scaling><c:delete val="0"/><c:axPos val="r"/><c:numFmt formatCode="#,##0" sourceLinked="0"/><c:majorTickMark val="out"/><c:minorTickMark val="none"/><c:tickLblPos val="nextTo"/><c:crossAx val="50010003"/><c:crosses val="max"/><c:crossBetween val="between"/></c:valAx>';
+                    let cx = chartXml('読んだ話の数と、文字数（' + D.axis + '）　' + D.title, '集計', n, '読んだ話', D.labels, D.chapters, '5B9279');
+                    cx = cx.replace('</c:barChart>', () => '</c:barChart>' + line).replace('</c:valAx></c:plotArea>', () => '</c:valAx>' + axes2 + '</c:plotArea><c:legend><c:legendPos val="b"/><c:overlay val="0"/></c:legend>');
+                    z.file('xl/charts/chart1.xml', cx);
+                }
+                z.file('xl/charts/chart2.xml', chartXml('読んだ冊数（' + D.axis + '）　' + D.title, '集計', n, '読んだ冊数', D.labels, D.bookCnt, 'DFB163').split("$B$").join("$D$"));
                 saveBlobAs(await z.generateAsync({ type: 'blob', mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), '読書の記録_' + D.title + '.xlsx');
                 toast('エクセルを書き出しました');
             } catch (e) { toast(e.message || 'エクセルを作れませんでした'); }
