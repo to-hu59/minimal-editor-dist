@@ -596,15 +596,12 @@
 #btn-drive[data-state="error"] .drive-dot { display:block; background:#c45a4a; }
 @keyframes drive-pulse { to { opacity:.3; } }
 #shelf-normal-header h1 { white-space:nowrap; }
-@media (max-width: 520px) { #shelf-header-btns { gap:3px; } #shelf-header-btns > * { margin:0 !important; width:28px; height:28px; } #shelf-normal-header h1 { font-size:12px; letter-spacing:0; white-space:nowrap; } #shelf-normal-header h1 + p { display:none; } #shelf-normal-header { padding-left:12px; padding-right:12px; } #shelf-normal-header > div:first-child { min-width:0; gap:8px; } }
-@media (max-width: 420px) { #shelf-header-btns { gap:2px; } #shelf-header-btns > * { width:26px; height:26px; } }
-@media (max-width: 340px) { #shelf-header-btns > * { width:24px !important; height:24px !important; } #shelf-normal-header h1 { font-size:11px !important; } }
 @media (max-width: 379px) {
   #shelf-normal-header { padding-left:12px; padding-right:12px; }
   #shelf-normal-header > div:first-child > div:first-child, #shelf-normal-header h1 + p { display:none; }
   #shelf-normal-header h1 { font-size:12px; }
-  #shelf-normal-header > div:last-child { gap:2px; }
-  #shelf-normal-header > div:last-child > * { margin:0 !important; width:26px; }
+  #shelf-normal-header > div:last-child { gap:4px; }
+  #shelf-normal-header > div:last-child > * { margin:0 !important; width:30px; }
 }
 @media (prefers-reduced-motion: reduce) { #btn-drive[data-state="sync"] .drive-dot { animation:none; } }
 #ocr-dialog h2 { font-size:16px; font-weight:bold; margin:0 0 8px; }
@@ -816,9 +813,6 @@
                     </div>
                 </div>
                 <div class="flex items-center space-x-1.5" id="shelf-header-btns">
-                    <button id="btn-shelf-wiki" class="w-8 h-8 rounded-xl bg-kinariCard border border-woodBorder text-woodAccent flex items-center justify-center active:scale-95 transition shadow-xs" title="Wiki（作品ごと）" aria-label="Wiki（作品ごと）">
-                        <i class="fa-solid fa-book text-xs"></i>
-                    </button>
                     <button id="btn-shelf-search" class="w-8 h-8 rounded-xl bg-kinariCard border border-woodBorder text-softMuted flex items-center justify-center active:scale-95 transition shadow-xs" title="検索（本文・コメント・Wiki・ノート）" aria-label="検索">
                         <i class="fa-solid fa-magnifying-glass text-xs"></i>
                     </button>
@@ -1753,6 +1747,11 @@
                         <button id="btn-pwa-update" class="mt-2 w-full py-2 bg-kinariDark text-softMuted hover:text-softText border border-woodBorder rounded-xl font-bold active:scale-95 transition">最新の版に更新する</button>
                     </div>
                     <div class="pt-3 border-t border-woodBorder">
+                        <span class="font-bold text-softMuted block mb-1">Wiki（作品ごと）</span>
+                        <p class="text-[11px] text-softMuted mb-1.5">Wikiのある作品が、作品ごとに並びます。「作品順」と「ジャンル別」に並べ替えられて、作品を「隠す」こともできます。</p>
+                        <button id="btn-open-wiki-index" class="w-full py-2 bg-kinariDark text-softText hover:bg-kinari border border-woodBorder rounded-xl font-bold active:scale-95 transition">Wiki（作品ごと）を開く</button>
+                    </div>
+                    <div class="pt-3 border-t border-woodBorder">
                         <span class="font-bold text-softMuted block mb-1">共通の設定（音読・wiki）</span>
                         <p class="text-[11px] text-softMuted mb-1.5">音読の辞書・記号の読み方・言葉の自動拾いの、全作品に使う設定です。作品ごとに「共通を使う」か「その作品だけ」を選べます。</p>
                         <button id="btn-open-speech-common" class="w-full py-2 bg-kinariDark text-softText hover:bg-kinari border border-woodBorder rounded-xl font-bold active:scale-95 transition">共通の設定を開く</button>
@@ -1783,7 +1782,7 @@
                         <span class="font-bold text-softMuted block mb-1">更新履歴</span>
                         <div id="changelog" class="text-[11px] text-softMuted leading-relaxed">
 <div class="mb-1.5"><b class="text-softText">2026-11-03（6）</b><br>編集の道具：「画面の枠」を「特殊演出」にして（動く人のマーク）、右端に固定した（「原文」のボタンはなくした）。「特殊な文字」（回転の矢印と星のマーク）を足して、縦書き（この部分だけ）・ななめ・左右反転・上下反転・回転・逆さを入れられるようにした（編集画面で、ルビや色と同じように、その場で見える。選ばないときは、いまの行ぜんぶ）。文字色の「カスタム」に「この色にする」を足して、選んだ色が本文と「A」の線に出るようにした。OCRのボタンのマークを変えた。特殊演出に、電光掲示板（右から左へ流れる・文字ごとの色・背景の色・折り返し）、駅の発車案内、空港の出発案内、文字化けするシステム画面、文字が崩れる配信コメント、ページがめくれない、ページが巻き戻る、を足した（🎬の演出ビューで動く）。作品のメニューに、Googleドキュメントへの書き出し（本文のみ）を足した。Driveの自動同期は、はじめは切にして、「いま同期する」で手動にできるようにした。Driveのフォルダ名とアプリ名を「読書リーダー(仮)」にした。</div>
-<div class="mb-1.5"><b class="text-softText">2026-11-03（10）</b><br>本棚の上のバーに、Wiki（本のマーク）を足して、ボタンの並びを、まとまりのある順にした（左から：Wiki・検索・表示切り替え・グラフ・Drive、右の2つは固定：コピー（印刷・書き出し）・設定）。Wikiのボタンを押すと、Wikiのある作品が、作品ごとに並ぶページが開く。「作品順」と「ジャンル別」に並べ替えられて、作品ごとに「隠す」「戻す」ができる（本棚の作品は、そのまま）。押すと、その作品のWikiが開く。</div>
+<div class="mb-1.5"><b class="text-softText">2026-11-03（10）</b><br>本棚の上のバーのボタンを、まとまりのある順に並べ直した（左から：検索・表示切り替え・グラフ・Drive、右の2つは固定：コピー（印刷・書き出し）・設定）。全体設定に「Wiki（作品ごと）」を足した。開くと、Wikiのある作品が、作品ごとに並ぶページが出る。「作品順」と「ジャンル別」に並べ替えられて、作品ごとに「隠す」「戻す」ができる（本棚の作品は、そのまま）。押すと、その作品のWikiが開く。</div>
 <div class="mb-1.5"><b class="text-softText">2026-11-03（9）</b><br>作品を消すと、その作品のWikiと、魚（アシスタント）が拾った言葉・仮登録も、一緒に消えるようにした（作品の削除・まとめて削除・別の端末で消えたとき）。いま、持ち主の作品がもうない言葉が残っていたら、アプリを開いたときに片づける。「新しい言葉が○件あります」の知らせは、出さないようにして、魚のボタンに、赤い点をつけるだけにした（中身は、魚のメニューの「新しい言葉」）。本棚（TOP）の魚のメニューに、「Wiki（作品ごと）」を足した。Wikiのある作品が並び、押すと、その作品のWikiが開く。</div>
 <div class="mb-1.5"><b class="text-softText">2026-11-03（8）</b><br>「ファイルから」で、「第1話」「1話」「# 3」「プロローグ」などの行や、Wordの見出し・Markdownの#・HTMLの見出しを見つけて、話に分けて取り込めるようにした（2話以上に分けられるときは、聞く）。本棚の「＋」の作品登録にも、「ファイルから作る」を足した（上で決めたタイプA〜Dで作品を作り、いちばん上の部に取り込む。題名が空ならファイルの名前）。話を足す「ファイルから」で、Wordのファイル（.docx）と、Googleドキュメントを「Microsoft Word（.docx）」でダウンロードしたファイル、ウェブページ（.html）も、取り込めるようにした。文字コードがShift_JISのテキストも、読める。Wordのルビは、｜漢字《かんじ》の形になる。古い形式（.doc）は、.docxにしてから。</div>
 <div class="mb-1.5"><b class="text-softText">2026-11-03（7）</b><br>「ここだけ直す」を足した。読む画面で、直したい文字を選ぶと、下に「ここだけ直す」が出る。押すと、その段落だけが窓で開き、直せる（編集ボタンで、本文ぜんぶを開いて、直す場所を探さなくてよい。ルビや書式の印も、そのまま書き換えられる）。編集画面の道具にも、えんぴつのマークで「ここだけ編集」（選んだ文字だけ）を足した。</div>
@@ -6714,7 +6713,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         function wikiIndexOpen() { wikiIndexRender(); document.getElementById('modal-wiki-index').classList.remove('hidden'); }
         function wikiIndexClose() { document.getElementById('modal-wiki-index').classList.add('hidden'); }
         document.addEventListener('click', e => {
-            if (e.target.closest && e.target.closest('#btn-shelf-wiki')) { wikiIndexOpen(); return; }
+            if (e.target.closest && e.target.closest('#btn-open-wiki-index')) { document.getElementById('modal-global-settings').classList.add('hidden'); wikiIndexOpen(); return; }
             const m = document.getElementById('modal-wiki-index'); if (!m || m.classList.contains('hidden')) return;
             if (e.target === m || (e.target.closest && e.target.closest('#wi-close'))) { wikiIndexClose(); return; }
             const b = e.target.closest && e.target.closest('[data-wi]'); if (!b || !m.contains(b)) return;
