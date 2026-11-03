@@ -1600,7 +1600,7 @@
                     <div class="grid grid-cols-2 gap-2 text-center text-xs">
                         <div class="bg-white border border-woodBorder rounded-2xl p-3 shadow-xs">
                             <span class="text-[10px] text-softMuted block">総登録作品</span>
-                            <span id="stat-total-books" class="text-base font-bold text-softText">0 冊</span>
+                            <span id="stat-total-books" class="text-base font-bold text-softText">0 冊・0 話</span>
                         </div>
                         <div class="bg-white border border-woodBorder rounded-2xl p-3 shadow-xs">
                             <span class="text-[10px] text-softMuted block">総文字数</span>
@@ -1608,6 +1608,10 @@
                         </div>
                     </div>
 
+                    <div class="bg-kinariDark p-1 rounded-xl flex items-center border border-woodBorder text-xs" role="group" aria-label="数え方">
+                        <button type="button" id="btn-stat-unit-book" class="flex-1 py-1 rounded-lg font-bold bg-white text-woodAccentDark shadow-xs transition">冊で数える</button>
+                        <button type="button" id="btn-stat-unit-chap" class="flex-1 py-1 rounded-lg font-bold text-softMuted hover:text-softText transition">話で数える</button>
+                    </div>
                     <div id="stat-panel-time" class="space-y-3.5">
                         <div class="bg-kinariDark p-1 rounded-xl flex items-center border border-woodBorder text-xs">
                             <button type="button" id="btn-time-sub-year" class="flex-1 py-1 rounded-lg font-bold bg-white text-woodAccentDark shadow-xs transition">年別で見る</button>
@@ -1796,6 +1800,7 @@
                         <span class="font-bold text-softMuted block mb-1">更新履歴</span>
                         <div id="changelog" class="text-[11px] text-softMuted leading-relaxed">
 <div class="mb-1.5"><b class="text-softText">2026-11-03（6）</b><br>編集の道具：「画面の枠」を「特殊演出」にして（動く人のマーク）、右端に固定した（「原文」のボタンはなくした）。「特殊な文字」（回転の矢印と星のマーク）を足して、縦書き（この部分だけ）・ななめ・左右反転・上下反転・回転・逆さを入れられるようにした（編集画面で、ルビや色と同じように、その場で見える。選ばないときは、いまの行ぜんぶ）。文字色の「カスタム」に「この色にする」を足して、選んだ色が本文と「A」の線に出るようにした。OCRのボタンのマークを変えた。特殊演出に、電光掲示板（右から左へ流れる・文字ごとの色・背景の色・折り返し）、駅の発車案内、空港の出発案内、文字化けするシステム画面、文字が崩れる配信コメント、ページがめくれない、ページが巻き戻る、を足した（🎬の演出ビューで動く）。作品のメニューに、Googleドキュメントへの書き出し（本文のみ）を足した。Driveの自動同期は、はじめは切にして、「いま同期する」で手動にできるようにした。Driveのフォルダ名とアプリ名を「読書リーダー(仮)」にした。</div>
+<div class="mb-1.5"><b class="text-softText">2026-11-04</b><br>読書グラフ＆統計を直した。月別は、いまの月まで（直近6か月）を出すようにした（これまでは、5〜10月に決まっていて、11月の作品が出なかった）。「冊で数える」「話で数える」の切り替えを足した。話にすると、年別・月別のグラフ、ジャンル比率、作家別が、話の数で出る。総登録作品のところにも、「4 冊・14 話」と、話の数を出す。</div>
 <div class="mb-1.5"><b class="text-softText">2026-11-03（12）</b><br>Driveのログイン（Googleの許可）は、約1時間で切れるので、切れたあと、最初に画面をタップしたときに、自動でやり直すようにした（許可ずみなら、小さな窓が一瞬ひらいて、すぐ閉じる）。設定のGoogle Driveの欄の、「ログインが切れたら、さわったときに自動でやり直す」で、入り切りできる（はじめは入）。</div>
 <div class="mb-1.5"><b class="text-softText">2026-11-03（11）</b><br>「ファイルから」（話を足す・「＋」の「ファイルから作る」）で、画像（.png .jpg など）も、何枚でも、まとめて選べるようにした。画像は、ファイルの名前の順に並び、「1話ごとの枚数」（例：3,4,3／3枚ずつなら 3）か、画像ごとの「新しい話」のチェックで、どこから新しい話にするかを決められる。決めたあと、1枚ずつ、画像から文字を読み取って（日本語の横書き。最初はネットが必要）、話にする。</div>
 <div class="mb-1.5"><b class="text-softText">2026-11-03（10）</b><br>本棚の上のバーのボタンを、まとまりのある順に並べ直した（左から：検索・表示切り替え・グラフ・Drive、右の2つは固定：コピー（印刷・書き出し）・設定）。全体設定に「Wiki（作品ごと）」を足した。開くと、Wikiのある作品が、作品ごとに並ぶページが出る。「作品順」と「ジャンル別」に並べ替えられて、作品ごとに「隠す」「戻す」ができる（本棚の作品は、そのまま）。押すと、その作品のWikiが開く。</div>
@@ -8711,6 +8716,23 @@ function setupPaging(){
             renderGlobalSummaryStats();
         }
 
+        // 数え方：冊で数える（1冊＝1）か、話で数える（その作品の話の数）か
+        function statUnit() { return state.statUnit === 'chap' ? 'chap' : 'book'; }
+        function chapCountOf(b) { let n = 0; (b.parts || []).forEach(p => { n += (p.chapters || []).length; (p.volumes || []).forEach(v => { n += (v.chapters || []).length; }); }); return n; }
+        function statW(b) { return statUnit() === 'chap' ? chapCountOf(b) : 1; }
+        function statUnitWord() { return statUnit() === 'chap' ? '話' : '冊'; }
+        function paintStatUnit() {
+            const on = 'flex-1 py-1 rounded-lg font-bold bg-white text-woodAccentDark shadow-xs transition', off = 'flex-1 py-1 rounded-lg font-bold text-softMuted hover:text-softText transition';
+            const a = document.getElementById('btn-stat-unit-book'), b = document.getElementById('btn-stat-unit-chap'); if (!a || !b) return;
+            a.className = statUnit() === 'book' ? on : off; b.className = statUnit() === 'chap' ? on : off;
+        }
+        // 直近6か月（いまの月まで）：[{ key, label }]
+        function recentMonths(n = 6) {
+            const d = new Date(), out = [];
+            for (let i = n - 1; i >= 0; i--) { const x = new Date(d.getFullYear(), d.getMonth() - i, 1), y = x.getFullYear(), m = x.getMonth() + 1; out.push({ key: y + '-' + m, label: (y === d.getFullYear() ? '' : String(y).slice(2) + '年') + m + '月' }); }
+            return out;
+        }
+        function bookMonthKey(b) { const d = new Date(); return (b.year || d.getFullYear()) + '-' + (b.month || (d.getMonth() + 1)); }
         function renderGlobalSummaryStats() {
             const totalBooks = state.books.length;
             let totalChars = 0;
@@ -8726,7 +8748,8 @@ function setupPaging(){
                 });
             });
 
-            document.getElementById('stat-total-books').textContent = `${totalBooks} 冊`;
+            paintStatUnit();
+            document.getElementById('stat-total-books').textContent = `${totalBooks} 冊・${state.books.reduce((n, b) => n + chapCountOf(b), 0).toLocaleString()} 話`;
             document.getElementById('stat-total-chars').textContent = `${totalChars.toLocaleString()} 字`;
 
             document.getElementById('stat-status-chips').innerHTML = Object.entries(statusCounts).map(([st, cnt]) => `
@@ -8743,14 +8766,14 @@ function setupPaging(){
             if (state.timeSubMode === 'year') {
                 btnYear.className = "flex-1 py-1 rounded-lg font-bold bg-white text-woodAccentDark shadow-xs transition";
                 btnMonth.className = "flex-1 py-1 rounded-lg font-bold text-softMuted hover:text-softText transition";
-                document.getElementById('time-chart-title').textContent = "年ごとの読書冊数";
+                document.getElementById('time-chart-title').textContent = "年ごとの読書" + (statUnit() === 'chap' ? '話数' : '冊数');
                 document.getElementById('time-sub-genre-title').textContent = "年別の主要ジャンル比率";
                 document.getElementById('time-sub-author-title').textContent = "年別のお気に入り作家";
                 renderTimeYearStats();
             } else {
                 btnYear.className = "flex-1 py-1 rounded-lg font-bold text-softMuted hover:text-softText transition";
                 btnMonth.className = "flex-1 py-1 rounded-lg font-bold bg-white text-woodAccentDark shadow-xs transition";
-                document.getElementById('time-chart-title').textContent = "月ごとの読書冊数 (直近)";
+                document.getElementById('time-chart-title').textContent = "月ごとの読書" + (statUnit() === 'chap' ? '話数' : '冊数') + " (直近6か月)";
                 document.getElementById('time-sub-genre-title').textContent = "直近のジャンル比率";
                 document.getElementById('time-sub-author-title').textContent = "直近によく読む作家";
                 renderTimeMonthStats();
@@ -8765,7 +8788,7 @@ function setupPaging(){
             years.forEach(y => yearCounts[`${y}年`] = 0);
             state.books.forEach(b => {
                 const y = b.year || 2026;
-                yearCounts[`${y}年`] = (yearCounts[`${y}年`] || 0) + 1;
+                yearCounts[`${y}年`] = (yearCounts[`${y}年`] || 0) + statW(b);
             });
 
             if (state.timeBarChartInstance) state.timeBarChartInstance.destroy();
@@ -8775,7 +8798,7 @@ function setupPaging(){
                 data: {
                     labels: Object.keys(yearCounts),
                     datasets: [{
-                        label: '読書冊数',
+                        label: statUnit() === 'chap' ? '読書話数' : '読書冊数',
                         data: Object.values(yearCounts),
                         backgroundColor: '#dfb163',
                         borderRadius: 6
@@ -8797,23 +8820,18 @@ function setupPaging(){
 
         function renderTimeMonthStats() {
             const ctx = document.getElementById('timeBarChart').getContext('2d');
-            const monthlyCounts = { '5月': 0, '6月': 0, '7月': 0, '8月': 0, '9月': 0, '10月': 0 };
-
-            state.books.forEach(b => {
-                const m = b.month || 10;
-                const key = `${m}月`;
-                if (monthlyCounts[key] !== undefined) monthlyCounts[key]++;
-            });
+            const months = recentMonths(6), counts = {}; months.forEach(m => { counts[m.key] = 0; });
+            state.books.forEach(b => { const k = bookMonthKey(b); if (counts[k] !== undefined) counts[k] += statW(b); });
 
             if (state.timeBarChartInstance) state.timeBarChartInstance.destroy();
 
             state.timeBarChartInstance = new Chart(ctx, {
                 type: 'bar',
                 data: {
-                    labels: Object.keys(monthlyCounts),
+                    labels: months.map(m => m.label),
                     datasets: [{
-                        label: '読書冊数',
-                        data: Object.values(monthlyCounts),
+                        label: statUnit() === 'chap' ? '読書話数' : '読書冊数',
+                        data: months.map(m => counts[m.key]),
                         backgroundColor: '#5b9279',
                         borderRadius: 6
                     }]
@@ -8823,20 +8841,20 @@ function setupPaging(){
                     maintainAspectRatio: false,
                     plugins: { legend: { display: false } },
                     scales: {
-                        y: { beginAtZero: true, ticks: { stepSize: 1, font: { family: 'Hiragino Sans', size: 10 } } },
+                        y: { beginAtZero: true, ticks: { precision: 0, font: { family: 'Hiragino Sans', size: 10 } } },
                         x: { ticks: { font: { family: 'Hiragino Sans', size: 10 } } }
                     }
                 }
             });
 
-            const recent = state.books.filter(b => (b.month || 10) >= 8);
+            const keys = new Set(months.map(m => m.key)), recent = state.books.filter(b => keys.has(bookMonthKey(b)));
             renderSubPeriodGenreAndAuthor(recent.length > 0 ? recent : state.books);
         }
 
         function renderSubPeriodGenreAndAuthor(targetBooks) {
             const subCtx = document.getElementById('timeSubGenreChart').getContext('2d');
             const genreCounts = {};
-            targetBooks.forEach(b => (b.tags || []).forEach(t => genreCounts[t] = (genreCounts[t] || 0) + 1));
+            targetBooks.forEach(b => (b.tags || []).forEach(t => genreCounts[t] = (genreCounts[t] || 0) + statW(b)));
 
             if (state.timeSubGenreChartInstance) state.timeSubGenreChartInstance.destroy();
 
@@ -8867,7 +8885,7 @@ function setupPaging(){
             const authorCounts = {};
             targetBooks.forEach(b => {
                 const name = b.author || '作者名';
-                authorCounts[name] = (authorCounts[name] || 0) + 1;
+                authorCounts[name] = (authorCounts[name] || 0) + statW(b);
             });
             const sortedAuthors = Object.entries(authorCounts).sort((a,b) => b[1] - a[1]);
 
@@ -8877,7 +8895,7 @@ function setupPaging(){
                         <span class="w-4 h-4 rounded-full bg-kinariDark border border-woodBorder flex items-center justify-center font-bold text-[9px] text-woodAccentDark">${idx + 1}</span>
                         <span class="font-bold text-softText">${escapeHtml(name)}</span>
                     </div>
-                    <span class="text-[10px] font-bold text-woodAccentDark">${count} 冊</span>
+                    <span class="text-[10px] font-bold text-woodAccentDark">${count} ${statUnitWord()}</span>
                 </div>
             `).join('') || '<div class="text-[10px] text-softMuted py-1 text-center">記録がありません</div>';
         }
@@ -8885,7 +8903,7 @@ function setupPaging(){
         function renderGenreDoughnutChart() {
             const ctx = document.getElementById('genreChart').getContext('2d');
             const genreCounts = {};
-            state.books.forEach(b => (b.tags || []).forEach(t => genreCounts[t] = (genreCounts[t] || 0) + 1));
+            state.books.forEach(b => (b.tags || []).forEach(t => genreCounts[t] = (genreCounts[t] || 0) + statW(b)));
 
             if (state.genreChartInstance) state.genreChartInstance.destroy();
 
@@ -8917,7 +8935,7 @@ function setupPaging(){
             const authorCounts = {};
             state.books.forEach(b => {
                 const name = b.author || '作者名';
-                authorCounts[name] = (authorCounts[name] || 0) + 1;
+                authorCounts[name] = (authorCounts[name] || 0) + statW(b);
             });
 
             const sorted = Object.entries(authorCounts).sort((a,b) => b[1] - a[1]);
@@ -8927,7 +8945,7 @@ function setupPaging(){
                         <span class="w-5 h-5 rounded-full bg-kinariDark border border-woodBorder flex items-center justify-center font-bold text-[10px] text-woodAccentDark">${idx + 1}</span>
                         <span class="font-bold text-softText">${escapeHtml(name)}</span>
                     </div>
-                    <span class="text-[11px] font-bold text-woodAccentDark">${count} 冊</span>
+                    <span class="text-[11px] font-bold text-woodAccentDark">${count} ${statUnitWord()}</span>
                 </div>
             `).join('');
         }
@@ -9061,6 +9079,8 @@ function setupPaging(){
             document.getElementById('tab-stat-genre').addEventListener('click', () => switchStatTab('genre'));
             document.getElementById('tab-stat-author').addEventListener('click', () => switchStatTab('author'));
 
+            for (const [id, u] of [['btn-stat-unit-book', 'book'], ['btn-stat-unit-chap', 'chap']]) document.getElementById(id).addEventListener('click', () => { state.statUnit = u; try { localStorage.setItem('yomimono_stat_unit', u); } catch (e) {} switchStatTab(state.statTab || 'time'); });
+            try { state.statUnit = localStorage.getItem('yomimono_stat_unit') === 'chap' ? 'chap' : 'book'; } catch (e) {}
             document.getElementById('btn-time-sub-year').addEventListener('click', () => {
                 state.timeSubMode = 'year';
                 renderTimeStatsModule();
