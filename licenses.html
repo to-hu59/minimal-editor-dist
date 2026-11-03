@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>製作者・ライセンス</title>
+<style>
+:root {
+  --bg: #f4ede0; --card: #fbf7ee; --line: #d9cfbf; --text: #3d352d; --muted: #8a7f72; --accent: #8a6a1f; --link: #567567; --tag: #ece3d2;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --bg: #221c17; --card: #2b241e; --line: #4a3f35; --text: #f0e6d4; --muted: #b3a690; --accent: #d9b45f; --link: #9cc3b2; --tag: #3a3128; }
+}
+:root[data-theme="dark"] { --bg: #221c17; --card: #2b241e; --line: #4a3f35; --text: #f0e6d4; --muted: #b3a690; --accent: #d9b45f; --link: #9cc3b2; --tag: #3a3128; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.8 "Hiragino Sans", "Yu Gothic", "Noto Sans JP", sans-serif; }
+main { max-width: 760px; margin: 0 auto; padding: 24px 16px 72px; }
+h1 { font-size: 20px; margin: 0 0 4px; letter-spacing: .06em; }
+.lead { color: var(--muted); font-size: 13px; margin: 0 0 24px; }
+h2 { font-size: 15px; margin: 32px 0 10px; padding-bottom: 6px; border-bottom: 1px solid var(--line); color: var(--accent); letter-spacing: .08em; }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; margin: 0 0 10px; }
+.card h3 { font-size: 15px; margin: 0; }
+.by { font-size: 13px; color: var(--muted); margin: 0 0 6px; }
+.tag { display: inline-block; font-size: 11px; padding: 0 8px; border-radius: 999px; background: var(--tag); margin-right: 6px; }
+.note { font-size: 12.5px; color: var(--muted); margin: 4px 0 0; }
+.warn { color: #b4452f; }
+a { color: var(--link); word-break: break-all; }
+.empty { color: var(--muted); font-size: 13px; padding: 12px 14px; border: 1px dashed var(--line); border-radius: 14px; }
+.back { display: inline-block; margin-bottom: 16px; font-size: 13px; }
+</style>
+</head>
+<body>
+<main>
+  <a class="back" href="./" onclick="if(history.length>1&&document.referrer){history.back();return false}">← 戻る</a>
+  <h1>製作者・ライセンス</h1>
+  <p class="lead">このアプリで使っているフォントや素材の、製作者と利用条件を、自分でメモしておくページです。</p>
+
+  <h2>フォント</h2>
+  <div id="fonts"></div>
+
+  <h2>素材（キャラクター・音声など）</h2>
+  <div id="materials"></div>
+</main>
+<script>
+// ===== ここに足していく（書くかどうかは、自由です）=====
+// 使ったフォントや素材の、製作者と利用条件を、メモしておくページです。空のままで、かまいません。
+//
+// フォントの書き方（下の FONTS の [ ] の中に、1つずつ { ... }, を足します。必要なところだけで OK）
+//   name    ＝ フォントの名前
+//   by      ＝ 製作者
+//   license ＝ ライセンスの名前や、利用条件（例：SIL Open Font License 1.1／商用利用可・再配布は禁止）
+//   url     ＝ 配布元のページ（任意）
+//   note    ＝ 補足（任意）
+//   warn    ＝ 気をつけること（任意。赤く出ます）
+//   docs    ＝ 規約のファイル（任意）。fonts/ の中に置いたファイルを、[['表示名', 'fonts/ファイル名'], …] で
+// 例：
+//   { name: 'ためしフォント', by: '○○さん', license: 'SIL Open Font License 1.1', url: 'https://example.com/', note: '商用利用も可' },
+const FONTS = [
+];
+// 素材（キャラクター・音声など）の書き方（下の MATERIALS の [ ] の中に、同じように足します）
+//   name＝名前、by＝権利者・制作者、terms＝利用条件、credit＝クレジット表記（そのまま載せる文）、url＝規約のページ
+// 例：
+//   { name: 'ためし素材', by: '○○さん', terms: '使うときは、クレジット表記が必要', credit: '素材：○○', url: 'https://example.com/' },
+const MATERIALS = [
+];
+
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const link = (t, u) => '<a href="' + esc(u) + '" target="_blank" rel="noopener">' + esc(t) + '</a>';
+document.getElementById('fonts').innerHTML = FONTS.map(f =>
+  '<div class="card"><h3>' + esc(f.name) + '</h3>' +
+  '<p class="by">' + esc(f.by) + '</p>' +
+  '<p style="margin:0"><span class="tag">ライセンス</span>' + esc(f.license) + '</p>' +
+  (f.note ? '<p class="note">' + esc(f.note) + '</p>' : '') +
+  (f.warn ? '<p class="note warn">' + esc(f.warn) + '</p>' : '') +
+  (f.url ? '<p class="note">配布元：' + link(f.url, f.url) + '</p>' : '') +
+  (f.docs ? '<p class="note">' + f.docs.map(d => link(d[0], d[1])).join('　') + '</p>' : '') +
+  '</div>').join('');
+document.getElementById('materials').innerHTML = MATERIALS.length ? MATERIALS.map(m =>
+  '<div class="card"><h3>' + esc(m.name) + '</h3>' +
+  '<p class="by">' + esc(m.by) + '</p>' +
+  (m.terms ? '<p style="margin:0"><span class="tag">利用条件</span>' + esc(m.terms) + '</p>' : '') +
+  (m.credit ? '<p class="note">' + esc(m.credit) + '</p>' : '') +
+  (m.url ? '<p class="note">' + link(m.url, m.url) + '</p>' : '') +
+  '</div>').join('') : '<p class="empty">いまは、載せる素材はありません。キャラクターや音声（ずんだもん など）を使うときは、ここに表記を追加します。</p>';
+</script>
+</body>
+</html>
