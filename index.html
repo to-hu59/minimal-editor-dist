@@ -1750,7 +1750,7 @@
                     <div class="pt-3 border-t border-woodBorder">
                         <span class="font-bold text-softMuted block mb-1">更新履歴</span>
                         <div id="changelog" class="text-[11px] text-softMuted leading-relaxed">
-<div class="mb-1.5"><b class="text-softText">2026-11-03（6）</b><br>編集の道具：「画面の枠」を「特殊演出」にして（動く人のマーク）、右端に固定した（「原文」のボタンはなくした）。「特殊な文字」（回転の矢印と星のマーク）を足して、縦書き（この部分だけ）・ななめ・左右反転・上下反転・回転・逆さを入れられるようにした。文字色の「カスタム」に「この色にする」を足して、選んだ色が本文と「A」の線に出るようにした。OCRのボタンのマークを変えた。特殊演出に、電光掲示板（右から左へ流れる・文字ごとの色・背景の色・折り返し）、駅の発車案内、空港の出発案内、文字化けするシステム画面、文字が崩れる配信コメント、ページがめくれない、ページが巻き戻る、を足した（🎬の演出ビューで動く）。作品のメニューに、Googleドキュメントへの書き出し（本文のみ）を足した。Driveの自動同期は、はじめは切にして、「いま同期する」で手動にできるようにした。Driveのフォルダ名とアプリ名を「読書リーダー(仮)」にした。</div>
+<div class="mb-1.5"><b class="text-softText">2026-11-03（6）</b><br>編集の道具：「画面の枠」を「特殊演出」にして（動く人のマーク）、右端に固定した（「原文」のボタンはなくした）。「特殊な文字」（回転の矢印と星のマーク）を足して、縦書き（この部分だけ）・ななめ・左右反転・上下反転・回転・逆さを入れられるようにした（編集画面で、ルビや色と同じように、その場で見える。選ばないときは、いまの行ぜんぶ）。文字色の「カスタム」に「この色にする」を足して、選んだ色が本文と「A」の線に出るようにした。OCRのボタンのマークを変えた。特殊演出に、電光掲示板（右から左へ流れる・文字ごとの色・背景の色・折り返し）、駅の発車案内、空港の出発案内、文字化けするシステム画面、文字が崩れる配信コメント、ページがめくれない、ページが巻き戻る、を足した（🎬の演出ビューで動く）。作品のメニューに、Googleドキュメントへの書き出し（本文のみ）を足した。Driveの自動同期は、はじめは切にして、「いま同期する」で手動にできるようにした。Driveのフォルダ名とアプリ名を「読書リーダー(仮)」にした。</div>
 <div class="mb-1.5"><b class="text-softText">2026-11-03（5）</b><br>文字サイズを8pxまで、行の間隔を1.0まで、小さくできるようにした。ページめくりで、ホームの帯を出したとき、最後の1行が帯に隠れるのを直した（ページの下に、空きをとった）。ページめくりで、枠（システム画面・ステータス・掲示板など）が、前のページと次のページに分かれないようにした（入りきらないときは、枠ぜんぶを次のページに送る）。本棚の「詳細絞り込みリボン」を、🔍検索の中に入れた（言葉・作者・レーベル・年・評価・状態で、その場で絞り込める。条件は本棚に残り、上のバッジで解除できる）。ライセンスのページに、昔々ふぉんと・したたる明朝初号・装甲明朝を足した。</div>
 <div class="mb-1.5"><b class="text-softText">2026-11-03（4）</b><br>ウィキ：カテゴリ（重要人物・勢力・第1部など）を自分で作って、1つの項目にいくつでもつけられるようにした（一覧はカテゴリごとにまとまり、開閉・絞り込み・検索ができる）。項目ごとに、ステータス・所持品・スキル・関係などの欄を足せる（使うものだけ。行ごとに「何話から見えるか」も決められる）。本文で、ウィキに登録した言葉にうっすら色がつき、押すと小さなカードで見られる（読んだ話までの内容だけ出して、先の設定は🔒で伏せる。設定の「特殊演出」でON／OFF）。本文の演出に、［着信］［バイブ］［怒鳴り］［ジジッ］［頭痛］［どくん（心臓）］を足した（次の行、または［ここまで］までの文字だけが、ゆれる・ブレる・脈打つ。音と振動は、設定の「音を出す」「振動する」がONのとき。編集の「音・振動」から入れられる）。掲示板はタイプライターのカタカタ音にして、1つ書き終わるとチンと鳴る。ページの左右の余白をつめた。</div>
                             <details class="mt-1"><summary class="cursor-pointer font-bold">＋ 以前の履歴</summary><div class="mt-1.5">
@@ -4780,6 +4780,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         function oriKind(name, ps) {
             ps = ps || '';
             if (name === '縦書き') return ['V', ''];
+            if (name === 'ななめ左' || name === '斜め左') return ['L', ''];
             if (name === 'ななめ' || name === '斜め') return [/左/.test(ps) ? 'L' : 'S', ''];
             if (name === '左右反転') return ['F', ''];
             if (name === '上下反転') return ['G', ''];
@@ -4846,7 +4847,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                   if (em) { const ps = em[2] || '', sec = Number((ps.match(/秒=([0-9.]+)/) || [])[1]) || (Number((ps.match(/回数=([0-9]+)/) || [])[1]) * 1.05) || 0; pendingFx = pendingFx || { k: '', sec: 0 }; for (const c of fxKindOf(em[1] + ps)) if (!pendingFx.k.includes(c)) pendingFx.k += c; if (sec) pendingFx.sec = sec; continue; }
                   if (pendingFx && line.trim()) { if (frames) { frames.fxe = frames.fxe || []; frames.fxe[out.length] = { k: pendingFx.k, sec: pendingFx.sec || fxDefSec(pendingFx.k) }; } pendingFx = null; } }
                 // ［縦書き］［ななめ］［左右反転］［上下反転］［回転 角度=90］：印だけの行は消え、次の行に効く
-                { const om = line.trim().match(/^［(縦書き|ななめ|斜め|左右反転|上下反転|反転|回転|逆さ)([\s　][^］]*)?］$/);
+                { const om = line.trim().match(/^［(縦書き|ななめ左|斜め左|ななめ|斜め|左右反転|上下反転|反転|回転|逆さ)([\s　][^］]*)?］$/);
                   if (om) { pendingTx = oriKind(om[1], om[2]); continue; }
                   if (pendingTx && line.trim()) { if (frames && !/^［/.test(line.trim())) { frames.txe = frames.txe || []; frames.txe[out.length] = pendingTx; } pendingTx = null; } }
                 if (line.indexOf('［') < 0) { out.push(line); continue; }
@@ -4921,7 +4922,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                     if (frames) frames.push({ from, to: out.length - 1, color: own || (kind === '警告' ? '赤' : ''), label: kind || 'システム', note: true }); continue;
                 }
                 // 文の中の一部だけ：［着信］着信があった［／着信］、［バイブ］ぶるっ［／バイブ］（目印の文字にして、読み上げからは外す）
-                if (/［(縦書き|ななめ|斜め|左右反転|上下反転|反転|回転|逆さ)/.test(line)) { line = line.replace(/［(縦書き|ななめ|斜め|左右反転|上下反転|反転|回転|逆さ)([\s　][^］]*)?］([^［］]*?)(?:［／\1］|［\1終わり］|［ここまで］)/g, (m, nm, ps, body) => { const [k, num] = oriKind(nm, ps); return '\uE000' + k + ':' + num + '\uE002' + body + '\uE001'; }); }
+                if (/［(縦書き|ななめ左|斜め左|ななめ|斜め|左右反転|上下反転|反転|回転|逆さ)/.test(line)) { line = line.replace(/［(縦書き|ななめ左|斜め左|ななめ|斜め|左右反転|上下反転|反転|回転|逆さ)([\s　][^］]*)?］([^［］]*?)(?:［／\1］|［\1終わり］|［ここまで］)/g, (m, nm, ps, body) => { const [k, num] = oriKind(nm, ps); return '\uE000' + k + ':' + num + '\uE002' + body + '\uE001'; }); }
                 if (/［(着信|バイブ|怒鳴り|どなる|ノイズ|ジジッ?|頭痛|どくん|心臓)/.test(line)) { line = line.replace(/［(着信|バイブ|怒鳴り|どなる|ノイズ|ジジッ?|頭痛|どくん|心臓)([\s　][^］]*)?］([^［］]*?)(?:［／\1］|［\1終わり］|［ここまで］)/g, (m, nm, ps, body) => { ps = ps || ''; const k = fxKindOf(nm + ps), sec = (ps.match(/秒=([0-9.]+)/) || [])[1] || ''; return '\uE000' + k + ':' + sec + '\uE002' + body + '\uE001'; }); }
                 let had = false;
                 const only = line.replace(fxTagRe(), (m, sl, name) => FX_NAMES.has(name) ? '' : m).trim() === '';
@@ -5251,13 +5252,13 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             { id: 'fx-shout', name: '怒鳴り（強くゆれて・振動）', note: '次の行（選んだ文字だけ）が、どなるように、強くゆれて、振動する', tag: '［怒鳴り］' },
             { id: 'fx-noise', name: 'ジジッ（ノイズ・ざわっ）', note: '文字が、ジジッとブレる。ホラーの、ひずみ', tag: '［ジジッ］' },
             { id: 'fx-head', name: '頭痛（ずきん・ぼやける）', note: '文字が、ずきんとぼやけて、重く響く', tag: '［頭痛］' },
-            { id: 'ori-v', name: '縦書き（この部分だけ）', note: '選んだ文字だけが、縦に並ぶ。選ばないときは、次の1行', tag: '［縦書き］' },
-            { id: 'ori-sr', name: 'ななめ（右下がり）', note: 'お／　は／　　よ のように、1文字ずつ、右へずれて、下に並ぶ', tag: '［ななめ］' },
-            { id: 'ori-sl', name: 'ななめ（左下がり）', note: '1文字ずつ、左へずれて、下に並ぶ', tag: '［ななめ 左］' },
-            { id: 'ori-f', name: '左右反転', note: '文字が、鏡のように、左右さかさま', tag: '［左右反転］' },
-            { id: 'ori-g', name: '上下反転', note: '文字が、上下さかさま', tag: '［上下反転］' },
-            { id: 'ori-r90', name: '回転（90度）', note: '文字が、右に90度まわる（縦に読む）。角度は、印の 角度=数字 で変えられる', tag: '［回転 角度=90］' },
-            { id: 'ori-r180', name: '逆さ（180度）', note: '文字が、上下左右ともに、さかさま', tag: '［逆さ］' },
+            { inline: true, id: 'ori-v', name: '縦書き（この部分だけ）', note: '選んだ文字だけが、縦に並ぶ。選ばないときは、次の1行', tag: '［縦書き］' },
+            { inline: true, id: 'ori-sr', name: 'ななめ（右下がり）', note: 'お／　は／　　よ のように、1文字ずつ、右へずれて、下に並ぶ', tag: '［ななめ］' },
+            { id: 'ori-sl', name: 'ななめ（左下がり）', note: '1文字ずつ、左へずれて、下に並ぶ', tag: '［ななめ左］', inline: true },
+            { inline: true, id: 'ori-f', name: '左右反転', note: '文字が、鏡のように、左右さかさま', tag: '［左右反転］' },
+            { inline: true, id: 'ori-g', name: '上下反転', note: '文字が、上下さかさま', tag: '［上下反転］' },
+            { id: 'ori-r90', name: '回転（90度）', note: '文字が、右に90度まわる（縦に読む）。角度は、印の 角度=数字 で変えられる', tag: '［回転］', inline: true },
+            { inline: true, id: 'ori-r180', name: '逆さ（180度）', note: '文字が、上下左右ともに、さかさま', tag: '［逆さ］' },
             { id: 'fx-heart', name: '心臓（どくん・どくん）', note: '文字が、鼓動のように脈打つ。心臓の音と振動', tag: '［どくん］' },
             { id: 'led', name: '電光掲示板（右から左へ流れる）', note: '駅のような、光る点の文字が、右から左へ流れる。［赤］…［／赤］で文字ごとの色、［地=黄］…［／地］で背景色。演出ビュー（🎬）で動く', block: '［電光掲示板 背景=黒 文字=橙］', close: '［／電光掲示板］', tmpl: '［赤］注意［／赤］　まもなく電車が参ります［改行］二行目の文' },
             { id: 'led-wrap', name: '電光掲示板（折り返して止まる）', note: '長い文を、幅に合わせて何行かに分け、右から入ってきて止まる。色の指定も使える。演出ビュー（🎬）で動く', block: '［電光掲示板 背景=紺 折り返し 速さ=ふつう］', close: '［／電光掲示板］', tmpl: '［緑］お知らせです。［／緑］長い文は、自動で折り返されます。' },
@@ -5334,6 +5335,11 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             let k = FRAME_KINDS.find(x => x.id === id); if (!k || visualDraft.mode !== 'visual') return;
             if (k.bbs) k = Object.assign({}, k, { block: '［掲示板 形式=' + k.bbs + ' 見た目=' + (look || '定番') + ' 板=板の名前 題=スレのタイトル］', close: '［／掲示板］', tmpl: '1 名無しさん：\n2 名無しさん：>>1 ', bbsLines: true });
             const src = draftSource(), ctx = framePickCtx || { start: src.length, end: src.length };
+            if (k.inline && !src.slice(ctx.start, ctx.end).trim()) {   // 選んでいないときは、いまの行ぜんぶにかける（その場で見える）
+                const ls0 = src.lastIndexOf(String.fromCharCode(10), ctx.start - 1) + 1, le0 = src.indexOf(String.fromCharCode(10), ctx.start), line0 = src.slice(ls0, le0 < 0 ? src.length : le0);
+                if (!line0.trim()) { toast('文字を選ぶか、文のある行をタップしてから押してください'); return; }
+                ctx.start = ls0; ctx.end = ls0 + line0.length;
+            }
             const before = src.slice(0, ctx.start), after = src.slice(ctx.end), picked = src.slice(ctx.start, ctx.end);
             if (k.tag && !k.solo && picked.trim() && !/\n/.test(picked)) {   // 選んだ文字だけにかける
                 const cl = '［／' + k.tag.slice(1).split(/[\s　］]/)[0] + '］', wrapped = k.tag + picked + cl, next3 = before + wrapped + after;
@@ -7077,7 +7083,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             if (node.nodeType !== Node.ELEMENT_NODE && node.nodeType !== Node.DOCUMENT_FRAGMENT_NODE) return '';
             if (node.nodeType === Node.ELEMENT_NODE) {
                 if (node.hasAttribute('data-editor-placeholder')) return '';
-                if (node.matches('ruby[data-source]')) return node.dataset.source;
+                if (node.matches('ruby[data-source], span[data-stair][data-source]')) return node.dataset.source;
                 if (node.tagName === 'BR') return '\n';
             }
             let text = '';
@@ -7095,9 +7101,17 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             if(emptyLine && !root.lastChild?.hasAttribute?.('data-editor-placeholder')){const br=document.createElement('br');br.dataset.editorPlaceholder='';root.append(br);}
         }
         // 書式の名前（［名前］…［／名前］）。色とリンクは値つき（［色:#rrggbb］・［リンク:https://…］）
-        const SIMPLE_MARKS=['太字','斜体','下線','取消線','マーカー','大きく','小さく','中央','右'];
-        const MARKS={'太字':'strong','斜体':'em','下線':'u','取消線':'s','マーカー':'mark','大きく':'span','小さく':'span','中央':'span','右':'span','色':'span','リンク':'span'};
-        const MARK_STYLE={'マーカー':'background:#fff3a0;color:inherit','大きく':'font-size:1.35em','小さく':'font-size:.8em','中央':'display:inline-block;width:100%;text-align:center','右':'display:inline-block;width:100%;text-align:right','リンク':'color:#1976d2;text-decoration:underline'};
+        const ORI_MARKS=['縦書き','ななめ左','ななめ','左右反転','上下反転','逆さ','回転'];   // 文字の向き：その場で見えるように、書式の仲間にする
+        const SIMPLE_MARKS=['太字','斜体','下線','取消線','マーカー','大きく','小さく','中央','右',...ORI_MARKS];
+        const MARKS={'太字':'strong','斜体':'em','下線':'u','取消線':'s','マーカー':'mark','大きく':'span','小さく':'span','中央':'span','右':'span','色':'span','リンク':'span','縦書き':'span','ななめ':'span','ななめ左':'span','左右反転':'span','上下反転':'span','逆さ':'span','回転':'span'};
+        const MARK_STYLE={'マーカー':'background:#fff3a0;color:inherit','大きく':'font-size:1.35em','小さく':'font-size:.8em','中央':'display:inline-block;width:100%;text-align:center','右':'display:inline-block;width:100%;text-align:right','リンク':'color:#1976d2;text-decoration:underline',
+            '縦書き':'display:inline-block;writing-mode:vertical-rl;text-orientation:upright;vertical-align:top',
+            'ななめ':'display:inline-block;writing-mode:vertical-rl;text-orientation:upright;vertical-align:top;transform:skewX(45deg);transform-origin:top left;margin-right:1em',
+            'ななめ左':'display:inline-block;writing-mode:vertical-rl;text-orientation:upright;vertical-align:top;transform:skewX(-45deg);transform-origin:top right;margin-left:1em',
+            '左右反転':'display:inline-block;transform:scaleX(-1)',
+            '上下反転':'display:inline-block;transform:scaleY(-1)',
+            '逆さ':'display:inline-block;transform:rotate(180deg)',
+            '回転':'display:inline-block;writing-mode:vertical-rl;text-orientation:sideways;vertical-align:top'};
         const COLORS={'赤':'#d32f2f','青':'#1976d2','緑':'#388e3c','橙':'#f57c00'};
         const colorOf=v=>COLORS[v]||v;
         const COLOR_VALUE='(#[0-9a-fA-F]{6}|赤|青|緑|橙)';
@@ -7110,6 +7124,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         function marksToHtml(html){
             const tag={'太字':'strong','斜体':'em','下線':'u','取消線':'s'};
             const style={'マーカー':'background:#fff3a0','大きく':'font-size:1.35em','小さく':'font-size:.8em','中央':'display:block;text-align:center','右':'display:block;text-align:right'};
+            ORI_MARKS.forEach(n=>{style[n]=MARK_STYLE[n]});
             const simple=new RegExp('［('+SIMPLE_MARKS.join('|')+')］([^\\n\\r]*?)［／\\1］','g');
             const color=new RegExp('［色:'+COLOR_VALUE+'］([^\\n\\r]*?)［／色］','g');
             const link=/［リンク:([^］\n\r]+)］([^\n\r]*?)［／リンク］/g;
@@ -7156,6 +7171,13 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                     if(!m){appendPlain(rest,parent);return}
                     appendPlain(rest.slice(0,m.index),parent);
                     const name=m[1]||(m[3]!==undefined?'色':'リンク');
+                    if(name==='ななめ'||name==='ななめ左'){   // ななめは、1文字ずつ、ずらして並べて見せる（ルビと同じく、まとめて1つ。消すときは、まるごと）
+                        const st=document.createElement('span'),left=name==='ななめ左';
+                        st.dataset.stair='1';st.dataset.source=m[0];st.contentEditable='false';st.setAttribute('aria-label','ななめ：'+m[2].replace(/［[^］]*］/g,''));
+                        st.style.cssText='display:inline-flex;flex-direction:column;vertical-align:top;line-height:1.35;align-items:'+(left?'flex-end':'flex-start');
+                        Array.from(m[2].replace(/［[^］]*］/g,'')).forEach((ch,i)=>{const c=document.createElement('span');c.textContent=ch;c.style.cssText=(left?'margin-right:':'margin-left:')+i+'em';st.append(c)});
+                        parent.append(st);rest=rest.slice(m.index+m[0].length);continue;
+                    }
                     const el=document.createElement(MARKS[name]);
                     el.dataset.mark=name;
                     if(MARK_STYLE[name])el.style.cssText=MARK_STYLE[name];
@@ -7194,7 +7216,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                     if(result)return;
                     if(node.nodeType===3){if(wanted<=cursor+node.length){result=[node,Math.max(0,wanted-cursor)];return;}cursor+=node.length;return;}
                     if(node.nodeType===1 && node.dataset.mark){cursor+=markOpenOf(node).length;for(const child of node.childNodes)walk(child);cursor+=markCloseOf(node).length;return;}
-                    if(node.nodeType===1 && (node.matches('ruby[data-source]') || node.tagName==='BR')) {
+                    if(node.nodeType===1 && (node.matches('ruby[data-source], span[data-stair][data-source]') || node.tagName==='BR')) {
                         const len=serializeVisual(node).length;
                         if(wanted<=cursor+len){const index=[...node.parentNode.childNodes].indexOf(node);result=[node.parentNode,index+(wanted>cursor?1:0)];return;}cursor+=len;return;
                     }
