@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <title>読書リーダー（マスク用：まわりが切り取られても、栞が欠けない）</title>
+  <rect width="512" height="512" fill="#23352c"/>
+  <g transform="translate(256 256) scale(.72) translate(-256 -255)">
+    <path d="M170 70 L342 70 L342 440 L256 372 L170 440 Z" fill="#c9a45c"/>
+    <path d="M200 104 L312 104" stroke="#23352c" stroke-width="9" stroke-linecap="round" opacity=".35"/>
+    <g transform="translate(256 238)">
+      <path d="M-70 0 C-40 -46 18 -50 52 -8 L82 -38 L82 38 L52 8 C18 50 -40 46 -70 0 Z" fill="#23352c"/>
+      <circle cx="-34" cy="-8" r="7" fill="#c9a45c"/>
+    </g>
+  </g>
+</svg>
