@@ -1789,11 +1789,16 @@
                         <input type="file" id="input-import-json" accept=".json" class="w-full text-xs text-softMuted file:mr-2 file:py-1 file:px-3 file:rounded-xl file:border-0 file:bg-white file:border-woodBorder file:text-softText file:font-bold">
                     </div>
                     <div class="pt-3 border-t border-woodBorder">
+                        <span class="font-bold text-softMuted block mb-1">アプリの更新</span>
+                        <p id="app-build-info" class="text-[11px] text-softMuted mb-1.5"></p>
+                        <button id="btn-pwa-update" class="w-full py-2 bg-kinariDark text-softText hover:bg-kinari border border-woodBorder rounded-xl font-bold active:scale-95 transition">最新版にする</button>
+                        <p class="text-[10px] text-softMuted leading-relaxed mt-1.5">新しい版があるかを確かめて、あれば、読み込み直します。新しい版が見つかると、魚のボタンの左上に、青い点が付きます。</p>
+                    </div>
+                    <div class="pt-3 border-t border-woodBorder">
                         <span class="font-bold text-softMuted block mb-1">アプリとして使う（ホーム画面に追加）</span>
                         <p id="pwa-status" class="text-[11px] text-softMuted mb-1.5"></p>
                         <button id="btn-pwa-install" class="w-full py-2 bg-kinariDark text-softText hover:bg-kinari border border-woodBorder rounded-xl font-bold active:scale-95 transition">ホーム画面に追加する</button>
                         <p class="text-[10px] text-softMuted leading-relaxed mt-1.5">iPhone：画面の共有ボタン →「ホーム画面に追加」。Android（Chrome）：このボタン、またはメニュー →「アプリをインストール」。ストアには出しません。</p>
-                        <button id="btn-pwa-update" class="mt-2 w-full py-2 bg-kinariDark text-softMuted hover:text-softText border border-woodBorder rounded-xl font-bold active:scale-95 transition">最新の版に更新する</button>
                     </div>
                     <div class="pt-3 border-t border-woodBorder">
                         <span class="font-bold text-softMuted block mb-1">Wiki（作品ごと）</span>
@@ -1832,6 +1837,7 @@
                         <span class="font-bold text-softMuted block mb-1">更新履歴</span>
                         <div id="changelog" class="text-[11px] text-softMuted leading-relaxed">
 <div class="mb-1.5"><b class="text-softText">2026-11-03（6）</b><br>編集の道具：「画面の枠」を「特殊演出」にして（動く人のマーク）、右端に固定した（「原文」のボタンはなくした）。「特殊な文字」（回転の矢印と星のマーク）を足して、縦書き（この部分だけ）・ななめ・左右反転・上下反転・回転・逆さを入れられるようにした（編集画面で、ルビや色と同じように、その場で見える。選ばないときは、いまの行ぜんぶ）。文字色の「カスタム」に「この色にする」を足して、選んだ色が本文と「A」の線に出るようにした。OCRのボタンのマークを変えた。特殊演出に、電光掲示板（右から左へ流れる・文字ごとの色・背景の色・折り返し）、駅の発車案内、空港の出発案内、文字化けするシステム画面、文字が崩れる配信コメント、ページがめくれない、ページが巻き戻る、を足した（🎬の演出ビューで動く）。作品のメニューに、Googleドキュメントへの書き出し（本文のみ）を足した。Driveの自動同期は、はじめは切にして、「いま同期する」で手動にできるようにした。Driveのフォルダ名とアプリ名を「読書リーダー(仮)」にした。</div>
+<div class="mb-1.5"><b class="text-softText">2026-11-05（12）</b><br>全体設定に「アプリの更新」の欄を分けた（「アプリとして使う」から出した）。いまの版（日時）と、新しい版があるかを表示して、「最新版にする」で、新しい版に切り替える。魚のメニューのボタンも、「最新版にする」にそろえた。古い日付のままだった「版：2026-11-02」の表示は、消した。</div>
 <div class="mb-1.5"><b class="text-softText">2026-11-05（11）</b><br>タグ・ジャンルの候補の動きを直した。金色の候補（ジャンル）を押すと、ジャンルとして付く（別のジャンルが付いていたら、切り替わる。タグに付いていたら、ジャンルに移る）。緑・灰色の候補（タグ）は、続けて何個でも押して追加できる。すでに付いているもの（✓）は、もう一度押すと外れる。</div>
 <div class="mb-1.5"><b class="text-softText">2026-11-05（10）</b><br>魚のメニューを直した。検索・Wiki・作品の詳細設定などを使っても、メニューが閉じない（魚をもう一度押すか、×で閉じる。ページ送りなど、読む画面を動かすものは、これまでどおり閉じる）。「Wiki（作品ごと）」は、見出しを押して、開く・たためる（はじめは、たたんでいる）。中は、ジャンルごとの見出し（これも、押して開く・たためる）の下に、作品が並ぶ。ジャンルがない作品は「未分類」。「今年の読んだ数」「ジャンル別の冊数」は、本棚の上のグラフにあるので、魚のメニューから外した。タグの候補を押すと、そのまま、その作品に追加される（すでに付いているものには「✓」）。</div>
 <div class="mb-1.5"><b class="text-softText">2026-11-05（9）</b><br>新しい版があると、魚のボタンの左上に青い点が付き、魚のメニューに「新しい版があります。更新する」が出る（押すと、保存が終わってから、読み込み直す）。公開側の版の番号（version.json）を、開いたとき・45分おき・画面に戻ったときに、確かめる。この機能が入った版から、働く。</div>
@@ -1882,7 +1888,6 @@
                             </details>
                         </div>
                     </div>
-                    <div class="pt-3 border-t border-woodBorder text-[10px] text-softMuted">版：2026-11-02 アプリ版</div>
                     <div class="pt-3 border-t border-woodBorder">
                         <span class="font-bold text-softMuted block mb-1">初期化</span>
                         <button id="btn-reset-sample" class="w-full py-2 bg-kinariDark text-softMuted hover:text-softText border border-woodBorder rounded-xl font-bold active:scale-95 transition">
@@ -5102,7 +5107,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                 else toast('ブラウザのメニューから「ホーム画面に追加」か「アプリをインストール」を選んでください');
             });
             document.getElementById('btn-pwa-update').addEventListener('click', async () => {
-                toast('最新の版を確かめています…');
+                toast('最新版を確かめています…');
                 try {
                     if ('serviceWorker' in navigator) { const reg = await navigator.serviceWorker.getRegistration(); if (reg) await reg.update(); }
                     // 手元にとってある、ページ・スクリプトなどを捨てる（大きなフォント・演出の画像は残す）
@@ -7363,7 +7368,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                 h += '<button type="button" class="a-btn" data-act="ask">別の人を調べる</button><button type="button" class="a-btn" data-act="back">戻る</button>';
             } else {
                 if (assistState.msg) h += `<div class="a-msg">${wEsc(assistState.msg)}</div>`;
-                if (window.__updateReady) h += '<button type="button" class="a-btn a-main" data-act="app-update">🔄 新しい版があります。更新する</button>';
+                if (window.__updateReady) h += '<button type="button" class="a-btn a-main" data-act="app-update">🔄 最新版にする</button>';
                 if (detail) {
                     const n = wikiPending(bookId).length, inbox = termsBook(bookId).inbox, fresh = inbox.words.length + inbox.statuses.length;
                     if (fresh) h += `<button type="button" class="a-btn a-main" data-act="wiki-inbox">新しい言葉（${fresh}件）</button>`;
@@ -7476,8 +7481,14 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         }
         // 話の終わり・戻る・本の終わりで、読み終えた話から言葉を拾い、件数を小さく知らせる。読書は止めない
         // ===== 更新の確認：新しい版があれば、魚に青い点とメニュー（版の番号は version.json。公開のたびに、番号が変わる。番号が入っていない開発中は、確かめない） =====
-        const APP_BUILD = '20261104121205';
+        const APP_BUILD = '20261104124637';
         let updateCheckAt = 0;
+        function paintBuild() {
+            const el = document.getElementById('app-build-info'); if (!el) return;
+            const m = /^(\d{4})(\d\d)(\d\d)(\d\d)(\d\d)/.exec(APP_BUILD);
+            el.textContent = (m ? 'いまの版：' + m[1] + '年' + Number(m[2]) + '月' + Number(m[3]) + '日 ' + m[4] + ':' + m[5] : 'いまの版：開発中') + (window.__updateReady ? '　→ 新しい版があります' : '');
+        }
+        paintBuild();
         async function updateCheck(force) {
             if (APP_BUILD.startsWith('__') || window.__updateReady) return;
             if (!force && Date.now() - updateCheckAt < 5 * 60 * 1000) return;
@@ -7485,7 +7496,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             try {
                 const r = await fetch('version.json?t=' + Date.now(), { cache: 'no-store' }); if (!r.ok) return;
                 const j = await r.json(); if (!j || !j.v || j.v === APP_BUILD) return;
-                window.__updateReady = j.v;
+                window.__updateReady = j.v; paintBuild();
                 const b = document.getElementById('assist-btn'); if (b) b.dataset.update = '1';
                 if (!b || b.hidden) toast('新しい版があります。アプリを閉じて開き直すと、更新されます');
             } catch (e) {}
