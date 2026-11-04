@@ -1826,6 +1826,7 @@
                         <span class="font-bold text-softMuted block mb-1">更新履歴</span>
                         <div id="changelog" class="text-[11px] text-softMuted leading-relaxed">
 <div class="mb-1.5"><b class="text-softText">2026-11-03（6）</b><br>編集の道具：「画面の枠」を「特殊演出」にして（動く人のマーク）、右端に固定した（「原文」のボタンはなくした）。「特殊な文字」（回転の矢印と星のマーク）を足して、縦書き（この部分だけ）・ななめ・左右反転・上下反転・回転・逆さを入れられるようにした（編集画面で、ルビや色と同じように、その場で見える。選ばないときは、いまの行ぜんぶ）。文字色の「カスタム」に「この色にする」を足して、選んだ色が本文と「A」の線に出るようにした。OCRのボタンのマークを変えた。特殊演出に、電光掲示板（右から左へ流れる・文字ごとの色・背景の色・折り返し）、駅の発車案内、空港の出発案内、文字化けするシステム画面、文字が崩れる配信コメント、ページがめくれない、ページが巻き戻る、を足した（🎬の演出ビューで動く）。作品のメニューに、Googleドキュメントへの書き出し（本文のみ）を足した。Driveの自動同期は、はじめは切にして、「いま同期する」で手動にできるようにした。Driveのフォルダ名とアプリ名を「読書リーダー(仮)」にした。</div>
+<div class="mb-1.5"><b class="text-softText">2026-11-05（3）</b><br>保存場所を、IndexedDB（広い保存場所）に変えた。約5MBの制限がなくなり、長い作品や画像の多い作品も入る。はじめて開いたときだけ、古い保存場所から、作品・Wiki・設定をコピーする（古いほうは、消さない）。IndexedDBが使えないブラウザでは、これまでどおりの保存場所で動く。</div>
 <div class="mb-1.5"><b class="text-softText">2026-11-05（2）</b><br>バックアップの範囲を広げた。作品に加えて、Wiki・魚が拾った言葉・リーダーの設定・本棚の並び順なども、JSONに入る。復元すると、それらも戻る（古い形のファイルも読める）。追加したフォントと、Googleのログイン情報は、入らない。</div>
 <div class="mb-1.5"><b class="text-softText">2026-11-05</b><br>パワポ・エクセルの書き出しを直した。パワポは、作品と作家を表にして、数に単位をつけた（「27話」「3冊」）。冊のグラフにも、文字数の折れ線を重ねた。エクセルは、冊のグラフに文字数の折れ線を足し、ランキングのグラフを縦に並べた。日ごとの見出しは、話と冊を分けて出す（「28 話・1 冊」）。</div>
 <div class="mb-1.5"><b class="text-softText">2026-11-04（6）</b><br>「記録」のタブを、読んだ範囲がわかるようにした。日ごとの記録は、1日・1作品を1行にして、「30話〜50話、65話〜70話（27話）」「4巻（1冊）」のように出す（巻は、読んだ巻の数を冊で数える）。年と全期間は、月ごとに折りたたむ。「よく読んだ」は、上位5つと「ぜんぶ見る」。パワポは、話の棒と文字数の折れ線、読んだ冊数のグラフ、日ごとの表（同じ日の日付は1つ）、ぜんぶのランキングの表。エクセルは、「日ごとの記録」のシート（月ごとに折りたため、同じ日の日付は1つ）、集計の折れ線と冊のグラフ、枠とタイトルつきのカレンダー。</div>
@@ -2041,7 +2042,75 @@
     </dialog>
 
     <!-- Application Script -->
+    <!-- 保存場所：IndexedDB（広い）。アプリの本体は、保存データを読み込んだあとに、動かす。書き方は、これまでと同じ（KV.getItem / setItem）。はじめて開いたときだけ、古い保存場所（localStorage）から、コピーする（古いほうは消さない） -->
     <script>
+    (function () {
+        var DBN = 'yomimono_main', ST = 'kv', mem = new Map(), pend = new Map(), timer = null, db = null, mode = 'idb';
+        function req(r) { return new Promise(function (res, rej) { r.onsuccess = function () { res(r.result); }; r.onerror = function () { rej(r.error); }; }); }
+        function txDone(tx) { return new Promise(function (res, rej) { tx.oncomplete = res; tx.onerror = tx.onabort = function () { rej(tx.error || new Error('tx')); }; }); }
+        function warn(e) { window.__kvError = e; try { if (!window.__kvWarned && typeof window.toast === 'function') { window.__kvWarned = true; window.toast('保存に失敗しました。容量か、ブラウザの設定を確かめてください'); } } catch (er) {} }
+        function schedule() { if (!timer) timer = setTimeout(flush, 120); }
+        var PEND = 'yomimono_pending__';
+        // ページを閉じる・読み直すときに、まだ IndexedDB に書けていない分を、localStorage に、いったん避難させる（次に開いたときに、戻す）。大きすぎて入らないときは、IndexedDB への書き込みに任せる
+        function emergency() { try { pend.forEach(function (v, k) { try { localStorage.setItem(PEND + k, v === null ? '\u0000DEL' : v); } catch (e) {} }); } catch (e) {} }
+        function flush() {
+            clearTimeout(timer); timer = null;
+            if (mode !== 'idb' || !db || !pend.size) return Promise.resolve();
+            var items = Array.from(pend.entries()); pend.clear();
+            var back = function (e) { items.forEach(function (kv) { if (!pend.has(kv[0])) pend.set(kv[0], kv[1]); }); warn(e); };
+            try {
+                var tx = db.transaction(ST, 'readwrite'), os = tx.objectStore(ST);
+                items.forEach(function (kv) { if (kv[1] === null) os.delete(kv[0]); else os.put(kv[1], kv[0]); });
+                return txDone(tx).then(function () { try { items.forEach(function (kv) { localStorage.removeItem(PEND + kv[0]); }); } catch (e) {} }, back);
+            } catch (e) { back(e); return Promise.resolve(); }
+        }
+        var KV = {
+            getItem: function (k) { return mem.has(k) ? mem.get(k) : null; },
+            setItem: function (k, v) { v = String(v); if (mode === 'idb') { mem.set(k, v); pend.set(k, v); schedule(); } else { localStorage.setItem(k, v); mem.set(k, v); } },
+            removeItem: function (k) { mem.delete(k); if (mode === 'idb') { pend.set(k, null); schedule(); } else { try { localStorage.removeItem(k); } catch (e) {} } },
+            key: function (i) { return Array.from(mem.keys())[i] || null; },
+            get length() { return mem.size; },
+            flush: flush,
+            get mode() { return mode; }
+        };
+        window.KV = KV;
+        function lsAll() { var o = {}; try { for (var i = 0; i < localStorage.length; i++) { var k = localStorage.key(i); if (k && k.indexOf('yomimono_') === 0 && k.indexOf('yomimono_pending__') !== 0) o[k] = localStorage.getItem(k); } } catch (e) {} return o; }
+        var ready = (async function () {
+            if (!window.indexedDB) throw new Error('no indexedDB');
+            var op = indexedDB.open(DBN, 1); op.onupgradeneeded = function () { op.result.createObjectStore(ST); };
+            db = await req(op);
+            var os = db.transaction(ST, 'readonly').objectStore(ST), keys = await req(os.getAllKeys()), vals = await req(db.transaction(ST, 'readonly').objectStore(ST).getAll());
+            keys.forEach(function (k, i) { mem.set(k, vals[i]); });
+            try {   // 前に避難させた分があれば、IndexedDB に戻す
+                var pk = [], i2; for (i2 = 0; i2 < localStorage.length; i2++) { var kk = localStorage.key(i2); if (kk && kk.indexOf(PEND) === 0) pk.push(kk); }
+                if (pk.length) { var tp = db.transaction(ST, 'readwrite'), wp = tp.objectStore(ST); pk.forEach(function (kk) { var rk = kk.slice(PEND.length), v = localStorage.getItem(kk); if (v === '\u0000DEL') { wp.delete(rk); mem.delete(rk); } else { wp.put(v, rk); mem.set(rk, v); } }); await txDone(tp); pk.forEach(function (kk) { localStorage.removeItem(kk); }); }
+            } catch (e) {}
+            if (!mem.has('__migrated')) {   // はじめて：古い保存場所から、コピーして、合っているか確かめてから、印をつける
+                var old = lsAll(), tx = db.transaction(ST, 'readwrite'), w = tx.objectStore(ST);
+                Object.keys(old).forEach(function (k) { w.put(old[k], k); });
+                await txDone(tx);
+                var chk = db.transaction(ST, 'readonly').objectStore(ST);
+                for (var k in old) { var got = await req(chk.get(k)); if (got !== old[k]) throw new Error('copy check failed: ' + k); }
+                Object.keys(old).forEach(function (k) { mem.set(k, old[k]); });
+                var t2 = db.transaction(ST, 'readwrite'); t2.objectStore(ST).put(new Date().toISOString(), '__migrated'); await txDone(t2); mem.set('__migrated', '1');
+            }
+            try { localStorage.setItem('yomimono_idb_on', '1'); } catch (e) {}
+            try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) {}
+        })().catch(function (e) {   // IndexedDB が使えないとき：これまでどおり、localStorage で動く
+            mode = 'ls'; window.__kvFallback = e; mem.clear(); var o = lsAll(); Object.keys(o).forEach(function (k) { mem.set(k, o[k]); });
+            try { if (localStorage.getItem('yomimono_idb_on') === '1') window.__kvStale = true; } catch (er) {}   // 前は IndexedDB だった：いまの表示は、古い保存データかもしれない
+        });
+        window.addEventListener('pagehide', function () { emergency(); flush(); });
+        document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'hidden') flush(); });
+        function start() {   // ページの読み込み（HTMLの解析）が終わってから、アプリの本体を動かす
+            var src = document.getElementById('app-src'), sc = document.createElement('script');
+            sc.text = src.textContent; document.body.appendChild(sc);
+            if (window.__kvStale) setTimeout(function () { try { toast('保存場所を開けませんでした。古い保存データを表示しています。新しい内容は、書き込まれません'); } catch (e) {} }, 1500);
+        }
+        ready.then(function () { if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start(); });
+    })();
+    </script>
+    <script type="text/x-app" id="app-src">
         // デモ用初期データ（スクショ完全準拠のタイプD混合構成）
         const DEMO_BOOKS = [
             {
@@ -2169,7 +2238,7 @@
         let pressTimer = null;
 
         function init() {
-            const local = localStorage.getItem('yomimono_books_v11');
+            const local = KV.getItem('yomimono_books_v11');
             if (local) {
                 try { state.books = JSON.parse(local); } catch(e) { state.books = DEMO_BOOKS; }
             } else {
@@ -2177,14 +2246,14 @@
             }
             addLongSampleOnce();
 
-            const localCfg = localStorage.getItem('yomimono_reader_cfg_v11');
+            const localCfg = KV.getItem('yomimono_reader_cfg_v11');
             if (localCfg) {
                 try { state.readerSettings = { ...state.readerSettings, ...JSON.parse(localCfg) }; } catch(e) {}
             }
 
-            const localLayout = localStorage.getItem('yomimono_layout_v11');
+            const localLayout = KV.getItem('yomimono_layout_v11');
             if (localLayout) state.layoutMode = localLayout;
-            try { const mode=localStorage.getItem('yomimono_toc_view_v1');if(['asc','desc','favorites'].includes(mode))state.tocSortMode=mode; } catch(e) {}
+            try { const mode=KV.getItem('yomimono_toc_view_v1');if(['asc','desc','favorites'].includes(mode))state.tocSortMode=mode; } catch(e) {}
 
             renderYearOptions();
             updateLayoutIcon();
@@ -2200,10 +2269,10 @@
         const SAMPLE_LONG_FLAG = 'yomimono_sample_long_v1';
         function addLongSampleOnce() {
             try {
-                if (navigator.webdriver || localStorage.getItem(SAMPLE_LONG_FLAG)) return;
+                if (navigator.webdriver || KV.getItem(SAMPLE_LONG_FLAG)) return;
                 if (!state.books.some(b => b.id === 'book_sample_long')) state.books.push(sampleLongBook());
-                localStorage.setItem('yomimono_books_v11', JSON.stringify(state.books));
-                localStorage.setItem(SAMPLE_LONG_FLAG, '1');
+                KV.setItem('yomimono_books_v11', JSON.stringify(state.books));
+                KV.setItem(SAMPLE_LONG_FLAG, '1');
             } catch(e) {}
         }
         function sampleLongBook() {
@@ -2428,9 +2497,9 @@ MP 22/22
         let saveWarnAt = 0;
         function save() {
             try {
-                localStorage.setItem('yomimono_books_v11', JSON.stringify(state.books));
-                localStorage.setItem('yomimono_reader_cfg_v11', JSON.stringify(state.readerSettings));
-                localStorage.setItem('yomimono_layout_v11', state.layoutMode);
+                KV.setItem('yomimono_books_v11', JSON.stringify(state.books));
+                KV.setItem('yomimono_reader_cfg_v11', JSON.stringify(state.readerSettings));
+                KV.setItem('yomimono_layout_v11', state.layoutMode);
             } catch (e) {
                 // 端末の保存の空き（約5MB）が足りないとき。Driveには送る。画面にも知らせる
                 if (Date.now() - saveWarnAt > 15000) { saveWarnAt = Date.now(); try { toast('この端末の保存の空きが足りません。表紙の画像を小さくします'); } catch (er) {} shrinkAllCovers(true); }
@@ -2471,7 +2540,7 @@ MP 22/22
         // Drive の「読書リーダー(仮)」フォルダに作品ごと1ファイル（本文＋Wiki）。端末の中身はすぐ表示し、Drive とは裏で合わせる。
         // 両方で変わっていたら新しい方を使い、もう片方は「控え」として Drive に残す。トークンはメモリだけ（保存しない）。
         const DRIVE_CLIENT_ID_FIXED = '';   // 自分で置く人は、ここに、自分のクライアントIDを入れてもよい（手順書：docs/drive-setup.md）。入れなければ、設定の欄から入れる
-let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_CLIENT_ID = (localStorage.getItem('yomimono_drive_cid') || '').trim(); } catch (e) {}
+let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_CLIENT_ID = (KV.getItem('yomimono_drive_cid') || '').trim(); } catch (e) {}
         const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
         const DRIVE_META_KEY = 'yomimono_drive_v1';
         const DRIVE_API = 'https://www.googleapis.com/drive/v3/';
@@ -2480,7 +2549,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         let driveMeta = wJson(DRIVE_META_KEY, { connected: false, folderId: null, editedAt: 0, books: {} });
 
         const driveAutoOn = () => driveMeta.auto === true;   // 自動で同期するか（はじめは切）
-        function driveSaveMeta() { try { localStorage.setItem(DRIVE_META_KEY, JSON.stringify(driveMeta)); } catch (e) {} }
+        function driveSaveMeta() { try { KV.setItem(DRIVE_META_KEY, JSON.stringify(driveMeta)); } catch (e) {} }
         function driveHash(text) { let h = 0x811c9dc5; for (let i = 0; i < text.length; i++) { h ^= text.charCodeAt(i); h = Math.imul(h, 0x01000193); } return (h >>> 0).toString(36) + ':' + text.length; }
         function driveWikiAll() { return wJson(WIKI_KEY, {}); }
         function drivePack(book) { const wiki = (driveWikiAll()[book.id] || {}).entries || []; return JSON.stringify({ v: 1, book, wiki, wikiGroups: (driveWikiAll()[book.id] || {}).groups || [] }); }
@@ -2513,8 +2582,8 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             return { token: r.access_token, expiresAt: Date.now() + Number(r.expires_in || 3600) * 1000 - 60000 };
         }
         // 許可の札は1時間ほどで切れる。再読み込みやアプリの開き直しでは、残っていれば使い回す（アカウントを聞かれにくくする）
-        function driveTokenSave() { try { if (driveToken) localStorage.setItem('yomimono_drive_tok', JSON.stringify(driveToken)); else localStorage.removeItem('yomimono_drive_tok'); } catch (e) {} }
-        function driveTokenRestore() { try { const t = JSON.parse(localStorage.getItem('yomimono_drive_tok') || 'null'); if (t && t.token && t.expiresAt > Date.now()) driveToken = t; else localStorage.removeItem('yomimono_drive_tok'); } catch (e) {} }
+        function driveTokenSave() { try { if (driveToken) KV.setItem('yomimono_drive_tok', JSON.stringify(driveToken)); else KV.removeItem('yomimono_drive_tok'); } catch (e) {} }
+        function driveTokenRestore() { try { const t = JSON.parse(KV.getItem('yomimono_drive_tok') || 'null'); if (t && t.token && t.expiresAt > Date.now()) driveToken = t; else KV.removeItem('yomimono_drive_tok'); } catch (e) {} }
         function driveHasToken() { return !!driveToken && driveToken.expiresAt > Date.now(); }
         async function driveEnsureToken(prompt) {
             if (driveHasToken()) return true;
@@ -2649,7 +2718,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             }
             driveSaveMeta();
             if (changedLocal) {
-                localStorage.setItem('yomimono_books_v11', JSON.stringify(state.books));
+                KV.setItem('yomimono_books_v11', JSON.stringify(state.books));
                 if (document.getElementById('view-detail')?.classList.contains('hidden') && document.getElementById('view-reader')?.classList.contains('hidden')) renderShelf();
             }
             if (conflicts) toast(`${conflicts}件、2つの端末で直していました。新しい方を使い、もう片方はDriveに控えを残しました`);
@@ -2739,7 +2808,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                 if (Date.now() - driveReloginAt < 45000) return; driveReloginAt = Date.now();
                 driveEnsureToken('').then(() => { driveSetState(driveMeta.pending && !driveAutoOn() ? 'tap' : 'ok', driveMeta.pending && !driveAutoOn() ? '自動同期は切ってあります。まだ送っていない変更があります（☁を押すと同期）' : undefined); driveFetchWho(); if (driveAutoOn()) driveSync(); }).catch(() => {});
             }, true);
-            const cidIn = document.getElementById('drive-cid'); if (cidIn) { cidIn.value = DRIVE_CLIENT_ID; document.getElementById('drive-cid-save').addEventListener('click', () => { const v = cidIn.value.trim(); if (v && !/^[0-9]+-[a-z0-9]+.apps.googleusercontent.com$/i.test(v)) { toast('IDの形が違います（…apps.googleusercontent.com で終わる文字です）'); return; } try { if (v) localStorage.setItem('yomimono_drive_cid', v); else localStorage.removeItem('yomimono_drive_cid'); } catch (e) {} DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED || v; if (driveMeta.connected) { driveLogout(); } driveSetState('off'); toast(v ? 'IDを保存しました。本棚の ☁ からつなげます' : 'IDを消しました'); }); if (DRIVE_CLIENT_ID_FIXED) { cidIn.value = '（コードの中に入っています）'; cidIn.disabled = true; } }
+            const cidIn = document.getElementById('drive-cid'); if (cidIn) { cidIn.value = DRIVE_CLIENT_ID; document.getElementById('drive-cid-save').addEventListener('click', () => { const v = cidIn.value.trim(); if (v && !/^[0-9]+-[a-z0-9]+.apps.googleusercontent.com$/i.test(v)) { toast('IDの形が違います（…apps.googleusercontent.com で終わる文字です）'); return; } try { if (v) KV.setItem('yomimono_drive_cid', v); else KV.removeItem('yomimono_drive_cid'); } catch (e) {} DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED || v; if (driveMeta.connected) { driveLogout(); } driveSetState('off'); toast(v ? 'IDを保存しました。本棚の ☁ からつなげます' : 'IDを消しました'); }); if (DRIVE_CLIENT_ID_FIXED) { cidIn.value = '（コードの中に入っています）'; cidIn.disabled = true; } }
             const auto = document.getElementById('drive-auto'); if (auto) { auto.checked = driveAutoOn(); auto.addEventListener('change', () => { driveMeta.auto = auto.checked; driveSaveMeta(); if (auto.checked) { toast('自動で同期します'); driveSync(); } else { driveSetState(driveMeta.pending ? 'tap' : 'ok', '自動同期は切ってあります' + (driveMeta.pending ? '。まだ送っていない変更があります' : '') + '（☁を押すと同期）'); toast('自動同期を切りました。☁を押したときだけ同期します'); } }); }
             document.getElementById('btn-drive-now')?.addEventListener('click', () => driveConnect());
             document.getElementById('btn-drive').addEventListener('click', e => { e.stopPropagation(); driveConnect(); });
@@ -3013,10 +3082,10 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
 
         // ===== 本棚の並び替え =====
         const SHELF_SORTS = [['added', '登録順'], ['title', 'タイトル順'], ['author', '作者順'], ['genre', 'ジャンルごと'], ['rating', '評価の高い順'], ['year', '読書期間の新しい順']];
-        function shelfShowHidden() { try { return localStorage.getItem('yomimono_show_hidden') === '1'; } catch (e) { return false; } }
-        function shelfSortMode() { try { const v = localStorage.getItem('yomimono_shelf_sort'); return SHELF_SORTS.some(x => x[0] === v) ? v : 'added'; } catch (e) { return 'added'; } }
-        function shelfSortDir() { try { return localStorage.getItem('yomimono_shelf_sort_dir') === 'desc' ? 'desc' : 'asc'; } catch (e) { return 'asc'; } }
-        function shelfCollapsed() { try { return JSON.parse(localStorage.getItem('yomimono_shelf_collapsed') || '{}') || {}; } catch (e) { return {}; } }
+        function shelfShowHidden() { try { return KV.getItem('yomimono_show_hidden') === '1'; } catch (e) { return false; } }
+        function shelfSortMode() { try { const v = KV.getItem('yomimono_shelf_sort'); return SHELF_SORTS.some(x => x[0] === v) ? v : 'added'; } catch (e) { return 'added'; } }
+        function shelfSortDir() { try { return KV.getItem('yomimono_shelf_sort_dir') === 'desc' ? 'desc' : 'asc'; } catch (e) { return 'asc'; } }
+        function shelfCollapsed() { try { return JSON.parse(KV.getItem('yomimono_shelf_collapsed') || '{}') || {}; } catch (e) { return {}; } }
         const STATUS_ORDER = ['読書中', '再開', '積読', '読了', '中断'];
         function shelfGroupFn(mode) {
             if (mode === 'genre') return b => classificationKey(b.genre) || '未設定';
@@ -3055,9 +3124,9 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                 bar = document.createElement('div'); bar.id = 'shelf-sort-bar';
                 bar.innerHTML = '<label for="shelf-sort-select">並び</label><select id="shelf-sort-select" aria-label="本棚の並び替え">' + SHELF_SORTS.map(x => '<option value="' + x[0] + '">' + x[1] + '</option>').join('') + '</select><button type="button" id="shelf-hidden-toggle" hidden></button><button type="button" id="shelf-sort-dir" aria-label="昇順・降順を切り替える"></button>';
                 c.parentNode.insertBefore(bar, c);
-                bar.querySelector('select').addEventListener('change', e => { try { localStorage.setItem('yomimono_shelf_sort', e.target.value); } catch (er) {} renderShelf(); });
-                bar.querySelector('#shelf-hidden-toggle').addEventListener('click', () => { try { localStorage.setItem('yomimono_show_hidden', shelfShowHidden() ? '0' : '1'); } catch (er) {} renderShelf(); });
-                bar.querySelector('#shelf-sort-dir').addEventListener('click', () => { try { localStorage.setItem('yomimono_shelf_sort_dir', shelfSortDir() === 'asc' ? 'desc' : 'asc'); } catch (er) {} renderShelf(); });
+                bar.querySelector('select').addEventListener('change', e => { try { KV.setItem('yomimono_shelf_sort', e.target.value); } catch (er) {} renderShelf(); });
+                bar.querySelector('#shelf-hidden-toggle').addEventListener('click', () => { try { KV.setItem('yomimono_show_hidden', shelfShowHidden() ? '0' : '1'); } catch (er) {} renderShelf(); });
+                bar.querySelector('#shelf-sort-dir').addEventListener('click', () => { try { KV.setItem('yomimono_shelf_sort_dir', shelfSortDir() === 'asc' ? 'desc' : 'asc'); } catch (er) {} renderShelf(); });
             }
             const mode = shelfSortMode(), dir = shelfSortDir();
             bar.querySelector('select').value = mode;
@@ -3068,7 +3137,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         document.addEventListener('click', e => {
             const h = e.target.closest('.shelf-group-head'); if (!h) return;
             const col = shelfCollapsed(), k = h.dataset.group; if (col[k]) delete col[k]; else col[k] = 1;
-            try { localStorage.setItem('yomimono_shelf_collapsed', JSON.stringify(col)); } catch (er) {}
+            try { KV.setItem('yomimono_shelf_collapsed', JSON.stringify(col)); } catch (er) {}
             renderShelf();
         });
 
@@ -3330,7 +3399,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             else registrationClassification.tags=uniqueClassificationTags([...registrationClassification.tags,label]);
         }
         // 年・分類は、たためる（たたんでいるときは、1行の要約だけ）。開閉は覚えておく
-        function detailClassOpen() { try { return localStorage.getItem('yomimono_detail_class_open') === '1'; } catch (e) { return false; } }
+        function detailClassOpen() { try { return KV.getItem('yomimono_detail_class_open') === '1'; } catch (e) { return false; } }
         function updateDetailClassFold(book, tokens) {
             const box = document.getElementById('detail-classification'), tg = document.getElementById('btn-detail-class-toggle'); if (!box || !tg) return;
             const open = detailClassOpen() || box.contains(document.activeElement);
@@ -3341,7 +3410,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         }
         document.addEventListener('click', e => {
             if (!e.target.closest('#btn-detail-class-toggle')) return;
-            try { localStorage.setItem('yomimono_detail_class_open', detailClassOpen() ? '0' : '1'); } catch (er) {}
+            try { KV.setItem('yomimono_detail_class_open', detailClassOpen() ? '0' : '1'); } catch (er) {}
             const book = state.books.find(b => b.id === state.currentBookId); updateDetailClassFold(book);
         });
         function renderDetailTagChips(tags) {
@@ -3462,7 +3531,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         function setTocView(mode) {
             if(reorderMode || !['asc','desc','favorites'].includes(mode))return;
             state.tocSortMode=mode;
-            try { localStorage.setItem('yomimono_toc_view_v1',mode); } catch(e) { toast('表示設定を保存できませんでした。この画面では切り替わります'); }
+            try { KV.setItem('yomimono_toc_view_v1',mode); } catch(e) { toast('表示設定を保存できませんでした。この画面では切り替わります'); }
             renderDetailAccordion();
         }
         // ===== 目次：細い行、30話ごとの区切り、作品ごとの番号の出し方 =====
@@ -5540,7 +5609,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             { g: '1行の通知', note: '通知・警告・アイテム入手・スキル獲得', ids: ['sys', 'sys-warn', 'sys-item', 'sys-skill'] },
             { g: '掲示板', note: '2ch／5ch型・返信ツリー型', ids: ['bbs', 'bbs-tree'] }
         ];
-        function frameGroupsOpen() { try { return JSON.parse(localStorage.getItem('yomimono_frame_groups') || '{}') || {}; } catch (e) { return {}; } }
+        function frameGroupsOpen() { try { return JSON.parse(KV.getItem('yomimono_frame_groups') || '{}') || {}; } catch (e) { return {}; } }
         let framePickCtx = null;
         function openFramePicker(only) {
             only = Array.isArray(only) ? only : null;   // 「特殊」のボタンからは、文字の向きだけを出す
@@ -5553,7 +5622,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                 + (() => { const op = frameGroupsOpen(); return FRAME_GROUPS.filter(gr => only ? only.includes(gr.g) : gr.g !== '文字の向き').map(gr => '<details class="fg" data-g="' + escapeHtml(gr.g) + '"' + ((op[gr.g] || only) ? ' open' : '') + '><summary>' + escapeHtml(gr.g) + '<span class="fgn">' + escapeHtml(gr.note) + '</span></summary>' + gr.ids.map(id => FRAME_KINDS.find(k => k.id === id)).filter(Boolean).map(k => '<button type="button" class="fm" data-k="' + k.id + '">' + escapeHtml(k.name) + '<span>' + escapeHtml(k.note) + '</span></button>').join('') + '</details>').join(''); })()
                 + '<button type="button" class="fm" data-k="" style="text-align:center;color:#8a7a68">やめる</button></div>';
             document.body.appendChild(m);
-            m.addEventListener('toggle', e => { const d = e.target; if (!d.matches || !d.matches('details.fg')) return; const op = frameGroupsOpen(); op[d.dataset.g] = d.open; try { localStorage.setItem('yomimono_frame_groups', JSON.stringify(op)); } catch (er) {} }, true);
+            m.addEventListener('toggle', e => { const d = e.target; if (!d.matches || !d.matches('details.fg')) return; const op = frameGroupsOpen(); op[d.dataset.g] = d.open; try { KV.setItem('yomimono_frame_groups', JSON.stringify(op)); } catch (er) {} }, true);
             m.addEventListener('click', e => {
                 if (e.target === m) { m.remove(); return; }
                 const b = e.target.closest('button[data-k]'); if (!b) return;
@@ -6424,15 +6493,15 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                 x = Math.max(4, Math.min(innerWidth - w - 4, x)); y = Math.max(4, Math.min(innerHeight - h - 4, y));
                 bar.classList.add('moved'); bar.style.left = x + 'px'; bar.style.top = y + 'px'; return { x, y };
             };
-            try { const p = JSON.parse(localStorage.getItem(KEY) || 'null'); if (p && typeof p.x === 'number') bar._saved = p; } catch (e) {}
+            try { const p = JSON.parse(KV.getItem(KEY) || 'null'); if (p && typeof p.x === 'number') bar._saved = p; } catch (e) {}
             bar._restore = () => { if (bar._saved) bar._saved = place(bar._saved.x, bar._saved.y); };
-            if (bar._saved && (bar._saved.x > innerWidth || bar._saved.y > innerHeight)) { bar._saved = null; try { localStorage.removeItem(KEY); } catch (e) {} }
+            if (bar._saved && (bar._saved.x > innerWidth || bar._saved.y > innerHeight)) { bar._saved = null; try { KV.removeItem(KEY); } catch (e) {} }
             let drag = null;
             grip.addEventListener('pointerdown', e => { const r = bar.getBoundingClientRect(); drag = { dx: e.clientX - r.left, dy: e.clientY - r.top }; try { grip.setPointerCapture(e.pointerId); } catch (x) {} e.preventDefault(); });
             grip.addEventListener('pointermove', e => { if (drag) bar._saved = place(e.clientX - drag.dx, e.clientY - drag.dy); });
-            const end = () => { if (!drag) return; drag = null; try { if (bar._saved) localStorage.setItem(KEY, JSON.stringify(bar._saved)); } catch (e) {} };
+            const end = () => { if (!drag) return; drag = null; try { if (bar._saved) KV.setItem(KEY, JSON.stringify(bar._saved)); } catch (e) {} };
             grip.addEventListener('pointerup', end); grip.addEventListener('pointercancel', end);
-            grip.addEventListener('dblclick', () => { bar.classList.remove('moved'); bar.style.left = bar.style.top = ''; bar._saved = null; try { localStorage.removeItem(KEY); } catch (e) {} });
+            grip.addEventListener('dblclick', () => { bar.classList.remove('moved'); bar.style.left = bar.style.top = ''; bar._saved = null; try { KV.removeItem(KEY); } catch (e) {} });
             window.addEventListener('resize', () => { if (!bar.classList.contains('hidden')) bar._restore(); });
             document.getElementById('btn-tts-rate').addEventListener('click', cycleTtsRate);
             paintTtsRate();
@@ -6743,8 +6812,8 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         let wikiState = { view: 'list', editId: null, draft: null, pendingName: null, revealed: {}, confirmDel: false, filter: 'all', q: '', closed: {} };
 
         function wEsc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
-        function wJson(key, fallback) { try { const v = JSON.parse(localStorage.getItem(key) || 'null'); return v == null ? fallback : v; } catch (e) { return fallback; } }
-        function wSave(key, val) { try { localStorage.setItem(key, JSON.stringify(val)); return true; } catch (e) { toast('保存できませんでした。容量を確認してください'); return false; } }
+        function wJson(key, fallback) { try { const v = JSON.parse(KV.getItem(key) || 'null'); return v == null ? fallback : v; } catch (e) { return fallback; } }
+        function wSave(key, val) { try { KV.setItem(key, JSON.stringify(val)); return true; } catch (e) { toast('保存できませんでした。容量を確認してください'); return false; } }
         function wikiEntries(bookId) { return ((wJson(WIKI_KEY, {})[bookId]) || {}).entries || []; }
         function wikiSetEntries(bookId, entries) { const all = wJson(WIKI_KEY, {}); all[bookId] = Object.assign({}, all[bookId], { entries }); const ok = wSave(WIKI_KEY, all); driveDirty(); return ok; }
         // 自分で作るカテゴリ（重要人物・勢力・第1部…）。1つの項目に複数つけられる。順番は並べ替えできる
@@ -7723,9 +7792,9 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             colorBtn.onmousedown=e=>e.preventDefault();let colorSel=null;
             colorBtn.onclick=()=>{if(!visualDraft.mode||visualDraft.mode!=='visual'){toast('文字を選んでから押してください');return}colorSel=editorSelection();colorDialog.showModal()};
             // 色の窓で、選んだ文字の位置を覚えておく（色の選択に移ると、本文の選択が外れるため）
-            let lastColor='';try{lastColor=localStorage.getItem('yomimono_last_color')||''}catch(e){}
+            let lastColor='';try{lastColor=KV.getItem('yomimono_last_color')||''}catch(e){}
             const paintColorBtn=v=>{const sp=colorBtn.querySelector('span');if(sp&&v)sp.style.borderBottomColor=v};paintColorBtn(lastColor);if(lastColor)document.getElementById('color-custom').value=lastColor;
-            const applyColor=v=>{try{localStorage.setItem('yomimono_last_color',v)}catch(e){}paintColorBtn(v);colorDialog.close();if(colorSel&&colorSel.end>colorSel.start)setVisualSelection(colorSel.start,colorSel.end);toggleMark('色',v)};
+            const applyColor=v=>{try{KV.setItem('yomimono_last_color',v)}catch(e){}paintColorBtn(v);colorDialog.close();if(colorSel&&colorSel.end>colorSel.start)setVisualSelection(colorSel.start,colorSel.end);toggleMark('色',v)};
             document.getElementById('color-cancel').onclick=()=>{colorDialog.close();root.focus({preventScroll:true})};
             colorDialog.addEventListener('click',e=>{const b=e.target.closest('[data-hex]');if(b)applyColor(b.dataset.hex)});
             document.getElementById('color-custom').onchange=e=>applyColor(e.target.value);
@@ -8327,7 +8396,7 @@ function paintReadingModeButtons(){[['scroll','btn-mode-scroll'],['pages','btn-m
 function setReadingMode(m){rememberPage(true);pageReader.mode=m;savePagePreferences();rebuildPages();paintReadingModeButtons()}
 const READER_PAGE_MAX_W=1100,READER_PAGE_BAR_TOP=0,READER_PAGE_BAR_BOTTOM=78,READER_SPREAD_MIN_W=1000,READER_SPREAD_PAGE_W=840,READER_SPREAD_GAP=48;
 function pagingActive(){return pageReader.mode==='pages'&&!document.getElementById('view-reader').classList.contains('editing');}
-function savePagePreferences(){try{localStorage.setItem('yomimono_pages_v1',JSON.stringify({mode:pageReader.mode,vertical:pageReader.vertical,flip:pageReader.flip,spread:pageReader.spread,positions:pageReader.positions,last:pageReader.last}));}catch{toast('読書位置を保存できませんでした。空き容量を確認してください');}}
+function savePagePreferences(){try{KV.setItem('yomimono_pages_v1',JSON.stringify({mode:pageReader.mode,vertical:pageReader.vertical,flip:pageReader.flip,spread:pageReader.spread,positions:pageReader.positions,last:pageReader.last}));}catch{toast('読書位置を保存できませんでした。空き容量を確認してください');}}
 function rememberPage(preserveAnchor=false){if(!pageReader.model||!pagingActive())return;if(!preserveAnchor)pageReader.offset=pageReader.model.pages[pageReader.index]?.offset||0;pageReader.positions[pageReader.key]=pageReader.offset;pageReader.last[state.currentBookId]={chapter:state.currentChapterId,volume:state.currentVolumeId,part:state.currentPartIdx};savePagePreferences();}
 function readerSequenceIndex(){const book=state.books.find(b=>b.id===state.currentBookId);const sequence=getReaderSequence(book||{});return {book,sequence,index:sequence.findIndex(x=>x.chap.id===state.currentChapterId)};}
 function adjacentReaderEntry(direction){const {sequence,index}=readerSequenceIndex();return sequence[index+direction]||null;}
@@ -8478,7 +8547,7 @@ async function turnReaderPage(direction){
 }
 
 function setupPaging(){
- try{const saved=JSON.parse(localStorage.getItem('yomimono_pages_v1')||'{}');pageReader.mode=saved.mode==='pages'?'pages':'scroll';pageReader.vertical=saved.vertical===true;pageReader.flip=saved.flip!==false;pageReader.spread=saved.spread!==false;pageReader.positions=saved.positions&&typeof saved.positions==='object'?saved.positions:{};pageReader.last=saved.last&&typeof saved.last==='object'?saved.last:{};}catch{}
+ try{const saved=JSON.parse(KV.getItem('yomimono_pages_v1')||'{}');pageReader.mode=saved.mode==='pages'?'pages':'scroll';pageReader.vertical=saved.vertical===true;pageReader.flip=saved.flip!==false;pageReader.spread=saved.spread!==false;pageReader.positions=saved.positions&&typeof saved.positions==='object'?saved.positions:{};pageReader.last=saved.last&&typeof saved.last==='object'?saved.last:{};}catch{}
  document.getElementById('reader-reading-mode').onchange=e=>{rememberPage(true);pageReader.mode=e.target.value;savePagePreferences();rebuildPages();};
  document.getElementById('reader-page-direction').onchange=e=>{pageReader.vertical=e.target.value==='vertical';savePagePreferences();rebuildPages();};
  document.getElementById('btn-page-prev').onclick=()=>turnReaderPage(-1);document.getElementById('btn-page-next').onclick=()=>turnReaderPage(1);
@@ -9440,8 +9509,8 @@ function setupPaging(){
                 if (ent.volId) openReaderForVolumeChapter(ent.volId, cid, ent.partIdx); else openReader(cid, ent.partIdx);
             });
 
-            for (const [id, u] of [['btn-stat-unit-book', 'book'], ['btn-stat-unit-chap', 'chap']]) document.getElementById(id).addEventListener('click', () => { state.statUnit = u; try { localStorage.setItem('yomimono_stat_unit', u); } catch (e) {} switchStatTab(state.statTab || 'time'); });
-            try { state.statUnit = localStorage.getItem('yomimono_stat_unit') === 'chap' ? 'chap' : 'book'; } catch (e) {}
+            for (const [id, u] of [['btn-stat-unit-book', 'book'], ['btn-stat-unit-chap', 'chap']]) document.getElementById(id).addEventListener('click', () => { state.statUnit = u; try { KV.setItem('yomimono_stat_unit', u); } catch (e) {} switchStatTab(state.statTab || 'time'); });
+            try { state.statUnit = KV.getItem('yomimono_stat_unit') === 'chap' ? 'chap' : 'book'; } catch (e) {}
             document.getElementById('btn-time-sub-year').addEventListener('click', () => {
                 state.timeSubMode = 'year';
                 renderTimeStatsModule();
@@ -9534,7 +9603,7 @@ function setupPaging(){
             const BACKUP_SKIP = new Set(['yomimono_books_v11', 'yomimono_drive_tok', 'yomimono_drive_v1', 'yomimono_drive_cid', 'yomimono_sample_long_v1']);   // 作品は別に入れる／ログイン・Driveの対応表・サンプルの印は、別の端末に持ち込まない
             function backupBuild() {
                 const data = {};
-                try { for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k && k.indexOf('yomimono_') === 0 && !BACKUP_SKIP.has(k)) data[k] = localStorage.getItem(k); } } catch (e) {}
+                try { for (let i = 0; i < KV.length; i++) { const k = KV.key(i); if (k && k.indexOf('yomimono_') === 0 && !BACKUP_SKIP.has(k)) data[k] = KV.getItem(k); } } catch (e) {}
                 return { app: 'yomimono', format: 2, exportedAt: new Date().toISOString(), books: state.books, data };
             }
             function backupRestore(parsed) {   // 古い形（作品の一覧だけ）も読める。戻り値：Wiki・設定などを戻した件数
@@ -9543,7 +9612,7 @@ function setupPaging(){
                 state.books = books; save();   // 先に作品を保存する（save は設定も書くので、そのあとで、バックアップの設定を上書きする）
                 let n = 0;
                 if (!Array.isArray(parsed) && parsed.data && typeof parsed.data === 'object') {
-                    for (const [k, v] of Object.entries(parsed.data)) { if (k.indexOf('yomimono_') !== 0 || BACKUP_SKIP.has(k) || typeof v !== 'string') continue; try { localStorage.setItem(k, v); n++; } catch (e) {} }
+                    for (const [k, v] of Object.entries(parsed.data)) { if (k.indexOf('yomimono_') !== 0 || BACKUP_SKIP.has(k) || typeof v !== 'string') continue; try { KV.setItem(k, v); n++; } catch (e) {} }
                 }
                 return n;
             }
@@ -10396,7 +10465,7 @@ function setupPaging(){
             return String(str || '').replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
         }
 
-        window.onload = init;
+        if (document.readyState === 'complete') init(); else window.onload = init;
     </script>
 </body>
 </html>
