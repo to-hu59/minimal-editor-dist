@@ -4,7 +4,9 @@
 
 短い説明だけでよい人は、[かんたん版](drive-setup.md) を見てください。
 
-Google Drive と同期したい人だけ、この手順で自分用の設定を作ってください。使わない人は読まなくて大丈夫です。作品は、使っている端末の中に保存されます。
+Google Drive と同期したい人だけ、この手順で自分用の設定を作ってください。使わない人は読まなくて大丈夫です。作品は、使っている端末のブラウザ内に保存されます。保存できる量は端末やブラウザによって異なります。データの削除や端末の故障に備え、設定から JSON のバックアップを別の場所にも残してください。
+
+Drive の設定が難しい場合は、先に JSON のバックアップを使えます。Google への接続は不要です。大切な編集のあとや週1回を目安に、別の場所にも保存してください。
 
 ## 全体の流れ
 
@@ -501,7 +503,8 @@ Google Cloud の画面には、最初にお金の案内（「無料トライア�
        https://to-hu59.github.io
 
    - 末尾の「/」や「/minimal-editor-dist/」は付けません。
-   - パソコンで試すだけの場合は、「http://localhost:8000」も追加します（ポート番号は自分が使うもの）。
+   - 公開版を使う場合は「https://to-hu59.github.io」を登録します。パソコンで使う場合も、公開版だけなら localhost の追加は不要です。
+   - 手元のパソコンでサーバーを起動する場合だけ、「http://localhost」と「http://localhost:実際のポート番号」を追加します。8000 番で起動する場合の例は「http://localhost:8000」です。
    - 「承認済みのリダイレクト URI」は、このアプリでは使いません。空のままにします。
    - 「このクライアントを AI 搭載エージェントに使用する」には、チェックを入れません。
 
@@ -595,15 +598,16 @@ ID は、使っている端末の中にだけ保存されます。ほかの人�
 数日たつとつながらなくなる
 → 「テスト中」のままだと、Google の都合で許可が切れることがあります。もう一度「☁」を押して、許可し直してください。
 
-## Google の公式の説明（日本語）
-
-- プロジェクトを作る：https://developers.google.com/workspace/guides/create-project?hl=ja
-- API をオンにする：https://developers.google.com/workspace/guides/enable-apis?hl=ja
-- 同意画面を設定する：https://developers.google.com/workspace/guides/configure-oauth-consent?hl=ja
-- クライアント ID を作る：https://developers.google.com/workspace/guides/create-credentials?hl=ja
-
 ## 気をつけること
 
 - ログイン（Google の許可）は、約 1 時間で切れます。設定の Google Drive の欄に、「ログインが切れたら、さわったときに自動でやり直す」があります（はじめはオン）。オンなら、切れたあとに画面をさわると、小さな窓が一瞬ひらいて、つなぎ直します。
 - クライアント ID は、人に見られても問題ありません。ただし自分のプロジェクトのものです。ほかの人にも使わせたい場合は、その人にそれぞれ作ってもらうほうが安全です。
 - 作品の本文は、Drive にも置かれます。どの Google アカウントでつなぐか、気をつけてください。
+
+## 参考リンク
+
+- [Google 公式：OAuth クライアント ID と生成元の設定](https://developers.google.com/identity/oauth2/web/guides/get-google-api-clientid)
+- [プロジェクトを作る（Google 公式）](https://developers.google.com/workspace/guides/create-project?hl=ja)
+- [API をオンにする（Google 公式）](https://developers.google.com/workspace/guides/enable-apis?hl=ja)
+- [同意画面を設定する（Google 公式）](https://developers.google.com/workspace/guides/configure-oauth-consent?hl=ja)
+- [クライアント ID を作る（Google 公式）](https://developers.google.com/workspace/guides/create-credentials?hl=ja)
