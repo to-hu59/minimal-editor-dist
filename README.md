@@ -1,4 +1,4 @@
-# Dokusho Reader (working title)
+# Reading Reader (working title)
 
 A browser-based reading app made for personal use. It is a work in progress.
 
