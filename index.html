@@ -1840,13 +1840,13 @@
                     <div class="pt-3 border-t border-woodBorder">
                         <span class="font-bold text-softMuted block mb-1">更新履歴</span>
                         <div id="changelog" class="text-[11px] text-softMuted leading-relaxed">
+<div class="mb-1.5"><b class="text-softText">2026-11-05（30）</b><br>Wikiの一覧の下に、「Wiki関連の機能は、順次、実装しています」と表示した。配布版の更新履歴から、自分用の項目を外した。</div>
 <div class="mb-1.5"><b class="text-softText">2026-11-05（28）</b><br>Wikiの上のバー（固定）に、🏠（本棚TOPへ）と📖（この作品のページへ）を足した。</div>
 <div class="mb-1.5"><b class="text-softText">2026-11-05（27）</b><br>「関連を足す」の窓に、「名前を入れて、作ってつなぐ」を足した（まだ項目にない作品名などを、打つだけで、項目を作ってつなげる。出演作品の役は、ひとことに）。</div>
 <div class="mb-1.5"><b class="text-softText">2026-11-05（26）</b><br>Wikiに、さらに足した。①関連の詳細（評価・特記事項など。名前は自由。○話からも付けられ、ページは、いまの進捗までの最新値を出す）と、関連の期間（所属の移り変わりを、矢印で）。詳細は、ふつうは、つないだ側だけに出るが、「向こうにも出す」で、メンバーの役割なども出せる。②Wikiの一覧を、関連（所属など）で分けて見る。③説明文の書式（## 見出し・- 箇条書き・**太字**・> 引用・---、{{3話}}で話へのリンク）と、目次。④項目のページに「初出」（本文に初めて出る話）。⑤一覧に一行説明、並べ方（名前・初出の話・最近出てきた順）。⑥読む画面の魚のメニューに「この話に出てくる人・用語」。</div>
 <div class="mb-1.5"><b class="text-softText">2026-11-05（25）</b><br>魚の赤い点を、画面に合わせて、つけ直すようにした（本棚TOPでは、どれかの作品に新しい言葉があるとき。作品の詳細・読む画面では、その作品だけ）。画面を切り替えたとき、Wikiを閉じたときにも、見直す。</div>
 <div class="mb-1.5"><b class="text-softText">2026-11-05（24）</b><br>Wikiを、大きく広げた。項目の「ページ」（読むための画面。鉛筆で編集）／「○話時点で見る」（ステータス・スキルは、その話までの最新値）／関連する項目（所属・後輩など。双方向・関係の名前・ひとこと・時期つき）／項目の時期と、出来事・功績（経歴・変遷）／年表／相関図（Mermaidの文字もコピーできる）／文章の中の自動リンクと [[名前]]（まだ無い項目は赤い印）／逆リンク（出てくるところ）／種類のひな形。魚のメニューに「話のまとめ」（各話・範囲）と「一括訂正」（まちがい→正しい形。元に戻せる）を足した。</div>
 <div class="mb-1.5"><b class="text-softText">2026-11-05（23）</b><br>「一括訂正」を足した（魚のメニュー）。誤字・表記ゆれを、まとめて正しい形に直す（例：スホ、スンホ → スルホ。まちがいは、「、」でいくつでも）。「確認」で件数を見てから「実行」。本文を書き換えるが、直前の状態は控えに残り、「元に戻す」で戻せる。Wikiの名前・別の呼び方も、いっしょに直せる。</div>
-<div class="mb-1.5"><b class="text-softText">2026-11-05（22）</b><br>プライバシーポリシーのページ（privacy.html）を足した。Driveの「長くつなぐ」（自分用・中継サーバー）の入れ口を足した（配布版には入っていない）。</div>
 <div class="mb-1.5"><b class="text-softText">2026-11-05（21）</b><br>Wikiの一覧で、複数のタグがある項目は、いちばん最初のタグのグループにだけ出し、ほかのタグは行の右に小さな印で出すようにした（タグでしぼったときは、そのタグの項目をぜんぶ出す）。「Wikiに登録」で既存の項目に足すときの一覧は、タグごとにおりたためる。</div>
 <div class="mb-1.5"><b class="text-softText">2026-11-05（20）</b><br>Wikiの項目を直す画面の上のバーに、「✓」（保存して閉じる）を固定でつけた。保存していない変更があるまま、戻る・閉じるを押すと、確認が出る。</div>
 <div class="mb-1.5"><b class="text-softText">2026-11-05（19）</b><br>「Wikiに登録」で、新しい項目にするか、すでにある項目の「別の呼び方」に足すかを、えらべるようにした。Wikiを閉じたとき、名前や別の呼び方が変わっていれば、読む画面の色づけをすぐ直す。別の呼び方がかぶるときは、確認の窓を出す。「追記を追加」を押さずに保存しても、書きかけの追記がいっしょに入る（ボタンも目立つ形に）。</div>
@@ -7626,6 +7626,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                 if (entries.some(x => x.year || (x.events || []).some(ev => ev.year))) h += '<button class="wk-btn" data-w="timeline"><span>年表（時期の順に見る）</span><span>›</span></button>';
                 h += '<button class="wk-btn" data-w="groups"><span>カテゴリを整える（重要人物・勢力・第1部…）</span><span>›</span></button>';
                 const tb = termsBook(bookId), dn = Object.keys(tb.dismissed).length;
+                h += '<div class="wk-muted" style="margin-top:14px;font-size:12px">※ Wiki関連の機能は、順次、実装しています（使いながら、少しずつ、足していきます）。</div>';
                 h += '<div class="wk-sub">言葉の自動拾い（この作品）</div>';
                 h += '<button class="wk-btn" data-w="terms-toggle"><span>仮登録：読み終えた話から拾う</span><span>' + (typeof tb.enabled === 'boolean' ? (tb.enabled ? '入' : '切') : '共通（' + (termsEnabledFor(bookId) ? '入' : '切') + '）') + '</span></button>';
                 h += '<button class="wk-btn" data-w="terms-rescan">読み終えた話を、もう一度調べる</button>';
@@ -8324,7 +8325,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         }
         // 話の終わり・戻る・本の終わりで、読み終えた話から言葉を拾い、件数を小さく知らせる。読書は止めない
         // ===== 更新の確認：新しい版があれば、魚に青い点とメニュー（版の番号は version.json。公開のたびに、番号が変わる。番号が入っていない開発中は、確かめない） =====
-        const APP_BUILD = '20261105074810';
+        const APP_BUILD = '20261105080943';
         let updateCheckAt = 0;
         function paintBuild() {
             const el = document.getElementById('app-build-info'); if (!el) return;
