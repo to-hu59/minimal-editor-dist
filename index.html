@@ -1837,6 +1837,7 @@
                         <span class="font-bold text-softMuted block mb-1">更新履歴</span>
                         <div id="changelog" class="text-[11px] text-softMuted leading-relaxed">
 <div class="mb-1.5"><b class="text-softText">2026-11-03（6）</b><br>編集の道具：「画面の枠」を「特殊演出」にして（動く人のマーク）、右端に固定した（「原文」のボタンはなくした）。「特殊な文字」（回転の矢印と星のマーク）を足して、縦書き（この部分だけ）・ななめ・左右反転・上下反転・回転・逆さを入れられるようにした（編集画面で、ルビや色と同じように、その場で見える。選ばないときは、いまの行ぜんぶ）。文字色の「カスタム」に「この色にする」を足して、選んだ色が本文と「A」の線に出るようにした。OCRのボタンのマークを変えた。特殊演出に、電光掲示板（右から左へ流れる・文字ごとの色・背景の色・折り返し）、駅の発車案内、空港の出発案内、文字化けするシステム画面、文字が崩れる配信コメント、ページがめくれない、ページが巻き戻る、を足した（🎬の演出ビューで動く）。作品のメニューに、Googleドキュメントへの書き出し（本文のみ）を足した。Driveの自動同期は、はじめは切にして、「いま同期する」で手動にできるようにした。Driveのフォルダ名とアプリ名を「読書リーダー(仮)」にした。</div>
+<div class="mb-1.5"><b class="text-softText">2026-11-05（13）</b><br>「ファイルから」の取り込みを作り直した。ファイルを選ぶと、「取り込む話を選ぶ」の画面が出て、見つかった巻・話を、チェックで選べる。形式は、自動で判別／話だけ／1つの話にまとめる。空の話（「1話」など）があれば、番号で合わせて、題名と中身を入れる（題名を変えないこともできる）。なければ、新しい話として追加。中身がある話は、はじめは触らない（上書き・別の話として追加に、変えられる）。「第2巻」「1巻」「Vol.2」の見出しは、巻として、同じ番号の巻に入れる（なければ、新しく作る）。「＋」の「ファイルから作る」で、バックアップのJSONも選べるようにした（読み込む作品を選ぶ画面が出る）。</div>
 <div class="mb-1.5"><b class="text-softText">2026-11-05（12）</b><br>全体設定に「アプリの更新」の欄を分けた（「アプリとして使う」から出した）。いまの版（日時）と、新しい版があるかを表示して、「最新版にする」で、新しい版に切り替える。魚のメニューのボタンも、「最新版にする」にそろえた。古い日付のままだった「版：2026-11-02」の表示は、消した。</div>
 <div class="mb-1.5"><b class="text-softText">2026-11-05（11）</b><br>タグ・ジャンルの候補の動きを直した。金色の候補（ジャンル）を押すと、ジャンルとして付く（別のジャンルが付いていたら、切り替わる。タグに付いていたら、ジャンルに移る）。緑・灰色の候補（タグ）は、続けて何個でも押して追加できる。すでに付いているもの（✓）は、もう一度押すと外れる。</div>
 <div class="mb-1.5"><b class="text-softText">2026-11-05（10）</b><br>魚のメニューを直した。検索・Wiki・作品の詳細設定などを使っても、メニューが閉じない（魚をもう一度押すか、×で閉じる。ページ送りなど、読む画面を動かすものは、これまでどおり閉じる）。「Wiki（作品ごと）」は、見出しを押して、開く・たためる（はじめは、たたんでいる）。中は、ジャンルごとの見出し（これも、押して開く・たためる）の下に、作品が並ぶ。ジャンルがない作品は「未分類」。「今年の読んだ数」「ジャンル別の冊数」は、本棚の上のグラフにあるので、魚のメニューから外した。タグの候補を押すと、そのまま、その作品に追加される（すでに付いているものには「✓」）。</div>
@@ -1947,7 +1948,7 @@
                         </div>
                     </div>
                     <div>
-                        <button type="button" id="btn-new-book-from-file" class="w-full py-2.5 rounded-xl border border-dashed border-woodBorder bg-white text-xs font-bold text-woodAccentDark active:scale-95 transition">ファイルから作る（Word・テキスト・MD・HTML）</button>
+                        <button type="button" id="btn-new-book-from-file" class="w-full py-2.5 rounded-xl border border-dashed border-woodBorder bg-white text-xs font-bold text-woodAccentDark active:scale-95 transition">ファイルから作る（Word・テキスト・MD・HTML・バックアップJSON）</button>
                         <p class="text-[10px] text-softMuted mt-1">上で決めたタイプ（A〜D）で作品を作り、いちばん上の部に、ファイルを取り込みます。「第1話」「1話」などの見出しがあれば、話に分けられます。題名が空のときは、ファイルの名前になります。</p>
                     </div>
                     <div>
@@ -4551,21 +4552,108 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             } else { if (!part.chapters) part.chapters = []; list = part.chapters; }
             chaps.forEach(c => list.push({ id: 'chap_' + Math.random().toString(36).substring(2, 9), title: c.title, favorite: false, content: c.content }));
         }
-        // 取り込む：part（部）に、話を足す。2話以上に分けられるときは、聞く
+        // ===== ファイルから取り込む：巻・話・題名を判別して、入れる場所を決める。空の話には、題名と中身を入れる =====
+        const impNum = t => { const m = String(t || '').replace(/[０-９]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0)).match(/\d+/); return m ? Number(m[0]) : null; };
+        const impEmpty = c => !String((c && c.content) || '').trim();
+        const IMP_VOL = /^\s*(?:第\s*[0-9０-９一二三四五六七八九十]+\s*巻|[0-9０-９]+\s*巻|Vol(?:ume)?\.?\s*[0-9０-９]+)/i;
+        function impParse(lines, fileTitle, mode) {   // → [{ volNum, volTitle, chaps:[{title, content}] }]。mode：auto（見出しで判別）／flat（巻は無視。話だけ）／single（1つの話にまとめる）
+            const NL = String.fromCharCode(10), join = ls => ls.map(l => l.t).join(NL).replace(/^\s*\n+|\n+\s*$/g, '');
+            if (mode === 'single') return [{ volNum: null, volTitle: '', chaps: [{ title: fileTitle, content: join(lines) }] }];
+            const heads = []; if (mode !== 'flat') lines.forEach((l, i) => { const t = l.t.trim(); if (t && t.length <= 60 && IMP_VOL.test(t)) heads.push(i); });
+            if (!heads.length) return [{ volNum: null, volTitle: '', chaps: splitIntoChapters(lines, fileTitle) }];
+            const out = [];
+            if (heads[0] > 0 && join(lines.slice(0, heads[0])).replace(/\s/g, '').length > 20) out.push({ volNum: null, volTitle: '', chaps: splitIntoChapters(lines.slice(0, heads[0]), fileTitle) });
+            heads.forEach((h, k) => { const vt = lines[h].t.trim().replace(/^#+\s*/, '').slice(0, 60); out.push({ volNum: impNum(vt), volTitle: vt, chaps: splitIntoChapters(lines.slice(h + 1, k + 1 < heads.length ? heads[k + 1] : lines.length), vt) }); });
+            return out;
+        }
+        function impBuildPlan(part, groups) {   // 入れる場所を決める：巻は、番号で合わせる／話は、番号か題名で合わせる。空の話は「中身を入れる」、中身がある話は、はじめは「触らない」
+            const ebook = part.formatType === 'ebook', used = new Set();
+            groups.forEach(g => {
+                let vol = null, list;
+                if (ebook) { const vs = part.volumes || []; vol = g.volNum != null ? (vs.find(v => impNum(v.title) === g.volNum) || null) : (vs.find(v => v.id === g.volSel) || vs[0] || null); list = vol ? (vol.chapters || []) : []; }
+                else list = part.chapters || [];
+                g.vol = vol;
+                g.rows = g.chaps.map(chap => {
+                    const n = impNum(chap.title), ex = list.find(c => !used.has(c) && ((n != null && impNum(c.title) === n) || String(c.title || '').trim() === String(chap.title || '').trim())) || null;
+                    if (ex) used.add(ex);
+                    const act = !ex ? 'new' : impEmpty(ex) ? 'fill' : 'skip';
+                    return { chap, ex, act, chk: act !== 'skip' };
+                });
+            });
+        }
+        function impApply(part, groups, titleToo) {   // 戻り値：{ filled：中身を入れた話, added：足した話 }
+            let filled = 0, added = 0; const rid = p => p + Math.random().toString(36).substring(2, 9);
+            groups.forEach(g => {
+                const sel = g.rows.filter(r => r.chk && r.act !== 'skip'); if (!sel.length) return;
+                let list;
+                if (part.formatType === 'ebook') {
+                    if (!part.volumes) part.volumes = [];
+                    let vol = g.vol; if (!vol) { vol = { id: rid('vol_'), title: g.volTitle || ((g.volNum || part.volumes.length + 1) + '巻'), chapters: [] }; part.volumes.push(vol); }
+                    if (!vol.chapters) vol.chapters = []; list = vol.chapters;
+                } else { if (!part.chapters) part.chapters = []; list = part.chapters; }
+                sel.forEach(r => {
+                    if ((r.act === 'fill' || r.act === 'overwrite') && r.ex) { r.ex.content = r.chap.content; if (titleToo) r.ex.title = r.chap.title; filled++; }
+                    else { list.push({ id: rid('chap_'), title: r.chap.title, favorite: false, content: r.chap.content }); added++; }
+                });
+            });
+            return { filled, added };
+        }
+        const impMsg = r => [r.filled ? r.filled + '話に、中身を入れました' : '', r.added ? r.added + '話を追加しました' : ''].filter(Boolean).join('・');
+        function importPlanDialog(part, fileName, lines, fileTitle) {   // 取り込む前の確認の画面。戻り値：{ groups, titleToo } か、やめたら null
+            return new Promise(resolve => {
+                let mode = 'auto', titleToo = true, groups = []; const ebook = part.formatType === 'ebook';
+                const ov = document.createElement('div'); ov.id = 'import-plan'; ov.style.cssText = 'position:fixed;inset:0;z-index:100000;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;padding:12px';
+                document.body.appendChild(ov);
+                const E = escapeHtml, close = v => { ov.remove(); resolve(v); };
+                const paint = () => {
+                    const vsOpts = g => (part.volumes || []).map(v => '<option value="' + E(v.id) + '"' + (g.vol && g.vol.id === v.id ? ' selected' : '') + '>' + E(v.title) + '</option>').join('') + '<option value="">（新しい巻を作る）</option>';
+                    let body = '', fillN = 0, newN = 0;
+                    groups.forEach((g, gi) => {
+                        const head = g.volTitle ? E(g.volTitle) + (ebook ? (g.vol ? '　→ 今の「' + E(g.vol.title) + '」に入れる' : '　→ 新しい巻を作る') : '') : (ebook ? '入れる巻：<select data-vsel="' + gi + '" style="padding:2px 4px;border:1px solid #cdbf9f;border-radius:8px;background:#fff">' + vsOpts(g) + '</select>' : '');
+                        if (head) body += '<div style="margin-top:10px;padding:4px 10px;border-radius:10px;background:#b8923f22;color:#7a5a14;font-weight:700">' + head + '</div>';
+                        g.rows.forEach((r, ri) => {
+                            const on = r.chk && r.act !== 'skip'; if (on) { if (r.act === 'new' || r.act === 'append') newN++; else fillN++; }
+                            let st;
+                            if (r.act === 'new') st = '→ 新しい話として追加';
+                            else if (r.act === 'fill') st = '→ 今の「' + E(r.ex.title) + '」（空）に、中身を入れる';
+                            else st = '→ 今の「' + E(r.ex.title) + '」には、中身があります：<select data-act="' + gi + ',' + ri + '" style="padding:2px 4px;border:1px solid #cdbf9f;border-radius:8px;background:#fff"><option value="skip"' + (r.act === 'skip' ? ' selected' : '') + '>触らない</option><option value="overwrite"' + (r.act === 'overwrite' ? ' selected' : '') + '>上書きする</option><option value="append"' + (r.act === 'append' ? ' selected' : '') + '>別の話として追加</option></select>';
+                            body += '<label style="display:flex;gap:8px;align-items:flex-start;padding:7px 2px;border-bottom:1px solid #e3d9c4"><input type="checkbox" data-chk="' + gi + ',' + ri + '"' + (r.chk && r.act !== 'skip' ? ' checked' : '') + (r.act === 'skip' ? ' disabled' : '') + ' style="margin-top:3px"><span style="flex:1;min-width:0"><b>' + E(r.chap.title) + '</b><span style="color:#9a8a72;font-size:10px">（' + r.chap.content.length.toLocaleString() + '字）</span><br><span style="color:#7a6a52;font-size:11px">' + st + '</span></span></label>';
+                        });
+                    });
+                    ov.innerHTML = '<div class="bg-kinari rounded-2xl border border-woodBorder text-xs" style="width:100%;max-width:460px;max-height:85vh;display:flex;flex-direction:column"><div style="padding:14px 16px 4px;font-weight:700;font-size:13px">取り込む話を選ぶ</div><div style="padding:0 16px 6px;color:#7a6a52;word-break:break-all">' + E(fileName) + '</div>'
+                        + '<div style="padding:0 16px 6px;display:flex;gap:10px;align-items:center;flex-wrap:wrap"><span>形式：</span><select id="ip-mode" style="padding:3px 6px;border:1px solid #cdbf9f;border-radius:8px;background:#fff"><option value="auto"' + (mode === 'auto' ? ' selected' : '') + '>自動で判別（巻・話）</option><option value="flat"' + (mode === 'flat' ? ' selected' : '') + '>話だけ</option><option value="single"' + (mode === 'single' ? ' selected' : '') + '>1つの話にまとめる</option></select></div>'
+                        + '<label style="padding:0 16px 6px;display:flex;gap:8px;align-items:center"><input type="checkbox" id="ip-title"' + (titleToo ? ' checked' : '') + '><span>題名も、ファイルの見出しに変える（空の話に入れるとき）</span></label>'
+                        + '<div style="overflow:auto;padding:0 16px;flex:1">' + (body || '<div style="padding:12px 0;color:#7a6a52">取り込める話が、見つかりませんでした</div>') + '</div>'
+                        + '<div style="padding:10px 16px 4px;color:#7a6a52">中身を入れる ' + fillN + '話／新しく追加 ' + newN + '話</div>'
+                        + '<div style="padding:8px 16px 14px;display:flex;gap:8px;justify-content:flex-end"><button type="button" id="ip-cancel" class="px-4 py-2 rounded-xl border border-woodBorder bg-white">やめる</button><button type="button" id="ip-go" class="px-4 py-2 rounded-xl text-white font-bold" style="background:#b8923f;opacity:' + (fillN + newN ? 1 : .45) + '"' + (fillN + newN ? '' : ' disabled') + '>取り込む</button></div></div>';
+                };
+                const rebuild = () => { groups = impParse(lines, fileTitle, mode); impBuildPlan(part, groups); paint(); };
+                ov.addEventListener('change', e => {
+                    const t = e.target;
+                    if (t.id === 'ip-mode') { mode = t.value; rebuild(); return; }
+                    if (t.id === 'ip-title') { titleToo = t.checked; return; }
+                    if (t.dataset.vsel !== undefined) { groups[Number(t.dataset.vsel)].volSel = t.value; impBuildPlan(part, groups); paint(); return; }
+                    if (t.dataset.act !== undefined) { const [g, r] = t.dataset.act.split(',').map(Number), row = groups[g].rows[r]; row.act = t.value; row.chk = t.value !== 'skip'; paint(); return; }
+                    if (t.dataset.chk !== undefined) { const [g, r] = t.dataset.chk.split(',').map(Number); groups[g].rows[r].chk = t.checked; paint(); }
+                });
+                ov.addEventListener('click', e => { if (e.target.id === 'ip-cancel' || e.target === ov) close(null); else if (e.target.id === 'ip-go') close({ groups, titleToo }); });
+                rebuild();
+            });
+        }
+        // 取り込む：part（部）に、ファイルの話を入れる（取り込む前に、見つかった巻・話と、入れる場所を見せて、選んでもらう）
         async function importFilesIntoPart(book, part, files) {
-            let added = 0, toastTail = '';
+            let added = 0, filled = 0, toastTail = '';
             const images = files.filter(isImageFile); files = files.filter(f => !isImageFile(f));
             if (images.length) { const chaps = await imagesToChapters(images); if (chaps && chaps.length) { addChaptersToPart(part, chaps); added += chaps.length; } }
             for (const file of files) {
                 let lines;
                 try { lines = await fileToLines(file); }
-                catch (err) { toast(err.code === 'doc' ? '古い形式（.doc）は読めません。Wordで「名前を付けて保存」から、.docx にして、取り込んでください' : '「' + file.name + '」を取り込めませんでした。Googleドキュメントは、「ファイル → ダウンロード → Microsoft Word（.docx）」で保存してから、選んでください'); continue; }
-                const fileTitle = file.name.replace(/\.[^/.]+$/, ''); let chaps = splitIntoChapters(lines, fileTitle);
-                if (chaps.length >= 2 && !confirm('「' + file.name + '」を、' + chaps.length + '話に分けて取り込みますか？\n\n' + chaps.slice(0, 12).map((c, i) => (i + 1) + '. ' + c.title).join('\n') + (chaps.length > 12 ? '\n…' : '') + '\n\nOK：分ける　／　キャンセル：1つの話にする')) chaps = [{ title: fileTitle, content: lines.map(l => l.t).join(String.fromCharCode(10)).replace(/^\s*\n+|\n+\s*$/g, '') }];
-                addChaptersToPart(part, chaps);
-                added += chaps.length; toastTail = chaps.length >= 2 ? '' : '「' + chaps[0].title + '」';
+                catch (err) { toast(err.code === 'doc' ? '古い形式（.doc）は読めません。Wordで「名前を付けて保存」から、.docx にして、取り込んでください' : '「' + file.name + '」を読めませんでした'); continue; }
+                const fileTitle = file.name.replace(/\.[^/.]+$/, ''), plan = await importPlanDialog(part, file.name, lines, fileTitle);
+                if (!plan) continue;
+                const r = impApply(part, plan.groups, plan.titleToo); added += r.added; filled += r.filled;
             }
-            return { added, toastTail };
+            return { added, filled, toastTail };
         }
         window.importFileForPart = function(partIdx) {
             const input = document.createElement('input');
@@ -4575,7 +4663,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                 const files = [...e.target.files]; if (!files.length) return;
                 const book = state.books.find(b => b.id === state.currentBookId), part = book && book.parts[partIdx]; if (!part) return;
                 const r = await importFilesIntoPart(book, part, files);
-                if (r.added) { save(); updateDetailStats(); renderDetailAccordion(); toast(r.added + '話を取り込みました'); }
+                if (r.added || r.filled) { save(); updateDetailStats(); renderDetailAccordion(); savedToast(impMsg(r)); }
             };
             input.click();
         };
@@ -7481,7 +7569,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         }
         // 話の終わり・戻る・本の終わりで、読み終えた話から言葉を拾い、件数を小さく知らせる。読書は止めない
         // ===== 更新の確認：新しい版があれば、魚に青い点とメニュー（版の番号は version.json。公開のたびに、番号が変わる。番号が入っていない開発中は、確かめない） =====
-        const APP_BUILD = '20261104124637';
+        const APP_BUILD = '20261104131615';
         let updateCheckAt = 0;
         function paintBuild() {
             const el = document.getElementById('app-build-info'); if (!el) return;
@@ -9820,6 +9908,7 @@ function setupPaging(){
                     if (restored > 0) setTimeout(() => location.reload(), 900); else { renderYearOptions(); renderShelf(); }   // Wiki・設定は、読み込み直しで、全部の画面に反映する
                 });
             }
+            window.importBackupParsed = importParsed; window.backupPlanOf = backupPlan;   // 「＋」の「ファイルから作る」からも使う
             document.getElementById('input-import-json').addEventListener('change', (e) => {
                 const file = e.target.files[0];
                 if (!file) return;
@@ -10665,14 +10754,20 @@ function setupPaging(){
         }
         function newBookFromFile() {
             const input = document.createElement('input');
-            input.type = 'file'; input.multiple = true; input.accept = '.txt,.md,.docx,.html,.htm,image/*';
+            input.type = 'file'; input.multiple = true; input.accept = '.txt,.md,.docx,.html,.htm,.json,image/*';
             input.onchange = async () => {
                 const files = [...input.files]; if (!files.length) return;
+                const jf = files.find(f => /\.json$/i.test(f.name));
+                if (jf) {   // バックアップのJSON：作品を選んで、今の作品に足す（新しい作品は、作らない）
+                    try { const parsed = JSON.parse(await jf.text()); if (window.backupPlanOf(parsed)) { window.importBackupParsed(parsed); return; } } catch (e) {}
+                    toast('このファイルは、バックアップではないようです'); return;
+                }
                 const ti = document.getElementById('new-book-title'); if (!ti.value.trim()) ti.value = files[0].name.replace(/\.[^/.]+$/, '');
                 const nb = handleCreateNewBook({ noOpen: true }); if (!nb) return;
                 const r = await importFilesIntoPart(nb, nb.parts[0], files);
+                if (!r.added && !r.filled) { state.books = state.books.filter(b => b.id !== nb.id); save(); renderShelf(); toast('取り込みをやめました（作品は、作りませんでした）'); return; }
                 save(); driveSoon(); renderShelf();
-                savedToast('新しい作品を登録しました' + (r.added ? '（' + r.added + '話を取り込みました）' : ''));
+                savedToast('新しい作品を登録しました' + (r.added || r.filled ? '（' + impMsg(r) + '）' : ''));
                 openDetail(nb.id);
             };
             input.click();
