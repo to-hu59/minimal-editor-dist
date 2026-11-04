@@ -1782,6 +1782,7 @@
                             <span>作品・Wiki・設定をJSONで書き出し保存</span>
                         </button>
                         <button id="btn-export-pick" class="w-full py-2.5 bg-white hover:bg-kinariDark text-softText border border-woodBorder rounded-xl font-bold flex items-center justify-center space-x-2 shadow-xs mb-2 active:scale-95 transition"><i class="fa-solid fa-list-check text-woodAccent"></i><span>選んだ作品だけ書き出す</span></button>
+                        <button id="btn-backup-list" class="w-full py-2.5 bg-white hover:bg-kinariDark text-softText border border-woodBorder rounded-xl font-bold flex items-center justify-center space-x-2 shadow-xs mb-2 active:scale-95 transition"><i class="fa-solid fa-folder-open text-woodAccent"></i><span>バックアップの一覧（フォルダ）</span></button>
                         <p class="text-[10px] text-softMuted mb-1">追加したフォントと、Googleのログイン情報は、入りません。</p>
                         <label class="block text-[10px] text-softMuted mb-1">JSONファイルから読み込み（今の作品に足します。今の作品は消えません）:</label>
                         <input type="file" id="input-import-json" accept=".json" class="w-full text-xs text-softMuted file:mr-2 file:py-1 file:px-3 file:rounded-xl file:border-0 file:bg-white file:border-woodBorder file:text-softText file:font-bold">
@@ -1830,6 +1831,7 @@
                         <span class="font-bold text-softMuted block mb-1">更新履歴</span>
                         <div id="changelog" class="text-[11px] text-softMuted leading-relaxed">
 <div class="mb-1.5"><b class="text-softText">2026-11-03（6）</b><br>編集の道具：「画面の枠」を「特殊演出」にして（動く人のマーク）、右端に固定した（「原文」のボタンはなくした）。「特殊な文字」（回転の矢印と星のマーク）を足して、縦書き（この部分だけ）・ななめ・左右反転・上下反転・回転・逆さを入れられるようにした（編集画面で、ルビや色と同じように、その場で見える。選ばないときは、いまの行ぜんぶ）。文字色の「カスタム」に「この色にする」を足して、選んだ色が本文と「A」の線に出るようにした。OCRのボタンのマークを変えた。特殊演出に、電光掲示板（右から左へ流れる・文字ごとの色・背景の色・折り返し）、駅の発車案内、空港の出発案内、文字化けするシステム画面、文字が崩れる配信コメント、ページがめくれない、ページが巻き戻る、を足した（🎬の演出ビューで動く）。作品のメニューに、Googleドキュメントへの書き出し（本文のみ）を足した。Driveの自動同期は、はじめは切にして、「いま同期する」で手動にできるようにした。Driveのフォルダ名とアプリ名を「読書リーダー(仮)」にした。</div>
+<div class="mb-1.5"><b class="text-softText">2026-11-05（8）</b><br>「バックアップの一覧（フォルダ）」を足した（パソコンのChrome・Edge）。バックアップを置いたフォルダを1回選ぶと、中のバックアップ（日付・全部か一部か・作品の数）が、新しい順に並ぶ。押すと、読み込む作品を選ぶ画面になる。フォルダを選んでおくと、書き出しも、そのフォルダへ直接保存される。</div>
 <div class="mb-1.5"><b class="text-softText">2026-11-05（7）</b><br>バックアップを、選べるようにした。「選んだ作品だけ書き出す」（Wiki・言葉も、その作品の分だけ）を足した。読み込みは、「足す形」にした：ファイルの作品を選んで、今の作品に足す（今の作品は消えない。同じ作品は、ファイルの内容で上書き）。設定も戻すか、選べる。読んだ記録のカレンダーは、日ごとの数を「28話・1冊」のように出し、色は読んだ文字数で決める（1万字未満・1〜5万字・5万字以上）。全体の「読んだ話」は、「読んだ数」（話・章・冊）にした。</div>
 <div class="mb-1.5"><b class="text-softText">2026-11-05（6）</b><br>ジャンルのチップを、金色にした（タグは、緑のまま）。作品の詳細の上のチップと、「＋分類」の候補の一覧と、作品を登録するときの候補が、同じ色分けになる。</div>
 <div class="mb-1.5"><b class="text-softText">2026-11-05（5）</b><br>タグを消せるようにした。作品の詳細の、タグの横に「×」を付けた（その作品だけから外れる）。「＋分類」で名前を入れると、「全作品から消す（○冊）」が出て、付いているすべての作品から、まとめて消せる（確認が出る）。前の「削除」の名前は、「この作品から外す」にした。</div>
@@ -9653,10 +9655,27 @@ function setupPaging(){
                 } catch (e) {}
                 return Object.assign({ app: 'yomimono', format: 2, exportedAt: new Date().toISOString(), books: partial ? state.books.filter(b => idset.has(b.id)) : state.books, data }, partial ? { partial: true } : {});
             }
-            function backupDownload(obj, name) {
+            // ===== バックアップの置き場所（パソコンの Chrome・Edge）：フォルダを1回選ぶと、中のバックアップの一覧が出る。書き出しも、そのフォルダへ直接保存する =====
+            const FSB = {
+                ok: () => typeof window.showDirectoryPicker === 'function',
+                db() { return new Promise((res, rej) => { const r = indexedDB.open('yomimono_fs', 1); r.onupgradeneeded = () => r.result.createObjectStore('h'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }); },
+                async get() { try { const db = await this.db(); return await new Promise(res => { const q = db.transaction('h').objectStore('h').get('dir'); q.onsuccess = () => res(q.result || null); q.onerror = () => res(null); }); } catch (e) { return null; } },
+                async set(h) { const db = await this.db(); await new Promise((res, rej) => { const t = db.transaction('h', 'readwrite'); t.objectStore('h').put(h, 'dir'); t.oncomplete = res; t.onerror = () => rej(t.error); }); },
+                async ensure(change, ask) {   // 許可のあるフォルダを返す（なければ null）。ask＝画面から押されたとき（選ぶ・許可を聞く）
+                    let h = change ? null : await this.get();
+                    if (!h) { if (!ask) return null; h = await window.showDirectoryPicker({ id: 'yomimono-backup', mode: 'readwrite' }); await this.set(h); }
+                    let p = await h.queryPermission({ mode: 'readwrite' });
+                    if (p !== 'granted') { if (!ask) return null; p = await h.requestPermission({ mode: 'readwrite' }); if (p !== 'granted') return null; }
+                    return h;
+                }
+            };
+            async function backupDownload(obj, name) {   // 戻り値：'folder'＝選んだフォルダに保存／'download'＝ダウンロード
+                const text = JSON.stringify(obj, null, 2);
+                if (FSB.ok()) { try { const h = await FSB.ensure(false, false); if (h) { const fh = await h.getFileHandle(name, { create: true }), w = await fh.createWritable(); await w.write(text); await w.close(); return 'folder'; } } catch (e) {} }
                 const a = document.createElement('a');
-                a.href = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(obj, null, 2));
+                a.href = "data:text/json;charset=utf-8," + encodeURIComponent(text);
                 a.download = name; document.body.appendChild(a); a.click(); a.remove();
+                return 'download';
             }
             function backupPlan(parsed) {   // 読み込む前の確認用：何冊を足し、何冊を上書きするか
                 const books = Array.isArray(parsed) ? parsed : (parsed && Array.isArray(parsed.books) ? parsed.books : null); if (!books) return null;
@@ -9712,8 +9731,7 @@ function setupPaging(){
                 };
             }
             document.getElementById('btn-export-json').addEventListener('click', () => {
-                backupDownload(backupBuild(), 'yomimono_backup_' + new Date().toISOString().slice(0, 10) + '.json');
-                toast('バックアップを保存しました（作品・Wiki・設定）');
+                backupDownload(backupBuild(), 'yomimono_backup_' + new Date().toISOString().slice(0, 10) + '.json').then(w => toast(w === 'folder' ? 'バックアップを、選んだフォルダに保存しました（作品・Wiki・設定）' : 'バックアップを保存しました（作品・Wiki・設定）'));
             });
             // 選んだ作品だけ書き出す
             document.getElementById('btn-export-pick').addEventListener('click', () => {
@@ -9729,26 +9747,57 @@ function setupPaging(){
                 ov.querySelector('#bp-none').onclick = () => { boxes().forEach(x => x.checked = false); upd(); };
                 ov.querySelector('#bp-close').onclick = () => ov.remove();
                 ov.addEventListener('click', e => { if (e.target === ov) ov.remove(); });
-                ov.querySelector('#bp-go').onclick = () => { const ids = boxes().filter(x => x.checked).map(x => x.value); if (!ids.length) return; backupDownload(backupBuild(ids), 'yomimono_backup_一部_' + new Date().toISOString().slice(0, 10) + '.json'); ov.remove(); toast(ids.length + '冊を書き出しました（Wiki・言葉を含む。設定は入りません）'); };
+                ov.querySelector('#bp-go').onclick = () => { const ids = boxes().filter(x => x.checked).map(x => x.value); if (!ids.length) return; ov.remove(); backupDownload(backupBuild(ids), 'yomimono_backup_一部_' + new Date().toISOString().slice(0, 10) + '.json').then(w => toast(ids.length + '冊を' + (w === 'folder' ? '、選んだフォルダに' : '') + '書き出しました（Wiki・言葉を含む。設定は入りません）')); };
             });
+            function importParsed(parsed) {   // 読み込む作品を選んで、今の作品に足す
+                const plan = backupPlan(parsed);
+                if (!plan) { toast('このファイルは、バックアップではないようです'); return; }
+                restorePicker(parsed, plan, (picked) => {
+                    const restored = backupRestore(picked);
+                    document.getElementById('modal-global-settings').classList.add('hidden');
+                    toast(restored > 0 ? 'データを足しました（Wiki・設定も戻します）' : 'データを足しました');
+                    if (restored > 0) setTimeout(() => location.reload(), 900); else { renderYearOptions(); renderShelf(); }   // Wiki・設定は、読み込み直しで、全部の画面に反映する
+                });
+            }
             document.getElementById('input-import-json').addEventListener('change', (e) => {
                 const file = e.target.files[0];
                 if (!file) return;
                 const reader = new FileReader();
-                reader.onload = (evt) => {
-                    try {
-                        const parsed = JSON.parse(evt.target.result), plan = backupPlan(parsed);
-                        if (!plan) { toast('このファイルは、バックアップではないようです'); return; }
-                        restorePicker(parsed, plan, (picked) => {
-                            const restored = backupRestore(picked);
-                            document.getElementById('modal-global-settings').classList.add('hidden');
-                            toast(restored > 0 ? 'データを足しました（Wiki・設定も戻します）' : 'データを足しました');
-                            if (restored > 0) setTimeout(() => location.reload(), 900); else { renderYearOptions(); renderShelf(); }   // Wiki・設定は、読み込み直しで、全部の画面に反映する
-                        });
-                    } catch(err) { toast('読み込みエラーが発生しました'); }
-                };
+                reader.onload = (evt) => { try { importParsed(JSON.parse(evt.target.result)); } catch (err) { toast('読み込みエラーが発生しました'); } };
                 reader.readAsText(file); e.target.value = '';
             });
+            // バックアップの一覧（選んだフォルダの中）
+            async function openBackupList(change) {
+                let h;
+                try { h = await FSB.ensure(change, true); } catch (e) { if (e && e.name === 'AbortError') return; toast('フォルダを開けませんでした'); return; }
+                if (!h) { toast('フォルダへの許可が必要です'); return; }
+                const old = document.getElementById('backup-list'); if (old) old.remove();
+                const ov = document.createElement('div'); ov.id = 'backup-list'; ov.style.cssText = 'position:fixed;inset:0;z-index:100000;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;padding:12px';
+                ov.innerHTML = '<div class="bg-kinari rounded-2xl border border-woodBorder text-xs" style="width:100%;max-width:460px;max-height:80vh;display:flex;flex-direction:column"><div style="padding:14px 16px 4px;font-weight:700;font-size:13px">バックアップの一覧</div><div style="padding:0 16px 8px;color:#7a6a52">フォルダ：<b id="bl-folder"></b>　（読み込みたいものを押します）</div><div id="bl-list" style="overflow:auto;padding:0 16px;flex:1"><div style="padding:12px 0;color:#7a6a52">しらべています…</div></div><div style="padding:12px 16px;display:flex;gap:8px;justify-content:flex-end"><button type="button" id="bl-change" class="px-3 py-2 rounded-xl border border-woodBorder bg-white">フォルダを変える</button><button type="button" id="bl-close" class="px-4 py-2 rounded-xl border border-woodBorder bg-white">閉じる</button></div></div>';
+                document.body.appendChild(ov);
+                ov.querySelector('#bl-folder').textContent = h.name || '';
+                ov.querySelector('#bl-close').onclick = () => ov.remove();
+                ov.addEventListener('click', e => { if (e.target === ov) ov.remove(); });
+                ov.querySelector('#bl-change').onclick = () => { ov.remove(); openBackupList(true); };
+                const items = [];
+                try { for await (const [name, eh] of h.entries()) { if (eh.kind === 'file' && /^yomimono_backup.*\.json$/i.test(name)) items.push({ name, file: await eh.getFile() }); } } catch (e) { ov.querySelector('#bl-list').textContent = 'フォルダを読めませんでした'; return; }
+                items.sort((a, b) => b.file.lastModified - a.file.lastModified);
+                const list = ov.querySelector('#bl-list'); list.textContent = '';
+                if (!items.length) { list.innerHTML = '<div style="padding:12px 0;color:#7a6a52">このフォルダに、バックアップ（yomimono_backup…json）は、ありません</div>'; return; }
+                const pad = n => String(n).padStart(2, '0'), fmt = t => { const d = new Date(t); return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes()); }, size = n => n >= 1048576 ? (n / 1048576).toFixed(1) + 'MB' : Math.max(1, Math.round(n / 1024)) + 'KB';
+                for (const it of items) {
+                    const btn = document.createElement('button'); btn.type = 'button'; btn.style.cssText = 'display:block;width:100%;text-align:left;padding:10px 4px;border-bottom:1px solid #e3d9c4;background:transparent';
+                    btn.innerHTML = '<span style="font-weight:700">' + escapeHtml(fmt(it.file.lastModified)) + '</span>　<span class="bl-kind" style="color:#7a6a52">しらべています…</span><span style="float:right;color:#7a6a52">' + size(it.file.size) + '</span><span style="display:block;color:#9a8a72;font-size:10px;margin-top:2px">' + escapeHtml(it.name) + '</span>';
+                    btn.onclick = async () => { try { const parsed = JSON.parse(await it.file.text()); ov.remove(); importParsed(parsed); } catch (e) { toast('このファイルは、読めませんでした'); } };
+                    list.appendChild(btn);
+                    (async () => {   // 中身をのぞく（全部／一部・作品の数）。大きすぎるファイルは、のぞかない
+                        const k = btn.querySelector('.bl-kind');
+                        if (it.file.size > 30 * 1048576) { k.textContent = '（大きいので、押すと読み込みます）'; return; }
+                        try { const j = JSON.parse(await it.file.text()), n = Array.isArray(j) ? j.length : (Array.isArray(j.books) ? j.books.length : 0); k.textContent = (Array.isArray(j) ? '作品のみ' : j.partial ? '一部' : '全部') + '　作品 ' + n + '冊'; } catch (e) { k.textContent = '（バックアップではないようです）'; btn.disabled = true; btn.style.opacity = '.55'; }
+                    })();
+                }
+            }
+            { const bl = document.getElementById('btn-backup-list'); if (bl) { if (!FSB.ok()) bl.style.display = 'none'; else bl.addEventListener('click', () => openBackupList(false)); } }
             document.getElementById('btn-reset-sample').addEventListener('click', () => {
                 state.books = DEMO_BOOKS;
                 save();
