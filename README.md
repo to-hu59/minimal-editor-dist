@@ -24,6 +24,7 @@ The manuals below are in Japanese. Open a PDF to read it, or download a Word fil
 Tip: In Word for Windows, turn on View → Navigation Pane to browse the manuals more easily using the heading list.
 
 - Quick start (with screenshots): [Read PDF](docs/start.pdf) / [Download Word](https://raw.githubusercontent.com/to-hu59/minimal-editor-dist/main/docs/start.docx)
+- Screens guide, advanced (editing, special text and effects, reading aloud, wiki and more): [Read PDF](docs/app.pdf) / [Download Word](https://raw.githubusercontent.com/to-hu59/minimal-editor-dist/main/docs/app.docx)
 - Getting started: [Read PDF](README.pdf) / [Download Word](https://raw.githubusercontent.com/to-hu59/minimal-editor-dist/main/README.docx)
 - Google Drive setup: [Quick guide PDF](docs/drive-setup-easy.pdf) / [Word](https://raw.githubusercontent.com/to-hu59/minimal-editor-dist/main/docs/drive-setup-easy.docx)
 - Google Drive setup in detail: [Illustrated PDF](docs/drive-setup-detail.pdf) / [Word](https://raw.githubusercontent.com/to-hu59/minimal-editor-dist/main/docs/drive-setup-detail.docx)
