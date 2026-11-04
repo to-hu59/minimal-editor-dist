@@ -334,6 +334,7 @@
         .txs > span { margin-left: calc(var(--i) * 1em); }
         .txs.txsl { align-items: flex-end; }
         .txs.txsl > span { margin-left: 0; margin-right: calc(var(--i) * 1em); }
+        .wkr { background: rgba(160, 60, 60, .10); border-bottom: 1px dotted rgba(160, 60, 60, .7); border-radius: 2px; cursor: pointer; color: #8a3a3a; }
         .wkw { background: rgba(184, 146, 63, .13); border-bottom: 1px dotted rgba(138, 104, 36, .55); border-radius: 2px; cursor: pointer; }
         #wk-card { position: fixed; left: 12px; right: 12px; bottom: 14px; z-index: 56; max-width: 520px; margin: 0 auto; max-height: 46vh; overflow-y: auto; background: #fffdf8; border: 1px solid #cdbf9f; border-radius: 14px; box-shadow: 0 10px 30px rgba(40,30,15,.28); padding: 12px 14px; font: 14px/1.7 sans-serif; color: #2a2118; }
         #wk-card[hidden] { display: none; }
@@ -1756,7 +1757,7 @@
         <button type="button" id="assist-btn" aria-expanded="false" aria-controls="assist-panel" aria-label="アシスタントを開く">🐟</button>
         <div id="assist-panel" role="dialog" aria-label="アシスタント" hidden></div>
         <div id="wiki-proto-sheet" class="wiki-sheet" role="dialog" aria-label="Wiki（試作）">
-            <div class="wk-head"><button type="button" id="wiki-back" aria-label="戻る">‹</button><h3 id="wiki-title">Wiki</h3><button type="button" id="wiki-save" aria-label="保存して閉じる" title="保存して閉じる" hidden style="margin-left:auto;font-weight:700">✓</button><button type="button" id="wiki-close" aria-label="閉じる">×</button></div>
+            <div class="wk-head"><button type="button" id="wiki-back" aria-label="戻る">‹</button><h3 id="wiki-title">Wiki</h3><button type="button" id="wiki-edit" aria-label="編集する" title="編集する" hidden style="margin-left:auto;font-size:18px">✎</button><button type="button" id="wiki-save" aria-label="保存して閉じる" title="保存して閉じる" hidden style="margin-left:auto;font-weight:700">✓</button><button type="button" id="wiki-close" aria-label="閉じる">×</button></div>
             <div class="wk-body" id="wiki-body"></div>
         </div>
         <div id="modal-wiki-index" class="hidden fixed inset-0 z-50 bg-black/40 flex items-end sm:items-center justify-center" role="dialog" aria-label="Wiki（作品ごと）">
@@ -1837,6 +1838,7 @@
                     <div class="pt-3 border-t border-woodBorder">
                         <span class="font-bold text-softMuted block mb-1">更新履歴</span>
                         <div id="changelog" class="text-[11px] text-softMuted leading-relaxed">
+<div class="mb-1.5"><b class="text-softText">2026-11-05（24）</b><br>Wikiを、大きく広げた。項目の「ページ」（読むための画面。鉛筆で編集）／「○話時点で見る」（ステータス・スキルは、その話までの最新値）／関連する項目（所属・後輩など。双方向・関係の名前・ひとこと・時期つき）／項目の時期と、出来事・功績（経歴・変遷）／年表／相関図（Mermaidの文字もコピーできる）／文章の中の自動リンクと [[名前]]（まだ無い項目は赤い印）／逆リンク（出てくるところ）／種類のひな形。魚のメニューに「話のまとめ」（各話・範囲）と「一括訂正」（まちがい→正しい形。元に戻せる）を足した。</div>
 <div class="mb-1.5"><b class="text-softText">2026-11-05（23）</b><br>「一括訂正」を足した（魚のメニュー）。誤字・表記ゆれを、まとめて正しい形に直す（例：スホ、スンホ → スルホ。まちがいは、「、」でいくつでも）。「確認」で件数を見てから「実行」。本文を書き換えるが、直前の状態は控えに残り、「元に戻す」で戻せる。Wikiの名前・別の呼び方も、いっしょに直せる。</div>
 <div class="mb-1.5"><b class="text-softText">2026-11-05（22）</b><br>プライバシーポリシーのページ（privacy.html）を足した。Driveの「長くつなぐ」（自分用・中継サーバー）の入れ口を足した（配布版には入っていない）。</div>
 <div class="mb-1.5"><b class="text-softText">2026-11-05（21）</b><br>Wikiの一覧で、複数のタグがある項目は、いちばん最初のタグのグループにだけ出し、ほかのタグは行の右に小さな印で出すようにした（タグでしぼったときは、そのタグの項目をぜんぶ出す）。「Wikiに登録」で既存の項目に足すときの一覧は、タグごとにおりたためる。</div>
@@ -4866,30 +4868,325 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                 return inRt ? seg : seg.replace(R.re, m => '<span class="wkw" data-wk="' + R.map[m] + '">' + m + '</span>');
             }).join('');
         }
+        const wikiWhenText = e => e && e.year ? e.year + '年' + (e.month ? e.month + '月' : '') : '';
+        const wikiWhenKey = e => e && e.year ? e.year * 100 + (e.month || 0) : Infinity;
+        // ---- 関連する項目：項目どうしを、つなぐ（所属・後輩・出演…）。つながりは、片方の項目に持たせ、もう片方には、自動で、逆向きに出る ----
+        function wikiRelLabels(bookId) {
+            const set = new Set();
+            for (const e of wikiEntries(bookId)) for (const r of (e.rels || [])) { if (r.label) set.add(r.label); if (r.back) set.add(r.back); }
+            return [...set];
+        }
+        // 項目 id から見た、関連（行く向き・来る向き）を、関係の名前ごとにまとめる。cur を渡すと、「○話から見える」が、先のものは、隠す
+        function wikiRelView(bookId, id, cur) {
+            const all = wikiEntries(bookId), byId = new Map(all.map(e => [e.id, e])), groups = new Map(), seen = new Set();
+            const add = (label, otherId, ep, note) => {
+                const other = byId.get(otherId); if (!other) return;
+                if (cur !== undefined && ep && wikiNoteLocked({ ep }, cur)) return;
+                const key = label + '|' + otherId; if (seen.has(key)) return; seen.add(key);
+                if (!groups.has(label)) groups.set(label, []);
+                groups.get(label).push({ id: otherId, name: other.name, note: note || '', when: wikiWhenText(other), key: wikiWhenKey(other) });
+            };
+            const me = byId.get(id);
+            if (me) for (const r of (me.rels || [])) add(r.label || '関連', r.to, r.ep, r.note);
+            for (const e of all) if (e.id !== id) for (const r of (e.rels || [])) if (r.to === id) add(r.back || r.label || '関連', e.id, r.ep, r.note);
+            return [...groups.entries()].map(([label, items]) => ({ label, items: items.sort((a, b) => a.key - b.key) }));
+        }
+        // 「関連を足す」で、つなぐ相手を、えらぶ窓（タグごとに、おりたたむ）
+        function wikiRelPick(bookId, selfId, taken, onPick) {
+            let ov = document.getElementById('wk-rel-pick'); if (ov) ov.remove();
+            ov = document.createElement('div'); ov.id = 'wk-rel-pick';
+            ov.style.cssText = 'position:fixed;inset:0;z-index:95;background:rgba(0,0,0,.4);display:flex;align-items:flex-end;justify-content:center';
+            const card = document.createElement('div');
+            card.style.cssText = 'width:100%;max-width:520px;max-height:80vh;overflow:auto;background:#f5ede0;border-radius:18px 18px 0 0;padding:16px 16px calc(env(safe-area-inset-bottom,0px) + 16px);color:#3b2f1e;font-size:14px';
+            const mk = (t, sub, fn) => { const b = document.createElement('button'); b.type = 'button'; b.style.cssText = 'display:block;width:100%;text-align:left;margin-top:8px;padding:12px 14px;border-radius:12px;border:1px solid #c9b88f;background:#fff;color:inherit;font-weight:700;font-size:14px'; b.textContent = t; if (sub) { const sp = document.createElement('span'); sp.style.cssText = 'font-weight:400;font-size:11px;margin-left:8px;opacity:.7'; sp.textContent = sub; b.appendChild(sp); } b.onclick = () => { ov.remove(); fn(); }; return b; };
+            const h = document.createElement('div'); h.style.cssText = 'font-weight:700;margin-bottom:4px'; h.textContent = 'つなぐ相手を、えらぶ'; card.appendChild(h);
+            const all = wikiEntries(bookId).filter(e => e.id !== selfId && !taken.has(e.id));
+            if (!all.length) { const m = document.createElement('div'); m.style.cssText = 'margin-top:10px;opacity:.75'; m.textContent = 'つなげる項目が、ありません（先に、ほかの項目を作ってください）'; card.appendChild(m); }
+            const byName = (x, y) => String(x.name).localeCompare(String(y.name), 'ja');
+            const gs = wikiGroups(bookId), secs = gs.map(g => ({ name: g, list: all.filter(e => (e.groups || []).includes(g)).sort(byName) }));
+            secs.push({ name: '未分類', list: all.filter(e => !(e.groups || []).some(g => gs.includes(g))).sort(byName) });
+            for (const sec of secs.filter(x => x.list.length)) {
+                const head = document.createElement('button'); head.type = 'button';
+                head.style.cssText = 'display:flex;justify-content:space-between;align-items:center;width:100%;margin-top:10px;padding:10px 12px;border-radius:10px;border:1px solid #c9b88f;background:#eadfc6;color:#3b2f1e;font-weight:700;font-size:13px';
+                const body = document.createElement('div'); body.hidden = true;
+                const paint = () => { head.innerHTML = ''; const l = document.createElement('span'); l.textContent = (body.hidden ? '▸ ' : '▾ ') + sec.name; const c = document.createElement('span'); c.style.cssText = 'font-weight:400;font-size:11px;opacity:.7'; c.textContent = sec.list.length; head.append(l, c); };
+                head.onclick = () => { body.hidden = !body.hidden; paint(); }; paint();
+                for (const e of sec.list) body.appendChild(mk(e.name, e.category || '', () => onPick(e)));
+                card.append(head, body);
+            }
+            const cancel = mk('やめる', '', () => {}); cancel.style.textAlign = 'center'; cancel.style.marginTop = '14px'; card.appendChild(cancel);
+            ov.appendChild(card); ov.onclick = ev => { if (ev.target === ov) ov.remove(); };
+            document.body.appendChild(ov);
+        }
+        // ---- 文章の中の、項目へのリンク：登録してある名前は、自動で。[[名前]] と書くと、まだ無い項目も、リンクにできる（押すと、作れる）----
+        function wikiLinkify(bookId, text, selfId) {
+            const ents = wikiEntries(bookId), R = wikiHlRegex(bookId);
+            const norm = x => String(x || '').trim();
+            const find = nm => ents.find(e => [e.name].concat(e.aliases || []).some(x => norm(x) === nm));
+            const plain = seg => {
+                const esc = wEsc(seg).split(String.fromCharCode(10)).join('<br>');
+                if (!R) return esc;
+                let inTag = false;
+                return esc.split(/(<[^>]*>)/).map(p => { if (!p) return p; if (p[0] === '<') return p; return p.replace(R.re, m => { const id = R.map[m]; return (id && id !== selfId) ? '<span class="wkw" data-wk="' + id + '">' + m + '</span>' : m; }); }).join('');
+            };
+            const src = String(text || ''), re = /\[\[([^\[\]\n]{1,40})\]\]/g;
+            let out = '', last = 0, m;
+            while ((m = re.exec(src))) {
+                out += plain(src.slice(last, m.index));
+                const nm = norm(m[1]), hit = find(nm);
+                out += hit ? (hit.id === selfId ? wEsc(nm) : '<span class="wkw" data-wk="' + hit.id + '">' + wEsc(nm) + '</span>') : '<span class="wkr" data-wkn="' + wEsc(nm) + '" title="まだ項目がありません。押すと、作れます">' + wEsc(nm) + '</span>';
+                last = m.index + m[0].length;
+            }
+            return out + plain(src.slice(last));
+        }
+        // まだ無い項目へのリンクを押したとき：その名前で、新しい項目を作る画面
+        function wikiNewFromName(name) {
+            wikiOpen('list');
+            wikiState.view = 'detail'; wikiState.editId = null; wikiState.pendingName = null; wikiState.draft = wikiNewDraft(name, '未分類'); wikiRender();
+        }
+        // 項目（名前・別の呼び方）が、文章に出てくるか
+        function wikiMentions(e, text) {
+            const t = String(text || ''); if (!t) return false;
+            return [e.name].concat(e.aliases || []).some(x => { x = String(x || '').trim(); return x.length >= 2 && t.indexOf(x) >= 0; });
+        }
+        // 項目のページ：この項目が、出てくるところ（ほかの項目の説明・話のまとめ・本文）。いまの進捗より先の話は、出さない
+        function wikiBacklinksHtml(bookId, e, cur) {
+            const book = state.books.find(b => b.id === bookId); if (!book) return '';
+            const ents = wikiEntries(bookId), chips = [], none = '';
+            const chip = (label, attrs) => '<button type="button" class="wk-chip" ' + attrs + ' style="border:0;cursor:pointer">' + wEsc(label) + '</button>';
+            // 1) ほかの項目の説明に、出てくる
+            const refs = [];
+            for (const x of ents) {
+                if (x.id === e.id) continue;
+                const texts = [x.basic].concat((x.notes || []).filter(n => !wikiNoteLocked(n, cur)).map(n => n.text), (x.events || []).filter(v => !(v.ep && wikiNoteLocked({ ep: v.ep }, cur))).map(v => v.text));
+                for (const sec of (x.sections || [])) for (const r of (sec.rows || [])) if (!wikiNoteLocked({ ep: r.ep }, cur)) texts.push(r.v);
+                if (texts.some(t => wikiMentions(e, t))) refs.push(x);
+            }
+            // 2) 話のまとめ・本文に、出てくる
+            const flat = getFlatChapters(book), inSum = [], inBody = []; let hidden = 0;
+            flat.forEach((f, i) => {
+                const no = i + 1, s = f.chap.summary;
+                const sumText = s ? [s.sub, s.story, s.points, s.memo].join(String.fromCharCode(10)) : '';
+                const hitSum = sumText && wikiMentions(e, sumText), hitBody = wikiMentions(e, f.chap.content || '');
+                if (!hitSum && !hitBody) return;
+                if (cur && no > cur) { hidden++; return; }
+                if (hitSum) inSum.push({ no, id: f.chap.id });
+                if (hitBody) inBody.push({ no, id: f.chap.id });
+            });
+            let h = '';
+            if (refs.length) h += '<div class="wk-row" style="margin-top:4px;align-items:flex-start;justify-content:space-between"><span>項目の説明</span><span style="display:flex;flex-wrap:wrap;gap:4px;justify-content:flex-end">' + refs.map(x => chip(x.name, 'data-w="page" data-id="' + wEsc(x.id) + '"')).join('') + '</span></div>';
+            if (inSum.length) h += '<div class="wk-row" style="margin-top:4px;align-items:flex-start;justify-content:space-between"><span>話のまとめ</span><span style="display:flex;flex-wrap:wrap;gap:4px;justify-content:flex-end">' + inSum.slice(0, 60).map(c => chip(c.no + '話', 'data-w="sumopen" data-id="' + wEsc(c.id) + '"')).join('') + (inSum.length > 60 ? '<span class="wk-muted">…ほか' + (inSum.length - 60) + '話</span>' : '') + '</span></div>';
+            if (inBody.length) h += '<div class="wk-row" style="margin-top:4px;align-items:flex-start;justify-content:space-between"><span>本文に出る話（' + inBody.length + '話）</span><span style="display:flex;flex-wrap:wrap;gap:4px;justify-content:flex-end">' + inBody.slice(0, 60).map(c => chip(c.no + '話', 'data-w="readchap" data-id="' + wEsc(c.id) + '"')).join('') + (inBody.length > 60 ? '<span class="wk-muted">…ほか' + (inBody.length - 60) + '話</span>' : '') + '</span></div>';
+            if (!h) return '';
+            return '<div class="wk-label" style="margin-top:14px">この項目が、出てくるところ</div><div class="wk-sec">' + h + (hidden ? '<div class="wk-muted" style="margin-top:6px">🔒 先の話に出てくる分が、' + hidden + '話あります（読み進めると、出ます）</div>' : '') + '</div>';
+        }
+        // ===== 話のまとめ：各話に、サブタイトル・あらすじ・注目ポイント・読書メモを置く。範囲（10話ごとなど）のまとめも =====
+        const SUM_FIELDS = [['sub', '一行サブタイトル', '例：国民的嫌われ俳優の体に、元・闇金業者が憑依した。', 2], ['story', 'あらすじ', 'できごとを、順に。[[名前]] と書くと、その項目へのリンクになります', 8], ['points', '注目ポイント', '', 4], ['memo', '読書メモ（感想）', '', 4]];
+        let sumUI = { view: 'list', chapId: null, rangeId: null, reveal: {} };
+        function sumBook() { return state.books.find(b => b.id === state.currentBookId) || null; }
+        function sumChapters(book) { return getFlatChapters(book).map((f, i) => ({ n: i + 1, chap: f.chap, f })); }
+        const sumHas = c => { const s = c && c.summary; return !!(s && (s.sub || s.story || s.points || s.memo)); };
+        function sumProgress(book) { return wikiEpisode(book.id) || 0; }
+        function sumOpen(chapId) {
+            const book = sumBook(); if (!book) { toast('作品を開いてから、話のまとめを開いてください'); return; }
+            let ov = document.getElementById('sum-box');
+            if (!ov) {
+                ov = document.createElement('div'); ov.id = 'sum-box';
+                ov.style.cssText = 'position:fixed;inset:0;z-index:53;background:#f3ede0;display:flex;flex-direction:column;font:14px/1.7 sans-serif;color:#2a2118';
+                ov.innerHTML = '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:2px solid #b8923f;background:#23352c"><button type="button" id="sum-back" aria-label="戻る" style="min-width:44px;min-height:44px;border:0;background:transparent;color:#e3c783;font-size:22px">‹</button><h3 id="sum-title" style="margin:0;font-size:15px;color:#e3c783;letter-spacing:.08em">話のまとめ</h3><span style="display:flex"><button type="button" id="sum-edit" aria-label="編集する" hidden style="min-width:44px;min-height:44px;border:0;background:transparent;color:#e3c783;font-size:18px">✎</button><button type="button" id="sum-save" aria-label="保存して閉じる" hidden style="min-width:44px;min-height:44px;border:0;background:transparent;color:#e3c783;font-size:22px;font-weight:700">✓</button><button type="button" id="sum-close" aria-label="閉じる" style="min-width:44px;min-height:44px;border:0;background:transparent;color:#e3c783;font-size:22px">×</button></span></div><div id="sum-body" style="flex:1;overflow:auto;padding:14px 16px calc(env(safe-area-inset-bottom,0px) + 24px)"></div>';
+                document.body.appendChild(ov);
+                ov.addEventListener('click', sumClick);
+                document.getElementById('sum-back').onclick = sumBack; document.getElementById('sum-close').onclick = () => { if (sumLeaveOk()) ov.remove(); };
+                document.getElementById('sum-edit').onclick = () => { if (sumUI.view === 'page') { sumUI.view = 'edit'; sumRender(); } else if (sumUI.view === 'rpage') { sumUI.view = 'redit'; sumRender(); } };
+                document.getElementById('sum-save').onclick = sumSave;
+            }
+            sumUI = { view: chapId ? 'page' : 'list', chapId: chapId || null, rangeId: null, reveal: {} };
+            sumRender();
+        }
+        function sumDirty() {
+            if (sumUI.view === 'edit') { const c = sumChapters(sumBook()).find(x => x.chap.id === sumUI.chapId); const s = (c && c.chap.summary) || {}; return SUM_FIELDS.some(([k]) => (document.getElementById('sum-f-' + k).value || '') !== (s[k] || '')); }
+            if (sumUI.view === 'redit') { const r = (sumBook().rangeSummaries || []).find(x => x.id === sumUI.rangeId) || {}; return (document.getElementById('sum-rt').value || '') !== (r.text || '') || String(document.getElementById('sum-rf').value || '') !== String(r.from || '') || String(document.getElementById('sum-rto').value || '') !== String(r.to || ''); }
+            return false;
+        }
+        const sumLeaveOk = () => !sumDirty() || confirm('保存していない変更があります。破棄して戻りますか？');
+        function sumBack() {
+            if (!sumLeaveOk()) return;
+            if (sumUI.view === 'edit') { sumUI.view = 'page'; }
+            else if (sumUI.view === 'redit') { sumUI.view = sumUI.rangeId ? 'rpage' : 'list'; }
+            else if (sumUI.view === 'page' || sumUI.view === 'rpage') { sumUI.view = 'list'; }
+            else { const ov = document.getElementById('sum-box'); if (ov) ov.remove(); return; }
+            sumRender();
+        }
+        function sumSave() {
+            const book = sumBook(); if (!book) return;
+            if (sumUI.view === 'edit') {
+                const c = sumChapters(book).find(x => x.chap.id === sumUI.chapId); if (!c) return;
+                const s = {}; for (const [k] of SUM_FIELDS) s[k] = document.getElementById('sum-f-' + k).value.trim();
+                c.chap.summary = (s.sub || s.story || s.points || s.memo) ? s : undefined; if (!c.chap.summary) delete c.chap.summary;
+                save(); savedToast('まとめを保存しました'); sumUI.view = 'page'; sumRender();
+            } else if (sumUI.view === 'redit') {
+                const from = Math.floor(Number(document.getElementById('sum-rf').value)) || 0, to = Math.floor(Number(document.getElementById('sum-rto').value)) || 0, text = document.getElementById('sum-rt').value.trim();
+                if (!from || !to || to < from) { toast('はじめと終わりの話数を、入れてください（はじめ ≦ 終わり）'); return; }
+                book.rangeSummaries = book.rangeSummaries || [];
+                let r = book.rangeSummaries.find(x => x.id === sumUI.rangeId);
+                if (!r) { r = { id: 'rs_' + Date.now() }; book.rangeSummaries.push(r); sumUI.rangeId = r.id; }
+                r.from = from; r.to = to; r.text = text; save(); savedToast('範囲のまとめを保存しました'); sumUI.view = 'rpage'; sumRender();
+            }
+        }
+        function sumClick(ev) {
+            const t = ev.target.closest && ev.target.closest('[data-s]'); if (!t) return;
+            const book = sumBook(); if (!book) return; const a = t.dataset.s;
+            if (a === 'chap') { sumUI.view = 'page'; sumUI.chapId = t.dataset.id; sumRender(); }
+            else if (a === 'reveal') { sumUI.reveal[t.dataset.id] = true; sumRender(); }
+            else if (a === 'range') { sumUI.view = 'rpage'; sumUI.rangeId = t.dataset.id; sumRender(); }
+            else if (a === 'range-new') { sumUI.view = 'redit'; sumUI.rangeId = null; sumRender(); }
+            else if (a === 'range-del') { if (!confirm('この範囲のまとめを、消しますか？')) return; book.rangeSummaries = (book.rangeSummaries || []).filter(x => x.id !== sumUI.rangeId); save(); sumUI.view = 'list'; sumRender(); }
+            else if (a === 'prev' || a === 'next') { const all = sumChapters(book), i = all.findIndex(x => x.chap.id === sumUI.chapId), j = i + (a === 'next' ? 1 : -1); if (all[j]) { sumUI.chapId = all[j].chap.id; sumRender(); } }
+            else if (a === 'read') { const hit = getFlatChapters(book).find(f => f.chap.id === t.dataset.id); if (hit) { const ov = document.getElementById('sum-box'); if (ov) ov.remove(); wikiCloseQuiet(); state.currentBookId = book.id; if (hit.volId) openReaderForVolumeChapter(hit.volId, hit.chap.id, hit.partIdx); else openReader(hit.chap.id, hit.partIdx); } }
+        }
+        function wikiCloseQuiet() { try { document.getElementById('wiki-proto-sheet').classList.remove('open'); } catch (e) {} }
+        function sumRender() {
+            const book = sumBook(), body = document.getElementById('sum-body'), title = document.getElementById('sum-title'); if (!book || !body) return;
+            const all = sumChapters(book), cur = sumProgress(book), ed = document.getElementById('sum-edit'), sv = document.getElementById('sum-save');
+            ed.hidden = !(sumUI.view === 'page' || sumUI.view === 'rpage'); sv.hidden = !(sumUI.view === 'edit' || sumUI.view === 'redit');
+            const L = t => wikiLinkify(book.id, t), lockBox = (id, no) => '<div class="wk-muted" style="padding:14px;border:1px dashed #b8923f;border-radius:10px;margin-top:10px">🔒 まだ読んでいない話（' + no + '話）のまとめです。<br><button type="button" data-s="reveal" data-id="' + wEsc(id) + '" style="margin-top:8px;padding:8px 14px;border-radius:10px;border:1px solid #c9b88f;background:#fff">ネタバレを見る</button></div>';
+            const field = (label, html) => '<div style="margin-top:14px;font-weight:700;color:#7a6a4a;font-size:13px">' + label + '</div><div style="margin-top:4px;white-space:normal">' + html + '</div>';
+            let h = '';
+            if (sumUI.view === 'list') {
+                title.textContent = '話のまとめ';
+                h += '<div style="font-size:12px;opacity:.75">' + wEsc(book.title || '') + '　（いま：' + (cur ? cur + '話' : '不明') + '）。話を押すと、その話のまとめが開きます。</div>';
+                const rs = (book.rangeSummaries || []).slice().sort((a, b) => a.from - b.from);
+                h += '<div style="margin-top:14px;font-weight:700">範囲のまとめ（10話ごとなど）</div>';
+                for (const r of rs) h += '<button type="button" data-s="range" data-id="' + wEsc(r.id) + '" style="display:flex;justify-content:space-between;width:100%;margin-top:6px;padding:10px 12px;border-radius:10px;border:1px solid #c9b88f;background:#fff;text-align:left"><b>' + r.from + '〜' + r.to + '話</b><span>' + (r.to > cur && cur ? '🔒' : '') + '</span></button>';
+                h += '<button type="button" data-s="range-new" style="width:100%;margin-top:6px;padding:10px 12px;border-radius:10px;border:1px dashed #b8923f;background:transparent">＋ 範囲のまとめを足す</button>';
+                h += '<div style="margin-top:18px;font-weight:700">各話のまとめ</div>';
+                for (const c of all) h += '<button type="button" data-s="chap" data-id="' + wEsc(c.chap.id) + '" style="display:flex;justify-content:space-between;align-items:center;gap:8px;width:100%;margin-top:6px;padding:10px 12px;border-radius:10px;border:1px solid #c9b88f;background:#fff;text-align:left"><span><b>' + c.n + '話</b>　' + wEsc(c.chap.title || '') + (c.chap.summary && c.chap.summary.sub ? '<div style="font-size:12px;opacity:.7">' + wEsc(c.chap.summary.sub) + '</div>' : '') + '</span><span>' + (sumHas(c.chap) ? (c.n > cur && cur ? '🔒' : '📝') : '') + '</span></button>';
+            } else if (sumUI.view === 'page') {
+                const i = all.findIndex(x => x.chap.id === sumUI.chapId), c = all[i]; if (!c) { sumUI.view = 'list'; sumRender(); return; }
+                title.textContent = c.n + '話のまとめ';
+                h += '<div style="font-size:18px;font-weight:700">' + c.n + '話　' + wEsc(c.chap.title || '') + '</div>';
+                const s = c.chap.summary || {};
+                if (sumHas(c.chap) && c.n > cur && cur && !sumUI.reveal[c.chap.id]) h += lockBox(c.chap.id, c.n);
+                else if (!sumHas(c.chap)) h += '<div class="wk-muted" style="margin-top:12px;opacity:.7">まだ、まとめがありません。右上の鉛筆から、書けます。</div>';
+                else for (const [k, label] of SUM_FIELDS) if (s[k]) h += field(label, L(s[k]));
+                h += '<div style="display:flex;gap:8px;margin-top:18px"><button type="button" data-s="prev" ' + (i === 0 ? 'disabled' : '') + ' style="flex:1;padding:10px;border-radius:10px;border:1px solid #c9b88f;background:#fff">‹ 前の話</button><button type="button" data-s="read" data-id="' + wEsc(c.chap.id) + '" style="flex:1;padding:10px;border-radius:10px;border:1px solid #23594e;background:#23594e;color:#fff">この話を読む</button><button type="button" data-s="next" ' + (i === all.length - 1 ? 'disabled' : '') + ' style="flex:1;padding:10px;border-radius:10px;border:1px solid #c9b88f;background:#fff">次の話 ›</button></div>';
+            } else if (sumUI.view === 'edit') {
+                const c = all.find(x => x.chap.id === sumUI.chapId); if (!c) { sumUI.view = 'list'; sumRender(); return; }
+                title.textContent = c.n + '話のまとめを書く'; const s = c.chap.summary || {};
+                for (const [k, label, ph, rows] of SUM_FIELDS) h += '<div style="margin-top:12px;font-weight:700;font-size:13px;color:#7a6a4a">' + label + '</div><textarea id="sum-f-' + k + '" rows="' + rows + '" placeholder="' + wEsc(ph) + '" style="width:100%;box-sizing:border-box;margin-top:4px;padding:9px 10px;border-radius:10px;border:1px solid #c9b88f;background:#fff;font:inherit">' + wEsc(s[k] || '') + '</textarea>';
+                h += '<div class="wk-muted" style="margin-top:8px;font-size:12px;opacity:.7">上の「✓」で保存します</div>';
+            } else if (sumUI.view === 'rpage') {
+                const r = (book.rangeSummaries || []).find(x => x.id === sumUI.rangeId); if (!r) { sumUI.view = 'list'; sumRender(); return; }
+                title.textContent = r.from + '〜' + r.to + '話のまとめ';
+                if (r.to > cur && cur && !sumUI.reveal[r.id]) h += lockBox(r.id, r.to); else h += '<div style="margin-top:6px">' + (r.text ? L(r.text) : '<span style="opacity:.6">まだ、書いてありません</span>') + '</div>';
+                h += '<button type="button" data-s="range-del" style="margin-top:18px;padding:8px 14px;border-radius:10px;border:1px solid #c9b88f;background:#fff;color:#a33">このまとめを消す</button>';
+            } else if (sumUI.view === 'redit') {
+                const r = (book.rangeSummaries || []).find(x => x.id === sumUI.rangeId) || {};
+                title.textContent = sumUI.rangeId ? '範囲のまとめを直す' : '範囲のまとめを足す';
+                h += '<div style="display:flex;gap:8px;align-items:center;margin-top:8px"><input type="number" id="sum-rf" min="1" value="' + (r.from || '') + '" placeholder="はじめ" style="width:90px;padding:9px 10px;border-radius:10px;border:1px solid #c9b88f;background:#fff"> 〜 <input type="number" id="sum-rto" min="1" value="' + (r.to || '') + '" placeholder="終わり" style="width:90px;padding:9px 10px;border-radius:10px;border:1px solid #c9b88f;background:#fff"> 話</div>';
+                h += '<textarea id="sum-rt" rows="12" placeholder="この範囲のまとめ。[[名前]] と書くと、その項目へのリンクになります" style="width:100%;box-sizing:border-box;margin-top:10px;padding:9px 10px;border-radius:10px;border:1px solid #c9b88f;background:#fff;font:inherit">' + wEsc(r.text || '') + '</textarea><div class="wk-muted" style="margin-top:8px;font-size:12px;opacity:.7">上の「✓」で保存します</div>';
+            }
+            body.innerHTML = h; body.scrollTop = 0;
+        }
+        // ===== 相関図：項目どうしの「関連」を、図にする（○話時点・中心にする項目・何つながりまで・分類）。Mermaid の文字としても、コピーできる =====
+        function wikiGraphData(bookId, g, cur) {
+            const ents = wikiEntries(bookId), byId = new Map(ents.map(e => [e.id, e])), pair = new Map();
+            for (const e of ents) for (const r of (e.rels || [])) {
+                if (!byId.has(r.to) || r.to === e.id) continue;
+                if (cur && r.ep && wikiNoteLocked({ ep: r.ep }, cur)) continue;
+                const key = [e.id, r.to].sort().join('|');
+                let o = pair.get(key); if (!o) { o = { a: e.id, b: r.to, labels: [] }; pair.set(key, o); }
+                o.labels.push({ from: e.id, to: r.to, label: r.label || '関連', back: r.back || '', note: r.note || '' });
+            }
+            let edges = [...pair.values()];
+            let keep = null;
+            if (g.focus && byId.has(g.focus)) {
+                keep = new Set([g.focus]);
+                for (let h = 0; h < (g.hops || 1); h++) { const add = new Set(); for (const ed of edges) { if (keep.has(ed.a)) add.add(ed.b); if (keep.has(ed.b)) add.add(ed.a); } add.forEach(x => keep.add(x)); }
+                edges = edges.filter(ed => keep.has(ed.a) && keep.has(ed.b));
+            }
+            if (g.cat) edges = edges.filter(ed => (byId.get(ed.a).category || '未分類') === g.cat || (byId.get(ed.b).category || '未分類') === g.cat || ed.a === g.focus || ed.b === g.focus);
+            const ids = new Set(); edges.forEach(ed => { ids.add(ed.a); ids.add(ed.b); }); if (g.focus && byId.has(g.focus)) ids.add(g.focus);
+            const nodes = [...ids].map(id => ({ id, name: byId.get(id).name, cat: byId.get(id).category || '未分類' }));
+            // 線の文字：A→B の関係名。向こう側の呼び名が、ちがうときは「A→B / B→A」
+            for (const ed of edges) {
+                const f = ed.labels.find(l => l.from === ed.a), t = ed.labels.find(l => l.from === ed.b);
+                const ab = f ? f.label : (t && t.back) || (t ? t.label : ''), ba = t ? t.label : (f && f.back) || '';
+                ed.text = ab && ba && ab !== ba ? ab + ' / ' + ba : (ab || ba);
+                ed.note = ((f && f.note) || (t && t.note) || '');
+            }
+            return { nodes, edges };
+        }
+        function wikiGraphLayout(nodes, edges, W, H) {
+            const n = nodes.length, pos = new Map(), cx = W / 2, cy = H / 2, R = Math.min(W, H) * 0.35;
+            nodes.forEach((nd, i) => { const a = (i / Math.max(n, 1)) * Math.PI * 2; pos.set(nd.id, { x: cx + R * Math.cos(a), y: cy + R * Math.sin(a), vx: 0, vy: 0 }); });
+            const k = Math.sqrt((W * H) / Math.max(n, 1)) * 0.62;
+            for (let it = 0; it < 260; it++) {
+                const t = 1 - it / 260;
+                for (const a of nodes) { const pa = pos.get(a.id); pa.vx = 0; pa.vy = 0; }
+                for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) {
+                    const pa = pos.get(nodes[i].id), pb = pos.get(nodes[j].id); let dx = pa.x - pb.x, dy = pa.y - pb.y, d = Math.sqrt(dx * dx + dy * dy) || 0.01;
+                    const f = (k * k) / d; dx /= d; dy /= d; pa.vx += dx * f; pa.vy += dy * f; pb.vx -= dx * f; pb.vy -= dy * f;
+                }
+                for (const ed of edges) {
+                    const pa = pos.get(ed.a), pb = pos.get(ed.b); let dx = pa.x - pb.x, dy = pa.y - pb.y, d = Math.sqrt(dx * dx + dy * dy) || 0.01;
+                    const f = (d * d) / k; dx /= d; dy /= d; pa.vx -= dx * f; pa.vy -= dy * f; pb.vx += dx * f; pb.vy += dy * f;
+                }
+                for (const nd of nodes) { const p = pos.get(nd.id), d = Math.sqrt(p.vx * p.vx + p.vy * p.vy) || 0.01, m = Math.min(d, 40 * t + 2); p.x += (p.vx / d) * m; p.y += (p.vy / d) * m; p.x = Math.min(W - 70, Math.max(70, p.x)); p.y = Math.min(H - 30, Math.max(30, p.y)); }
+            }
+            return pos;
+        }
+        function wikiGraphMermaid(data) {
+            const idx = new Map(data.nodes.map((nd, i) => [nd.id, 'n' + (i + 1)])), q = s => String(s).replace(/"/g, "'");
+            const lines = ['graph LR'];
+            for (const nd of data.nodes) lines.push('  ' + idx.get(nd.id) + '["' + q(nd.name) + '"]');
+            for (const ed of data.edges) lines.push('  ' + idx.get(ed.a) + ' ---|' + q(ed.text || '関連') + '| ' + idx.get(ed.b));
+            return lines.join(String.fromCharCode(10));
+        }
+        function wikiGraphSvg(data, zoom) {
+            const n = data.nodes.length, W = Math.max(360, Math.min(1000, 110 * Math.ceil(Math.sqrt(n)) + 200)), H = Math.max(360, Math.min(1000, 110 * Math.ceil(Math.sqrt(n)) + 200));
+            const pos = wikiGraphLayout(data.nodes, data.edges, W, H), cats = [...new Set(data.nodes.map(x => x.cat))], pal = ['#23594e', '#b8923f', '#6a5a9a', '#a35a5a', '#3a6f96', '#7a7a3a', '#8a5a8a'];
+            const col = c => pal[cats.indexOf(c) % pal.length];
+            let s = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + W + ' ' + H + '" width="' + (zoom * 100).toFixed(0) + '%" style="display:block;background:#fbf7ee;border:1px solid #d8c9a6;border-radius:10px;max-width:none;height:auto">';
+            for (const ed of data.edges) {
+                const a = pos.get(ed.a), b = pos.get(ed.b), mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2, t = ed.text || '';
+                s += '<line x1="' + a.x.toFixed(1) + '" y1="' + a.y.toFixed(1) + '" x2="' + b.x.toFixed(1) + '" y2="' + b.y.toFixed(1) + '" stroke="#b9a77b" stroke-width="1.6"/>';
+                if (t) { const w = t.length * 11 + 10; s += '<rect x="' + (mx - w / 2).toFixed(1) + '" y="' + (my - 9).toFixed(1) + '" width="' + w + '" height="18" rx="9" fill="#fbf7ee" stroke="#d8c9a6"/><text x="' + mx.toFixed(1) + '" y="' + (my + 4).toFixed(1) + '" font-size="11" text-anchor="middle" fill="#6a5a3a">' + wEsc(t) + '</text>'; }
+            }
+            for (const nd of data.nodes) {
+                const p = pos.get(nd.id), w = Math.max(54, nd.name.length * 13 + 22);
+                s += '<g data-w="page" data-id="' + wEsc(nd.id) + '" style="cursor:pointer"><rect x="' + (p.x - w / 2).toFixed(1) + '" y="' + (p.y - 15).toFixed(1) + '" width="' + w + '" height="30" rx="8" fill="' + col(nd.cat) + '"/><text x="' + p.x.toFixed(1) + '" y="' + (p.y + 5).toFixed(1) + '" font-size="13" font-weight="700" text-anchor="middle" fill="#fff">' + wEsc(nd.name) + '</text></g>';
+            }
+            return s + '</svg>';
+        }
         function wikiCardClose() { const c = document.getElementById('wk-card'); if (c) c.hidden = true; }
         function wikiCardOpen(id) {
             const bookId = state.currentBookId, e = wikiEntries(bookId).find(x => x.id === id); if (!e) return;
             let c = document.getElementById('wk-card'); if (!c) { c = document.createElement('div'); c.id = 'wk-card'; document.body.appendChild(c); }
             const cur = wikiEpisode(bookId), notes = (e.notes || []).slice().sort((a, b) => (a.ep || 0) - (b.ep || 0)), vis = notes.filter(n => !wikiNoteLocked(n, cur)), lockedN = notes.length - vis.length;
-            let h = '<div class="wkc-h"><b>' + wEsc(e.name) + '</b><span class="wk-chip">' + wEsc(e.category) + '</span>' + (e.groups || []).map(g => '<span class="wk-chip">' + wEsc(g) + '</span>').join('') + '<button type="button" class="wkc-x" data-wkc="close" aria-label="閉じる">×</button></div>';
-            if (e.basic) h += '<div class="wkc-b">' + wEsc(e.basic) + '</div>';
-            for (const n of vis) h += '<div class="wkc-n">' + (n.ep ? '<span class="wkc-ep">' + n.ep + '話</span> ' : '') + wEsc(n.text) + '</div>';
+            let h = '<div class="wkc-h"><b>' + wEsc(e.name) + '</b><span class="wk-chip">' + wEsc(e.category) + '</span>' + (wikiWhenText(e) ? '<span class="wk-chip" style="background:#d9e6df">' + wEsc(wikiWhenText(e)) + '</span>' : '') + (e.groups || []).map(g => '<span class="wk-chip">' + wEsc(g) + '</span>').join('') + '<button type="button" class="wkc-x" data-wkc="close" aria-label="閉じる">×</button></div>';
+            if (e.basic) h += '<div class="wkc-b">' + wikiLinkify(bookId, e.basic, e.id) + '</div>';
+            for (const n of vis) h += '<div class="wkc-n">' + (n.ep ? '<span class="wkc-ep">' + n.ep + '話</span> ' : '') + wikiLinkify(bookId, n.text, e.id) + '</div>';
             let lockedR = 0;
             for (const sec of e.sections || []) {
                 const rows = (sec.rows || []).filter(r => { const lk = wikiNoteLocked({ ep: r.ep }, cur); if (lk) lockedR++; return !lk; });
                 if (rows.length) h += '<div class="wkc-s"><div class="wkc-st">' + wEsc(sec.title) + '</div>' + rows.map(r => '<div class="wkc-r"><span>' + wEsc(r.k) + '</span><b>' + wEsc(r.v) + '</b></div>').join('') + '</div>';
             }
-            if (!e.basic && !vis.length && !(e.sections || []).length) h += '<div class="wkc-m">まだ、書いてあることがありません</div>';
+            const relV = wikiRelView(bookId, e.id, cur);
+            if (relV.length) h += '<div class="wkc-s"><div class="wkc-st">関連</div>' + relV.map(g => '<div class="wkc-r"><span>' + wEsc(g.label) + '</span><span style="display:flex;flex-wrap:wrap;gap:4px;justify-content:flex-end">' + g.items.map(i => '<span style="display:inline-flex;align-items:center;gap:4px"><button type="button" class="wk-chip" data-wkc="entry" data-id="' + wEsc(i.id) + '" style="border:0;cursor:pointer">' + wEsc(i.name) + (i.when ? '（' + wEsc(i.when) + '）' : '') + '</button>' + (i.note ? '<span style="font-size:12px">' + wEsc(i.note) + '</span>' : '') + '</span>').join('') + '</span></div>').join('') + '</div>';
+            if (!e.basic && !vis.length && !(e.sections || []).length && !relV.length) h += '<div class="wkc-m">まだ、書いてあることがありません</div>';
             if (lockedR) h += '<div class="wkc-lock">🔒 先の欄の内容が' + lockedR + '件あります（読み進めると、見られます）</div>';
             if (lockedN) h += '<div class="wkc-lock">🔒 先の設定が' + lockedN + '件あります（読み進めると、見られます）</div>';
             h += '<div class="wkc-f"><button type="button" data-wkc="open" data-id="' + wEsc(e.id) + '">ウィキで開く</button></div>';
             c.innerHTML = h; c.hidden = false;
         }
         document.addEventListener('click', ev => {
+            const rl = ev.target.closest && ev.target.closest('.wkr');
+            if (rl) { ev.preventDefault(); ev.stopPropagation(); wikiNewFromName(rl.dataset.wkn || rl.textContent); return; }
             const w = ev.target.closest && ev.target.closest('.wkw');
             if (w) { ev.preventDefault(); ev.stopPropagation(); wikiCardOpen(w.dataset.wk); return; }
             const b = ev.target.closest && ev.target.closest('#wk-card [data-wkc]');
-            if (b) { ev.preventDefault(); ev.stopPropagation(); if (b.dataset.wkc === 'open') { const id = b.dataset.id; wikiCardClose(); wikiOpen('list'); wikiAct('open', { dataset: { id } }); } else wikiCardClose(); return; }
+            if (b) { ev.preventDefault(); ev.stopPropagation(); if (b.dataset.wkc === 'open') { const id = b.dataset.id; wikiCardClose(); wikiOpen('list'); wikiAct('page', { dataset: { id } }); } else if (b.dataset.wkc === 'entry') { wikiCardOpen(b.dataset.id); } else wikiCardClose(); return; }
             const c = document.getElementById('wk-card'); if (c && !c.hidden && !ev.target.closest('#wk-card')) wikiCardClose();
         }, true);
         function buildInteractiveSentencesHtml(rawText, frames) {
@@ -6272,7 +6569,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                 setTimeout(tick, 250);
                 toast('該当の文へ移動しました');
             } else if (x.kind === 'comment') openChapterComments(x.bookId, x.chapId);
-            else if (x.kind === 'wiki') { wikiOpen('list'); wikiAct('open', { dataset: { id: x.wikiId } }); }
+            else if (x.kind === 'wiki') { wikiOpen('list'); wikiAct('page', { dataset: { id: x.wikiId } }); }
             else if (x.kind === 'note') openNotebookModal();
             else openDetail(x.bookId);
         }
@@ -7061,7 +7358,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             const entries = wikiEntries(bookId), groups = wikiGroups(bookId), q = (wikiState.q || '').trim(), f = wikiState.filter || 'all';
             if (!entries.length) return '<div class="wk-muted">まだ項目がありません</div>';
             const match = e => !q || (e.name + ' ' + (e.aliases || []).join(' ') + ' ' + (e.basic || '')).indexOf(q) >= 0;
-            const row = (e, secName) => '<button class="wk-btn" data-w="open" data-id="' + wEsc(e.id) + '"><b>' + wEsc(e.name) + '</b><span style="display:flex;flex-wrap:wrap;gap:4px;justify-content:flex-end">' + (e.groups || []).filter(g => groups.includes(g) && g !== secName).map(g => '<span class="wk-chip" style="background:#ecdcae">' + wEsc(g) + '</span>').join('') + '<span class="wk-chip">' + wEsc(e.category) + '</span></span></button>';
+            const row = (e, secName) => '<button class="wk-btn" data-w="page" data-id="' + wEsc(e.id) + '"><b>' + wEsc(e.name) + '</b><span style="display:flex;flex-wrap:wrap;gap:4px;justify-content:flex-end">' + (wikiWhenText(e) ? '<span class="wk-chip" style="background:#d9e6df">' + wEsc(wikiWhenText(e)) + '</span>' : '') + (e.groups || []).filter(g => groups.includes(g) && g !== secName).map(g => '<span class="wk-chip" style="background:#ecdcae">' + wEsc(g) + '</span>').join('') + '<span class="wk-chip">' + wEsc(e.category) + '</span></span></button>';
             let h = '';
             if (!groups.length) { for (const e of entries.filter(match)) h += row(e, ''); return h || '<div class="wk-muted">見つかりません</div>'; }
             // ふだんは、いちばん最初のタグのグループにだけ出す（ほかのタグは、行の右に小さな印で出す）。タグをしぼったときは、そのタグの項目を、ぜんぶ出す
@@ -7167,7 +7464,10 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             const d = wikiState.draft; if (!d) return;
             const n = document.getElementById('wk-name'), c = document.getElementById('wk-cat'), b = document.getElementById('wk-basic');
             if (n) d.name = n.value; if (c) d.category = c.value; if (b) d.basic = b.value;
+            { const yy = document.getElementById('wk-year'), mm = document.getElementById('wk-month'); if (yy) d.year = yy.value; if (mm) d.month = mm.value; }
             { const al = document.getElementById('wk-alias'); if (al) d.aliases = wikiSplitAliases(al.value); }
+            for (const el of document.querySelectorAll('#wiki-body .wk-ey, #wiki-body .wk-em, #wiki-body .wk-et, #wiki-body .wk-ee')) { const ev = (d.events || [])[Number(el.dataset.v)]; if (!ev) continue; if (el.classList.contains('wk-ey')) ev.year = el.value; else if (el.classList.contains('wk-em')) ev.month = el.value; else if (el.classList.contains('wk-et')) ev.text = el.value; else ev.ep = Math.floor(Number(el.value)) || null; }
+            for (const el of document.querySelectorAll('#wiki-body .wk-rl, #wiki-body .wk-rb, #wiki-body .wk-rn, #wiki-body .wk-re')) { const r = (d.rels || [])[Number(el.dataset.r)]; if (!r) continue; if (el.classList.contains('wk-rl')) r.label = el.value; else if (el.classList.contains('wk-rb')) r.back = el.value; else if (el.classList.contains('wk-rn')) r.note = el.value; else r.ep = Math.floor(Number(el.value)) || null; }
             for (const el of document.querySelectorAll('#wiki-body .wk-nt')) { const nt = (d.notes || []).find(x => x.id === el.dataset.n); if (nt) nt.text = el.value; }
             for (const el of document.querySelectorAll('#wiki-body .wk-ne')) { const nt = (d.notes || []).find(x => x.id === el.dataset.n); if (nt) nt.ep = Math.floor(Number(el.value)) || null; }
             for (const el of document.querySelectorAll('#wiki-body .wk-st')) { const sec = (d.sections || [])[Number(el.dataset.s)]; if (sec) sec.title = el.value; }
@@ -7190,12 +7490,51 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                 if (gs.length) h += '<div class="wk-chips">' + ['all'].concat(gs, ['未分類']).map(g => '<button type="button" class="wk-fc' + ((wikiState.filter || 'all') === g ? ' on' : '') + '" data-w="gfilter" data-g="' + wEsc(g) + '">' + (g === 'all' ? 'すべて' : wEsc(g)) + '</button>').join('') + '</div>';
                 h += '<div id="wk-list">' + wikiListHtml(bookId) + '</div>';
                 h += '<button class="wk-btn" data-w="new">＋ 項目を手で追加</button>';
+                if (entries.some(x => (x.rels || []).length)) h += '<button class="wk-btn" data-w="graph"><span>相関図（関連の図）</span><span>›</span></button>';
+                if (entries.some(x => x.year || (x.events || []).some(ev => ev.year))) h += '<button class="wk-btn" data-w="timeline"><span>年表（時期の順に見る）</span><span>›</span></button>';
                 h += '<button class="wk-btn" data-w="groups"><span>カテゴリを整える（重要人物・勢力・第1部…）</span><span>›</span></button>';
                 const tb = termsBook(bookId), dn = Object.keys(tb.dismissed).length;
                 h += '<div class="wk-sub">言葉の自動拾い（この作品）</div>';
                 h += '<button class="wk-btn" data-w="terms-toggle"><span>仮登録：読み終えた話から拾う</span><span>' + (typeof tb.enabled === 'boolean' ? (tb.enabled ? '入' : '切') : '共通（' + (termsEnabledFor(bookId) ? '入' : '切') + '）') + '</span></button>';
                 h += '<button class="wk-btn" data-w="terms-rescan">読み終えた話を、もう一度調べる</button>';
                 h += '<button class="wk-btn" data-w="dismissed">捨てた言葉を見る' + (dn ? '（' + dn + '件）' : '') + '</button>';
+            } else if (wikiState.view === 'graph') {
+                title.textContent = '相関図';
+                const g = wikiState.graph = Object.assign({ focus: null, hops: 1, cat: '', zoom: 1 }, wikiState.graph || {});
+                const cur0 = wikiEpisode(bookId), maxEp = (wikiBook() ? getFlatChapters(wikiBook()).length : 0) || 999, asOf = wikiState.asOf ? Math.min(wikiState.asOf, maxEp) : 0, cur = asOf || cur0;
+                const withRel = entries.filter(e => (e.rels || []).length || entries.some(x => (x.rels || []).some(r => r.to === e.id)));
+                const cats = [...new Set(withRel.map(e => e.category || '未分類'))];
+                h += '<div class="wk-row" style="margin-top:0;flex-wrap:wrap"><label for="wk-asof" class="wk-muted">表示する話数</label><input type="number" id="wk-asof" min="1" max="' + maxEp + '" value="' + (cur || '') + '" style="margin-top:0;width:80px"><span class="wk-muted">話時点</span>' + (asOf && asOf !== cur0 ? '<button type="button" class="wk-mini" data-w="asof-reset">いまの進捗（' + (cur0 || '？') + '話）に戻す</button>' : '') + '</div>';
+                h += '<div class="wk-row" style="flex-wrap:wrap"><label for="wk-gfocus" class="wk-muted">中心</label><select id="wk-gfocus" style="margin-top:0;max-width:60%"><option value="">全体</option>' + withRel.slice().sort((a, b) => String(a.name).localeCompare(String(b.name), 'ja')).map(e => '<option value="' + wEsc(e.id) + '"' + (g.focus === e.id ? ' selected' : '') + '>' + wEsc(e.name) + '</option>').join('') + '</select>' + (g.focus ? '<button type="button" class="wk-fc' + (g.hops === 1 ? ' on' : '') + '" data-w="ghops" data-v="1">1つ先まで</button><button type="button" class="wk-fc' + (g.hops === 2 ? ' on' : '') + '" data-w="ghops" data-v="2">2つ先まで</button>' : '') + '</div>';
+                h += '<div class="wk-chips"><button type="button" class="wk-fc' + (!g.cat ? ' on' : '') + '" data-w="gcat" data-c="">すべて</button>' + cats.map(c => '<button type="button" class="wk-fc' + (g.cat === c ? ' on' : '') + '" data-w="gcat" data-c="' + wEsc(c) + '">' + wEsc(c) + '</button>').join('') + '</div>';
+                const data = wikiGraphData(bookId, g, cur);
+                if (!data.nodes.length) h += '<div class="wk-muted" style="margin-top:12px">つながっている項目が、ありません。項目の編集で、「＋ 関連を足す」から、つないでください。</div>';
+                else {
+                    h += '<div class="wk-row" style="margin-top:8px"><button type="button" class="wk-mini" data-w="gzoom" data-v="-1">－</button><button type="button" class="wk-mini" data-w="gzoom" data-v="1">＋</button><span class="wk-muted">' + data.nodes.length + '項目・' + data.edges.length + '本　名前を押すと、その項目のページ</span></div>';
+                    h += '<div style="margin-top:8px;overflow:auto;max-height:68vh;-webkit-overflow-scrolling:touch">' + wikiGraphSvg(data, g.zoom) + '</div>';
+                    h += '<button type="button" class="wk-btn" data-w="gmermaid">Mermaidの文字を、コピーする</button>';
+                }
+            } else if (wikiState.view === 'timeline') {
+                title.textContent = '年表';
+                const cats = [...new Set(entries.filter(x => x.year || (x.events || []).some(ev => ev.year)).map(x => x.category || '未分類'))], cf = wikiState.tlCat || '';
+                h += '<div class="wk-muted">項目の「時期」を、古い順に並べます。押すと、その項目のページが開きます。</div>';
+                h += '<div class="wk-chips">' + [''].concat(cats).map(c => '<button type="button" class="wk-fc' + (cf === c ? ' on' : '') + '" data-w="tlcat" data-c="' + wEsc(c) + '">' + (c ? wEsc(c) : 'すべて') + '</button>').join('') + '</div>';
+                const dated = [];
+                for (const x of entries) if (!cf || (x.category || '未分類') === cf) {
+                    if (x.year) dated.push({ x, year: x.year, month: x.month, key: wikiWhenKey(x), text: '' });
+                    for (const ev of (x.events || [])) if (ev.year) dated.push({ x, year: ev.year, month: ev.month, key: ev.year * 100 + (ev.month || 0), text: ev.text || '' });
+                }
+                dated.sort((a, b) => a.key - b.key || String(a.x.name).localeCompare(String(b.x.name), 'ja'));
+                if (!dated.length) h += '<div class="wk-muted">この分類に、時期のある項目は、ありません</div>';
+                let yy = null;
+                for (const row of dated) {
+                    const x = row.x;
+                    if (row.year !== yy) { yy = row.year; h += '<div class="wk-gh" style="cursor:default"><span>' + yy + '年</span></div>'; }
+                    const rel = row.text ? 0 : wikiRelView(bookId, x.id).reduce((n, g) => n + g.items.length, 0);
+                    h += '<button class="wk-btn" data-w="page" data-id="' + wEsc(x.id) + '"><span style="display:flex;gap:8px;align-items:baseline"><span class="wk-muted" style="min-width:2.5em">' + (row.month ? row.month + '月' : '') + '</span><b>' + wEsc(x.name) + '</b>' + (row.text ? '<span style="font-weight:400">' + wEsc(row.text) + '</span>' : '') + '</span><span style="display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end"><span class="wk-chip">' + wEsc(x.category || '') + '</span>' + (rel ? '<span class="wk-chip" style="background:#ecdcae">関連 ' + rel + '</span>' : '') + '</span></button>';
+                }
+                const nodate = entries.filter(x => !x.year && (!cf || (x.category || '未分類') === cf)).length;
+                if (nodate) h += '<div class="wk-muted" style="margin-top:10px">時期のない項目：' + nodate + '件（項目の編集で、年・月を入れると、ここに出ます）</div>';
             } else if (wikiState.view === 'groups') {
                 title.textContent = 'カテゴリを整える';
                 const gs = wikiGroups(bookId);
@@ -7208,6 +7547,9 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                         + '<button type="button" class="wk-mini" data-w="gren" data-i="' + i + '">名前</button><button type="button" class="wk-mini wk-danger" data-w="gdel" data-i="' + i + '">' + (wikiState.confirmG === g ? '本当に？' : '消す') + '</button></div>';
                 });
                 h += '<div class="wk-row"><input type="text" id="wk-gnew" placeholder="新しいカテゴリ名" style="margin-top:0"><button class="wk-btn" style="margin-top:0;width:auto;white-space:nowrap" data-w="gadd">追加</button></div>';
+                h += '<div class="wk-label" style="margin-top:18px">項目の「種類」のひな形</div><div class="wk-muted">項目を作るときの「カテゴリ」（人物・場所・組織…）の候補に、足します。足した種類は、どの作品でも使えます。</div>';
+                h += '<button class="wk-btn" data-w="preset" data-p="enc"><span>百科事典セット</span><span class="wk-muted">国家・都市／宗教・神／システム・職業・称号／契約・支配・信仰／作品／世界線</span></button>';
+                h += '<button class="wk-btn" data-w="preset" data-p="track"><span>追跡・分析セット</span><span class="wk-muted">伏線／功績・業績／考察</span></button>';
             } else if (wikiState.view === 'pending') {
                 title.textContent = '仮登録';
                 const pend = wikiPending(bookId);
@@ -7244,6 +7586,59 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                 if (!list.length) h += '<div class="wk-muted">捨てた言葉はありません</div>';
                 for (const name of list) h += `<div class="wk-row"><span style="flex:1"><b>${wEsc(name)}</b></span><button class="wk-btn" style="margin-top:0;width:auto" data-w="restore" data-name="${wEsc(name)}">仮登録に戻す</button></div>`;
                 if (list.length > 1) h += '<button class="wk-btn wk-accent" data-w="restore-all">ぜんぶ仮登録に戻す</button>';
+            } else if (wikiState.view === 'page') {
+                // 項目のページ（読むための画面）。編集は、右上の鉛筆から
+                const e = entries.find(x => x.id === wikiState.pageId);
+                if (!e) { wikiState.view = 'list'; wikiRender(); return; }
+                title.textContent = '項目';
+                const cur0 = wikiEpisode(bookId), maxEp = (wikiBook() ? getFlatChapters(wikiBook()).length : 0) || 999, asOf = wikiState.asOf ? Math.min(wikiState.asOf, maxEp) : 0, cur = asOf || cur0;
+                h += '<div class="wk-pg-h" style="display:flex;flex-wrap:wrap;gap:6px;align-items:center"><b style="font-size:20px;margin-right:4px">' + wEsc(e.name) + '</b><span class="wk-chip">' + wEsc(e.category || '') + '</span>' + (wikiWhenText(e) ? '<span class="wk-chip" style="background:#d9e6df">' + wEsc(wikiWhenText(e)) + '</span>' : '') + (e.groups || []).map(g => '<span class="wk-chip" style="background:#ecdcae">' + wEsc(g) + '</span>').join('') + '</div>';
+                h += '<div class="wk-row" style="margin-top:8px;flex-wrap:wrap"><label for="wk-asof" class="wk-muted">表示する話数</label><input type="number" id="wk-asof" min="1" max="' + maxEp + '" value="' + (cur || '') + '" style="margin-top:0;width:80px"><span class="wk-muted">話時点</span>' + (asOf && asOf !== cur0 ? '<button type="button" class="wk-mini" data-w="asof-reset">いまの進捗（' + (cur0 || '？') + '話）に戻す</button>' : '') + '</div>' + (asOf > cur0 && cur0 ? '<div class="wk-muted" style="color:#a33">※ いま読んでいる話（' + cur0 + '話）より先の内容を、見ています（ネタバレに注意）</div>' : '');
+                if ((e.aliases || []).length) h += '<div class="wk-muted" style="margin-top:4px">別の呼び方：' + e.aliases.map(wEsc).join('、') + '</div>';
+                if (e.basic) h += '<div class="wk-note" style="margin-top:10px">' + wikiLinkify(bookId, e.basic, e.id) + '</div>';
+                let lockedRows = 0;
+                for (const sec of (e.sections || [])) {
+                    const vis = (sec.rows || []).filter(r => { const lk = wikiNoteLocked({ ep: r.ep }, cur); if (lk) lockedRows++; return !lk; });
+                    if (!vis.length) continue;
+                    h += '<div class="wk-label" style="margin-top:14px">' + wEsc(sec.title) + (cur ? '<span class="wk-muted" style="margin-left:8px;font-weight:400">（' + cur + '話時点）</span>' : '') + '</div><div class="wk-sec">';
+                    // 同じ名前の行は、いまの進捗までの、いちばん新しい値を出す。前の値は、おりたたむ
+                    const order = [], by = new Map();
+                    for (const r of vis) { const k = String(r.k || '').trim(); if (!by.has(k)) { by.set(k, []); order.push(k); } by.get(k).push(r); }
+                    for (const k of order) {
+                        const rs = by.get(k).slice().sort((a, b) => (a.ep || 0) - (b.ep || 0)), last = rs[rs.length - 1], before = rs.slice(0, -1);
+                        h += '<div class="wk-row" style="margin-top:4px;justify-content:space-between"><span>' + wEsc(k) + '</span><b>' + wikiLinkify(bookId, last.v, e.id) + (last.ep ? '<span class="wk-muted" style="font-weight:400;margin-left:6px">（' + last.ep + '話〜）</span>' : '') + '</b></div>';
+                        if (before.length) h += '<details style="margin:0 0 4px 10px"><summary class="wk-muted" style="cursor:pointer">前の値（' + before.length + '）</summary>' + before.slice().reverse().map(r => '<div class="wk-muted">' + wEsc(r.v) + (r.ep ? '（' + r.ep + '話〜）' : '') + '</div>').join('') + '</details>';
+                    }
+                    h += '</div>';
+                }
+                const relV = wikiRelView(bookId, e.id, cur);
+                if (relV.length) {
+                    h += '<div class="wk-label" style="margin-top:14px">関連</div><div class="wk-sec">';
+                    for (const g of relV) h += '<div class="wk-row" style="margin-top:4px;justify-content:space-between;align-items:flex-start"><span>' + wEsc(g.label) + '</span><span style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">' + g.items.map(i => '<span><button type="button" class="wk-chip" data-w="page" data-id="' + wEsc(i.id) + '" style="border:0;cursor:pointer">' + wEsc(i.name) + (i.when ? '（' + wEsc(i.when) + '）' : '') + '</button>' + (i.note ? ' <span style="font-size:12px">' + wEsc(i.note) + '</span>' : '') + '</span>').join('') + '</span></div>';
+                    h += '</div>';
+                }
+                // 経歴・変遷：この項目の出来事と、時期のある関連（出演ドラマなど）を、時期の順に
+                {
+                    const rows = [];
+                    for (const ev of (e.events || [])) { if (ev.ep && wikiNoteLocked({ ep: ev.ep }, cur)) continue; rows.push({ key: ev.year ? ev.year * 100 + (ev.month || 0) : Infinity, when: ev.year ? ev.year + '年' + (ev.month ? ev.month + '月' : '') : '', text: ev.text || '' }); }
+                    for (const g of relV) for (const i of g.items) if (i.key !== Infinity) rows.push({ key: i.key, when: i.when, text: g.label + '：', id: i.id, name: i.name, note: i.note });
+                    rows.sort((a, b) => a.key - b.key);
+                    if (rows.length) {
+                        h += '<div class="wk-label" style="margin-top:14px">経歴・変遷' + (cur ? '<span class="wk-muted" style="margin-left:8px;font-weight:400">（' + cur + '話時点）</span>' : '') + '</div><div class="wk-sec">';
+                        for (const r of rows) h += '<div class="wk-row" style="margin-top:4px;align-items:baseline"><span class="wk-muted" style="min-width:5.5em">' + wEsc(r.when || '時期なし') + '</span><span style="flex:1">' + (r.id ? wEsc(r.text) + '<button type="button" class="wk-chip" data-w="page" data-id="' + wEsc(r.id) + '" style="border:0;cursor:pointer;margin-left:4px">' + wEsc(r.name) + '</button>' + (r.note ? ' <span style="font-size:12px">' + wEsc(r.note) + '</span>' : '') : wikiLinkify(bookId, r.text, e.id)) + '</span></div>';
+                        h += '</div>';
+                    }
+                }
+                const notes = (e.notes || []).slice().sort((a, b) => (a.ep || 0) - (b.ep || 0)), nVis = notes.filter(n => !wikiNoteLocked(n, cur)), nLocked = notes.length - nVis.length;
+                if (nVis.length) {
+                    h += '<div class="wk-label" style="margin-top:14px">進行度別情報</div>';
+                    for (const n of nVis) h += '<div class="wk-ep"><div class="wk-ep-label">' + (n.ep ? n.ep + '話 判明' : '話数なし') + '</div><div class="wk-note">' + wikiLinkify(bookId, n.text, e.id) + '</div></div>';
+                }
+                h += wikiBacklinksHtml(bookId, e, cur);
+                if (lockedRows || nLocked) h += '<div class="wk-muted" style="margin-top:12px">🔒 先の内容が' + (lockedRows + nLocked) + '件あります（読み進めると、見られます）</div>';
+                if (!e.basic && !(e.sections || []).length && !relV.length && !nVis.length && !(e.events || []).length) h += '<div class="wk-muted" style="margin-top:12px">まだ、書いてあることがありません。右上の鉛筆から、書けます</div>';
+                if (relV.length) h += '<button class="wk-btn" data-w="graph" data-id="' + wEsc(e.id) + '" style="margin-top:14px"><span>この項目の相関図</span><span>›</span></button>';
+                h += '<button class="wk-btn wk-accent" data-w="open" data-id="' + wEsc(e.id) + '" style="margin-top:18px">✎ 編集する</button>';
             } else {
                 const d = wikiState.draft;
                 title.textContent = wikiState.editId ? '項目の編集' : '新しい項目';
@@ -7257,6 +7652,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                 const allG = wikiGroups(bookId);
                 h += '<div class="wk-label">カテゴリ（いくつでも）</div><div class="wk-chips">' + allG.map(g => '<label class="wk-gc"><input type="checkbox" class="wk-g" value="' + wEsc(g) + '"' + ((d.groups || []).includes(g) ? ' checked' : '') + '><span>' + wEsc(g) + '</span></label>').join('') + '</div>';
                 h += '<div class="wk-row"><input type="text" id="wk-newg" placeholder="新しいカテゴリを作ってつける" style="margin-top:0"><button class="wk-btn" style="margin-top:0;width:auto;white-space:nowrap" data-w="addg">追加</button></div>';
+                h += '<div class="wk-label">時期（作品の放送・公開・出来事の年月。なくてもOK）</div><div class="wk-row" style="margin-top:0"><input type="number" id="wk-year" min="1" value="' + wEsc(String(d.year || '')) + '" placeholder="年（例：2024）" style="margin-top:0;width:130px"><select id="wk-month" style="margin-top:0;width:100px"><option value="">月</option>' + Array.from({ length: 12 }, (_, i) => '<option value="' + (i + 1) + '"' + (Number(d.month) === i + 1 ? ' selected' : '') + '>' + (i + 1) + '月</option>').join('') + '</select></div>';
                 h += '<label class="wk-label" for="wk-basic">基本情報（いつでも見られる）</label>';
                 h += `<textarea id="wk-basic" placeholder="例：主人公の親友。ムードメーカー">${wEsc(d.basic)}</textarea>`;
                 h += '<div class="wk-label">項目の欄（ステータス・所持品など。使うものだけ）</div>';
@@ -7270,6 +7666,35 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                 const have = new Set((d.sections || []).map(x => x.title));
                 h += '<div class="wk-chips">' + ['ステータス', '所持品', 'スキル', '関係'].filter(t => !have.has(t)).concat(['＋自由な欄']).map(t => '<button type="button" class="wk-fc" data-w="sec-add" data-t="' + wEsc(t) + '">＋ ' + wEsc(t.replace('＋', '')) + '</button>').join('') + '</div>';
                 h += '<div class="wk-muted">「話」を入れると、その話まで読み進めたら見えます（それまでは本文のカードでも伏せます）。</div>';
+                // 関連する項目
+                {
+                    const labels = wikiRelLabels(bookId);
+                    h += '<datalist id="wk-rl-list">' + labels.map(l => '<option value="' + wEsc(l) + '">').join('') + '</datalist>';
+                    h += '<div class="wk-label" style="margin-top:14px">関連する項目（所属・後輩・出演など。いくつでも）</div>';
+                    const ents = wikiEntries(bookId), byId = new Map(ents.map(x => [x.id, x]));
+                    (d.rels || []).forEach((r, ri) => {
+                        const t = byId.get(r.to); if (!t) return;
+                        h += '<div class="wk-sec"><div class="wk-row" style="margin-top:0"><b style="flex:1">' + wEsc(t.name) + '</b><span class="wk-chip">' + wEsc(t.category || '') + '</span><button type="button" class="wk-mini wk-danger" data-w="rel-del" data-r="' + ri + '" aria-label="この関連を消す">×</button></div>';
+                        h += '<div class="wk-row"><input type="text" class="wk-rl" data-r="' + ri + '" list="wk-rl-list" value="' + wEsc(r.label || '') + '" placeholder="関係（例：所属）" style="margin-top:0"><input type="text" class="wk-rb" data-r="' + ri + '" list="wk-rl-list" value="' + wEsc(r.back || '') + '" placeholder="向こう側の呼び名（なくてもOK）" style="margin-top:0"></div>';
+                        h += '<div class="wk-row"><input type="text" class="wk-rn" data-r="' + ri + '" value="' + wEsc(r.note || '') + '" placeholder="ひとこと（役名・ポジションなど）" style="margin-top:0"></div>';
+                        h += '<div class="wk-row"><label>○話から見える</label><input type="number" class="wk-re" data-r="' + ri + '" min="1" value="' + (r.ep || '') + '" placeholder="話数" style="margin-top:0;width:90px"></div></div>';
+                    });
+                    const incoming = [];
+                    for (const x of ents) if (x.id !== wikiState.editId) for (const r of (x.rels || [])) if (r.to === wikiState.editId) incoming.push({ name: x.name, label: r.back || r.label || '関連', note: r.note || '' });
+                    if (incoming.length) h += '<div class="wk-muted" style="margin-top:6px">向こうから、つながっている項目（向こうの項目で、直せます）：' + incoming.map(i => wEsc(i.name) + '（' + wEsc(i.label) + (i.note ? '・' + wEsc(i.note) : '') + '）').join('、') + '</div>';
+                    if (!(d.rels || []).length && !incoming.length) h += '<div class="wk-muted">まだ、つながっている項目は、ありません</div>';
+                    h += '<button type="button" class="wk-btn" data-w="rel-add">＋ 関連を足す</button>';
+                }
+                // 出来事・功績（変遷）
+                {
+                    h += '<div class="wk-label" style="margin-top:14px">出来事・功績（デビュー、受賞、順位の変化など。時期の順に、ページに出ます）</div>';
+                    (d.events || []).forEach((ev, vi) => {
+                        h += '<div class="wk-sec"><div class="wk-row" style="margin-top:0"><input type="number" class="wk-ey" data-v="' + vi + '" min="1" value="' + (ev.year || '') + '" placeholder="年" style="margin-top:0;width:90px"><select class="wk-em" data-v="' + vi + '" style="margin-top:0;width:80px"><option value="">月</option>' + Array.from({ length: 12 }, (_, i) => '<option value="' + (i + 1) + '"' + (Number(ev.month) === i + 1 ? ' selected' : '') + '>' + (i + 1) + '月</option>').join('') + '</select><span style="flex:1"></span><button type="button" class="wk-mini wk-danger" data-w="ev-del" data-v="' + vi + '" aria-label="この出来事を消す">×</button></div>';
+                        h += '<div class="wk-row"><input type="text" class="wk-et" data-v="' + vi + '" value="' + wEsc(ev.text || '') + '" placeholder="出来事（例：音楽チャートで1位）" style="margin-top:0"></div>';
+                        h += '<div class="wk-row"><label>○話から見える</label><input type="number" class="wk-ee" data-v="' + vi + '" min="1" value="' + (ev.ep || '') + '" placeholder="話数" style="margin-top:0;width:90px"></div></div>';
+                    });
+                    h += '<button type="button" class="wk-btn" data-w="ev-add">＋ 出来事を足す</button>';
+                }
                 const cur = wikiEpisode(bookId);
                 h += `<div class="wk-row" style="justify-content:space-between"><div class="wk-label" style="margin-top:14px">進行度別情報</div><span class="wk-chip">現在進捗: ${cur ? cur + '話' : '不明'}</span></div>`;
                 if (!d.notes.length) h += '<div class="wk-muted">まだ追記はありません</div>';
@@ -7293,10 +7718,10 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                 if (wikiState.editId) h += `<button class="wk-btn wk-danger" data-w="del">${wikiState.confirmDel ? 'もう一度押すと削除します' : '削除'}</button>`;
             }
             body.innerHTML = h;
-            { const sv = document.getElementById('wiki-save'); if (sv) sv.hidden = wikiState.view !== 'detail' || !wikiState.draft; }
+            { const sv = document.getElementById('wiki-save'); if (sv) sv.hidden = wikiState.view !== 'detail' || !wikiState.draft; const ed = document.getElementById('wiki-edit'); if (ed) ed.hidden = wikiState.view !== 'page'; if (wikiState.view === 'page') { const bd = document.getElementById('wiki-body'); if (bd && wikiState.pageScroll !== wikiState.pageId) { bd.scrollTop = 0; wikiState.pageScroll = wikiState.pageId; } } else wikiState.pageScroll = null; }
             if (wikiState.view === 'detail' && wikiState.draft && wikiState.snapFor !== wikiState.draft) { wikiState.snapFor = wikiState.draft; wikiState.snap = JSON.stringify(wikiState.draft); }
         }
-        function wikiNewDraft(name, category) { return { name: name || '', category: category || '未分類', aliases: [], groups: [], sections: [], basic: '', notes: [] }; }
+        function wikiNewDraft(name, category) { return { name: name || '', category: category || '未分類', year: '', month: '', aliases: [], rels: [], events: [], groups: [], sections: [], basic: '', notes: [] }; }
         function wikiSplitAliases(t) { const seen = new Set(); return String(t || '').split(/[,、，;；\n]+/).map(x => x.trim()).filter(x => x && !seen.has(x) && seen.add(x)); }
         function wikiAct(act, el) {
             const bookId = state.currentBookId;
@@ -7359,10 +7784,26 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                 const g = wikiPending(bookId).find(x => x.name === el.dataset.name); if (!g) return;
                 wikiState.view = 'detail'; wikiState.editId = null; wikiState.pendingName = g.name; wikiState.draft = wikiNewDraft(g.name, g.category); wikiRender(); return;
             }
+            if (act === 'timeline') { wikiState.view = 'timeline'; wikiState.tlCat = ''; wikiState.draft = null; wikiRender(); return; }
+            if (act === 'tlcat') { wikiState.tlCat = el.dataset.c || ''; wikiRender(); return; }
+            if (act === 'sumopen') { sumOpen(el.dataset.id); return; }
+            if (act === 'readchap') { const bk = state.books.find(b => b.id === bookId), hit = bk && getFlatChapters(bk).find(x => x.chap.id === el.dataset.id); if (hit) { wikiCloseQuiet(); state.currentBookId = bookId; if (hit.volId) openReaderForVolumeChapter(hit.volId, hit.chap.id, hit.partIdx); else openReader(hit.chap.id, hit.partIdx); } return; }
+            if (act === 'graph') { wikiState.graphFrom = (wikiState.view === 'page' && el.dataset.id) ? 'page' : null; wikiState.graph = { focus: el.dataset.id || null, hops: 1, cat: '', zoom: 1 }; wikiState.view = 'graph'; wikiState.draft = null; wikiRender(); return; }
+            if (act === 'ghops') { wikiState.graph.hops = Number(el.dataset.v) || 1; wikiRender(); return; }
+            if (act === 'gcat') { wikiState.graph.cat = el.dataset.c || ''; wikiRender(); return; }
+            if (act === 'gzoom') { const z = (wikiState.graph.zoom || 1) + (Number(el.dataset.v) > 0 ? 0.25 : -0.25); wikiState.graph.zoom = Math.max(0.5, Math.min(4, z)); wikiRender(); return; }
+            if (act === 'gmermaid') { const g = wikiState.graph, cur = wikiState.asOf || wikiEpisode(bookId), txt = wikiGraphMermaid(wikiGraphData(bookId, g, cur)); const ok = () => toast('Mermaidの文字を、コピーしました'); if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(ok, () => { window.prompt('コピーしてください', txt); }); else window.prompt('コピーしてください', txt); return; }
+            if (act === 'preset') {
+                const sets = { enc: ['国家・都市', '宗教・神', 'システム・職業・称号', '契約・支配・信仰', '作品', '世界線'], track: ['伏線', '功績・業績', '考察'] };
+                const before = wikiCats().length; for (const c of (sets[el.dataset.p] || [])) wikiAddCat(c);
+                const n = wikiCats().length - before; toast(n ? n + '個の種類を、足しました（項目の編集の「カテゴリ」に出ます）' : 'すべて、もう、入っています'); wikiRender(); return;
+            }
+            if (act === 'asof-reset') { wikiState.asOf = null; wikiRender(); return; }
+            if (act === 'page') { const e = wikiEntries(bookId).find(x => x.id === el.dataset.id); if (!e) return; wikiState.pageFrom = wikiState.view === 'timeline' ? 'timeline' : (wikiState.view === 'page' ? wikiState.pageFrom : null); wikiState.view = 'page'; wikiState.pageId = e.id; wikiState.draft = null; wikiState.editId = null; wikiState.pendingName = null; wikiState.confirmDel = false; wikiRender(); return; }
             if (act === 'open') {
                 const e = wikiEntries(bookId).find(x => x.id === el.dataset.id); if (!e) return;
                 wikiState.view = 'detail'; wikiState.editId = e.id; wikiState.pendingName = null; wikiState.confirmDel = false;
-                wikiState.draft = { name: e.name, category: e.category, groups: (e.groups || []).slice(), sections: JSON.parse(JSON.stringify(e.sections || [])), basic: e.basic || '', aliases: (e.aliases || []).slice(), notes: (e.notes || []).map(n => ({ ...n })) }; wikiRender(); return;
+                wikiState.draft = { name: e.name, category: e.category, groups: (e.groups || []).slice(), sections: JSON.parse(JSON.stringify(e.sections || [])), basic: e.basic || '', year: e.year || '', month: e.month || '', aliases: (e.aliases || []).slice(), events: (e.events || []).map(x => ({ ...x })), rels: (e.rels || []).map(r => ({ ...r })), notes: (e.notes || []).map(n => ({ ...n })) }; wikiRender(); return;
             }
             if (act === 'sec-add') {
                 wikiReadDraft(); const t = el.dataset.t === '＋自由な欄' ? '' : el.dataset.t;
@@ -7401,6 +7842,14 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             }
             if (act === 'note-edit') { wikiReadDraft(); wikiState.editNote = el.dataset.nid; wikiRender(); return; }
             if (act === 'note-done') { wikiReadDraft(); wikiState.editNote = null; wikiRender(); return; }
+            if (act === 'ev-add') { wikiReadDraft(); wikiState.draft.events = (wikiState.draft.events || []).concat({ id: 'v_' + Date.now() + Math.random().toString(36).slice(2, 5), year: '', month: '', text: '', ep: null }); wikiRender(); return; }
+            if (act === 'ev-del') { wikiReadDraft(); wikiState.draft.events.splice(Number(el.dataset.v), 1); wikiRender(); return; }
+            if (act === 'rel-add') {
+                wikiReadDraft(); const d = wikiState.draft; const taken = new Set((d.rels || []).map(r => r.to));
+                wikiRelPick(bookId, wikiState.editId, taken, e => { d.rels = (d.rels || []).concat({ id: 'r_' + Date.now() + Math.random().toString(36).slice(2, 6), to: e.id, label: '', back: '', ep: null }); wikiRender(); });
+                return;
+            }
+            if (act === 'rel-del') { wikiReadDraft(); wikiState.draft.rels.splice(Number(el.dataset.r), 1); wikiRender(); return; }
             if (act === 'note-del') { wikiReadDraft(); wikiState.draft.notes = (wikiState.draft.notes || []).filter(x => x.id !== el.dataset.nid); wikiState.editNote = null; toast('追記を消しました。「保存して閉じる」で確定します'); wikiRender(); return; }
             if (act === 'reveal') { wikiReadDraft(); wikiState.revealed[el.dataset.nid] = true; wikiRender(); return; }
             if (act === 'addcat') {
@@ -7423,7 +7872,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                 const aliases = (d.aliases || []).filter(x => x !== d.name.trim());
                 { const others = entries.filter(e => e.id !== wikiState.editId), used = new Map(); others.forEach(e => [e.name].concat(e.aliases || []).forEach(x => used.set(String(x).trim(), e.name)));
                   const dup = [d.name.trim()].concat(aliases).filter(x => used.has(x)); if (dup.length && !confirm('「' + dup[0] + '」は、「' + used.get(dup[0]) + '」でも使われています。\nそのまま保存しますか？\n（本文の色づけは、先に登録した項目のほうになります）')) return; }
-                const rec = { name: d.name.trim(), aliases, category: d.category, groups: d.groups || [], sections: (d.sections || []).map(x => ({ ...x, title: (x.title || '').trim() || '欄', rows: x.rows.filter(r => (r.k || '').trim() || (r.v || '').trim()) })).filter(x => x.rows.length), basic: d.basic, notes: d.notes };
+                const rec = { name: d.name.trim(), aliases, category: d.category, groups: d.groups || [], sections: (d.sections || []).map(x => ({ ...x, title: (x.title || '').trim() || '欄', rows: x.rows.filter(r => (r.k || '').trim() || (r.v || '').trim()) })).filter(x => x.rows.length), basic: d.basic, year: (Math.floor(Number(d.year)) > 0 ? Math.floor(Number(d.year)) : null), month: (Math.floor(Number(d.year)) > 0 && Math.floor(Number(d.month)) >= 1 && Math.floor(Number(d.month)) <= 12 ? Math.floor(Number(d.month)) : null), notes: d.notes, events: (d.events || []).filter(ev => String(ev.text || '').trim()).map(ev => ({ id: ev.id, year: Math.floor(Number(ev.year)) > 0 ? Math.floor(Number(ev.year)) : null, month: (Math.floor(Number(ev.year)) > 0 && Math.floor(Number(ev.month)) >= 1 && Math.floor(Number(ev.month)) <= 12) ? Math.floor(Number(ev.month)) : null, text: String(ev.text).trim(), ep: Math.floor(Number(ev.ep)) || null })), rels: (d.rels || []).filter(r => r && r.to && r.to !== wikiState.editId && wikiEntries(bookId).some(x => x.id === r.to)).map(r => ({ id: r.id, to: r.to, label: String(r.label || '').trim(), back: String(r.back || '').trim(), note: String(r.note || '').trim(), ep: Math.floor(Number(r.ep)) || null })) };
                 if (wikiState.editId) { const i = entries.findIndex(e => e.id === wikiState.editId); if (i >= 0) entries[i] = { ...entries[i], ...rec }; }
                 else entries.push({ id: 'w_' + Date.now(), at: Date.now(), ...rec });
                 if (!wikiSetEntries(bookId, entries)) return;
@@ -7431,12 +7880,12 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                     const t = termsBook(bookId); delete t.pending[wikiState.pendingName]; termsSave(bookId, t);
                 }
                 savedToast('保存しました');
-                wikiState.view = wikiState.pendingName && wikiPending(bookId).length ? 'pending' : 'list';
+                { const backId = wikiState.editId; wikiState.view = wikiState.pendingName && wikiPending(bookId).length ? 'pending' : (backId ? 'page' : 'list'); wikiState.pageId = backId || null; }
                 wikiState.pendingName = null; wikiState.editId = null; wikiState.draft = null; wikiRender(); return;
             }
             if (act === 'del') {
                 if (!wikiState.confirmDel) { wikiState.confirmDel = true; wikiReadDraft(); wikiRender(); return; }
-                wikiSetEntries(bookId, wikiEntries(bookId).filter(e => e.id !== wikiState.editId));
+                { const gone = wikiState.editId; wikiSetEntries(bookId, wikiEntries(bookId).filter(e => e.id !== gone).map(e => (e.rels || []).some(r => r.to === gone) ? { ...e, rels: e.rels.filter(r => r.to !== gone) } : e)); }
                 toast('削除しました'); wikiState.view = 'list'; wikiState.editId = null; wikiState.draft = null; wikiState.confirmDel = false; wikiRender();
             }
         }
@@ -7573,6 +8022,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                     h += '<button type="button" class="a-btn" data-act="search">🔎 この作品を検索（本文・コメント…）</button>';
                     h += '<button type="button" class="a-btn" data-act="book-settings">作品の詳細設定（ジャンル・音読・wiki）</button>';
                     h += '<button type="button" class="a-btn" data-act="locale">🌎 置換辞書（人物・場所ごと）</button>';
+                    h += '<button type="button" class="a-btn" data-act="summary">📝 話のまとめ（あらすじ・読書メモ）</button>';
                     h += '<button type="button" class="a-btn" data-act="bulkfix">✏️ 一括訂正（誤字・表記ゆれを、まとめて直す）</button>';
                     h += '<button type="button" class="a-btn" data-act="notes">読書ノートを開く</button>';
                 } else if (screen === 'shelf') {
@@ -7595,6 +8045,8 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                     h += '<button type="button" class="a-btn" data-act="prev">前の話へ</button><button type="button" class="a-btn" data-act="next">次の話へ</button>';
                     h += '<button type="button" class="a-btn" data-act="book-settings">作品の詳細設定（ジャンル・音読・wiki）</button>';
                     h += '<button type="button" class="a-btn" data-act="locale">🌎 置換辞書（人物・場所ごと）</button>';
+                    h += '<button type="button" class="a-btn" data-act="summary-this">📝 この話のまとめ</button>';
+                    h += '<button type="button" class="a-btn" data-act="summary">📝 話のまとめ（一覧）</button>';
                     h += '<button type="button" class="a-btn" data-act="bulkfix">✏️ 一括訂正（誤字・表記ゆれを、まとめて直す）</button>';
                     h += '<button type="button" class="a-btn" data-act="readmenu">読書メニューを開く</button>';
                 } else {
@@ -7632,6 +8084,8 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             if (act === 'search') { const top = (() => { try { const e = document.elementFromPoint(14, Math.round(innerHeight / 2)); return !!(e && e.closest('#view-shelf') && !e.closest('#view-detail') && !e.closest('#view-reader')); } catch (x) { return false; } })(); openUnifiedSearch(top || (assistScreen() === 'shelf' && !assistIsDetail()) ? 'all' : 'book'); return; }
             if (act === 'locale') { openLocalePage(); return; }
             if (act === 'bulkfix') { bulkfixOpen(); return; }
+            if (act === 'summary') { sumOpen(); return; }
+            if (act === 'summary-this') { sumOpen(state.currentChapterId); return; }
             if (act === 'book-settings') { openSpeechSettings('book'); return; }
             if (act === 'notes') { click('btn-detail-open-notebook'); return; }
             if (act === 'wiki-inbox') { wikiOpen('inbox'); return; }
@@ -7670,11 +8124,16 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             const wikiLeaveOk = () => !wikiDirty() || confirm('保存していない変更があります。破棄して戻りますか？');
             document.getElementById('wiki-close').onclick = () => { if (wikiLeaveOk()) wikiClose(); };
             document.getElementById('wiki-save').onclick = () => wikiAct('save', { dataset: {} });
+            document.getElementById('wiki-edit').onclick = () => { if (wikiState.view === 'page' && wikiState.pageId) wikiAct('open', { dataset: { id: wikiState.pageId } }); };
+            document.getElementById('wiki-proto-sheet').addEventListener('change', e => { if (e.target.id === 'wk-gfocus') { wikiState.graph.focus = e.target.value || null; wikiRender(); } });
+            document.getElementById('wiki-proto-sheet').addEventListener('change', e => { if (e.target.id === 'wk-asof') { const v = Math.floor(Number(e.target.value)) || 0; wikiState.asOf = v > 0 ? v : null; wikiRender(); } });
             document.getElementById('wiki-proto-sheet').addEventListener('input', e => { if (e.target.id === 'wk-q') { wikiState.q = e.target.value; const l = document.getElementById('wk-list'); if (l) l.innerHTML = wikiListHtml(state.currentBookId); } });
             document.getElementById('wiki-back').onclick = () => {
                 if (wikiState.view === 'list') { wikiClose(); return; }
                 if (!wikiLeaveOk()) return;
-                wikiState.view = (wikiState.view === 'detail' && wikiState.pendingName) ? 'pending' : 'list';
+                if (wikiState.view === 'graph') { wikiState.view = wikiState.graphFrom === 'page' && wikiState.pageId ? 'page' : 'list'; wikiState.graphFrom = null; wikiRender(); return; }
+                if (wikiState.view === 'page' && wikiState.pageFrom === 'timeline') { wikiState.view = 'timeline'; wikiState.pageFrom = null; wikiRender(); return; }
+                { const backId = (wikiState.view === 'detail' && !wikiState.pendingName) ? wikiState.editId : null; wikiState.view = (wikiState.view === 'detail' && wikiState.pendingName) ? 'pending' : (backId ? 'page' : 'list'); wikiState.pageId = backId || wikiState.pageId; }
                 wikiState.pendingName = null; wikiState.editId = null; wikiState.draft = null; wikiState.confirmDel = false; wikiRender();
             };
             document.getElementById('cand-notice').onclick = e => { const b = e.target.closest('[data-cn]'); if (b) candNoticeAct(b.dataset.cn); };
@@ -7687,7 +8146,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         }
         // 話の終わり・戻る・本の終わりで、読み終えた話から言葉を拾い、件数を小さく知らせる。読書は止めない
         // ===== 更新の確認：新しい版があれば、魚に青い点とメニュー（版の番号は version.json。公開のたびに、番号が変わる。番号が入っていない開発中は、確かめない） =====
-        const APP_BUILD = '20261104195459';
+        const APP_BUILD = '20261104211115';
         let updateCheckAt = 0;
         function paintBuild() {
             const el = document.getElementById('app-build-info'); if (!el) return;
