@@ -1826,6 +1826,7 @@
                         <span class="font-bold text-softMuted block mb-1">更新履歴</span>
                         <div id="changelog" class="text-[11px] text-softMuted leading-relaxed">
 <div class="mb-1.5"><b class="text-softText">2026-11-03（6）</b><br>編集の道具：「画面の枠」を「特殊演出」にして（動く人のマーク）、右端に固定した（「原文」のボタンはなくした）。「特殊な文字」（回転の矢印と星のマーク）を足して、縦書き（この部分だけ）・ななめ・左右反転・上下反転・回転・逆さを入れられるようにした（編集画面で、ルビや色と同じように、その場で見える。選ばないときは、いまの行ぜんぶ）。文字色の「カスタム」に「この色にする」を足して、選んだ色が本文と「A」の線に出るようにした。OCRのボタンのマークを変えた。特殊演出に、電光掲示板（右から左へ流れる・文字ごとの色・背景の色・折り返し）、駅の発車案内、空港の出発案内、文字化けするシステム画面、文字が崩れる配信コメント、ページがめくれない、ページが巻き戻る、を足した（🎬の演出ビューで動く）。作品のメニューに、Googleドキュメントへの書き出し（本文のみ）を足した。Driveの自動同期は、はじめは切にして、「いま同期する」で手動にできるようにした。Driveのフォルダ名とアプリ名を「読書リーダー(仮)」にした。</div>
+<div class="mb-1.5"><b class="text-softText">2026-11-05（4）</b><br>保存したときの知らせを、正しくした。「保存しました」は、IndexedDBへの書き込みが終わってから出る（それまでは「保存中…」）。書き込みに失敗したら、警告が出る。</div>
 <div class="mb-1.5"><b class="text-softText">2026-11-05（3）</b><br>保存場所を、IndexedDB（広い保存場所）に変えた。約5MBの制限がなくなり、長い作品や画像の多い作品も入る。はじめて開いたときだけ、古い保存場所から、作品・Wiki・設定をコピーする（古いほうは、消さない）。IndexedDBが使えないブラウザでは、これまでどおりの保存場所で動く。</div>
 <div class="mb-1.5"><b class="text-softText">2026-11-05（2）</b><br>バックアップの範囲を広げた。作品に加えて、Wiki・魚が拾った言葉・リーダーの設定・本棚の並び順なども、JSONに入る。復元すると、それらも戻る（古い形のファイルも読める）。追加したフォントと、Googleのログイン情報は、入らない。</div>
 <div class="mb-1.5"><b class="text-softText">2026-11-05</b><br>パワポ・エクセルの書き出しを直した。パワポは、作品と作家を表にして、数に単位をつけた（「27話」「3冊」）。冊のグラフにも、文字数の折れ線を重ねた。エクセルは、冊のグラフに文字数の折れ線を足し、ランキングのグラフを縦に並べた。日ごとの見出しは、話と冊を分けて出す（「28 話・1 冊」）。</div>
@@ -2053,16 +2054,22 @@
         var PEND = 'yomimono_pending__';
         // ページを閉じる・読み直すときに、まだ IndexedDB に書けていない分を、localStorage に、いったん避難させる（次に開いたときに、戻す）。大きすぎて入らないときは、IndexedDB への書き込みに任せる
         function emergency() { try { pend.forEach(function (v, k) { try { localStorage.setItem(PEND + k, v === null ? '\u0000DEL' : v); } catch (e) {} }); } catch (e) {} }
+        var chain = Promise.resolve(true);   // これまでの書き込みが、ぜんぶ終わったか（失敗なら false）
         function flush() {
             clearTimeout(timer); timer = null;
-            if (mode !== 'idb' || !db || !pend.size) return Promise.resolve();
-            var items = Array.from(pend.entries()); pend.clear();
-            var back = function (e) { items.forEach(function (kv) { if (!pend.has(kv[0])) pend.set(kv[0], kv[1]); }); warn(e); };
-            try {
-                var tx = db.transaction(ST, 'readwrite'), os = tx.objectStore(ST);
-                items.forEach(function (kv) { if (kv[1] === null) os.delete(kv[0]); else os.put(kv[1], kv[0]); });
-                return txDone(tx).then(function () { try { items.forEach(function (kv) { localStorage.removeItem(PEND + kv[0]); }); } catch (e) {} }, back);
-            } catch (e) { back(e); return Promise.resolve(); }
+            if (mode !== 'idb' || !db) return Promise.resolve(true);
+            if (pend.size) {
+                var items = Array.from(pend.entries()); pend.clear();
+                var back = function (e) { items.forEach(function (kv) { if (!pend.has(kv[0])) pend.set(kv[0], kv[1]); }); warn(e); return false; };
+                var p;
+                try {
+                    var tx = db.transaction(ST, 'readwrite'), os = tx.objectStore(ST);
+                    items.forEach(function (kv) { if (kv[1] === null) os.delete(kv[0]); else os.put(kv[1], kv[0]); });
+                    p = txDone(tx).then(function () { try { items.forEach(function (kv) { localStorage.removeItem(PEND + kv[0]); }); } catch (e) {} return true; }, back);
+                } catch (e) { p = Promise.resolve(back(e)); }
+                chain = Promise.all([chain, p]).then(function (r) { return r[1]; });
+            }
+            return chain;
         }
         var KV = {
             getItem: function (k) { return mem.has(k) ? mem.get(k) : null; },
@@ -2824,6 +2831,11 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             window.addEventListener('focus', () => { if (driveMeta.connected) driveSync(); });
         }
 
+        // 保存のあとの知らせ：書き込みが終わってから「保存しました」を出す。失敗したら、警告（IndexedDB への書き込みは、少し遅れて始まるため、表示だけ先に出さない）
+        function savedToast(msg) {
+            toast('保存中…');
+            Promise.resolve(KV.flush()).then(ok => { if (ok === false) toast('保存できませんでした。空き容量やブラウザの設定を確かめてください（バックアップを取ってください）'); else toast(msg); }, () => toast('保存できませんでした。空き容量やブラウザの設定を確かめてください'));
+        }
         function toast(msg) {
             const el = document.getElementById('toast');
             el.textContent = msg;
@@ -4033,7 +4045,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                 sort(part.volumes, document.getElementById(`sortable-part-vols-${p}`));
                 part.volumes?.forEach(v => sort(v.chapters, document.getElementById(`vol-chapters-${v.id}`)));
             });
-            save(); setReorderMode(false); toast('並び順を保存しました');
+            save(); setReorderMode(false); savedToast('並び順を保存しました');
         }
         function initSortableForDetail(book) {
             if (!reorderMode) return;
@@ -4214,7 +4226,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             updateDetailStats();
             renderDetailAccordion();
             closeBottomSheet();
-            toast('設定を保存しました');
+            savedToast('設定を保存しました');
         }
 
         function deleteBottomSheetItem() {
@@ -5778,7 +5790,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             const book = ttsBook(); if (!book || !src) return;
             const name = (prompt('この作品の演出として保存します。名前をつけてください', title || '') || '').trim(); if (!name) return;
             const styles = fxStyles(book).filter(s => s.name !== name); styles.push({ id: 'fs_' + Date.now().toString(36), name, src, at: Date.now() });
-            book.fx = Object.assign({}, book.fx || {}, { styles }); save(); toast('「' + name + '」を、この作品の演出に保存しました');
+            book.fx = Object.assign({}, book.fx || {}, { styles }); save(); savedToast('「' + name + '」を、この作品の演出に保存しました');
         }
         function fxPickInit() {
             const modal = document.getElementById('modal-fx-pick'), body = document.getElementById('fx-pick-body');
@@ -7165,7 +7177,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                 if (wikiState.pendingName) {
                     const t = termsBook(bookId); delete t.pending[wikiState.pendingName]; termsSave(bookId, t);
                 }
-                toast('保存しました');
+                savedToast('保存しました');
                 wikiState.view = wikiState.pendingName && wikiPending(bookId).length ? 'pending' : 'list';
                 wikiState.pendingName = null; wikiState.editId = null; wikiState.draft = null; wikiRender(); return;
             }
@@ -9799,7 +9811,7 @@ function setupPaging(){
                     book.review = document.getElementById('notebook-review-input').value;
                     save();
                     document.getElementById('modal-reading-notebook').classList.add('hidden');
-                    toast('読書ノートと感想を保存しました');
+                    savedToast('読書ノートと感想を保存しました');
                 }
             });
 
@@ -9966,7 +9978,7 @@ function setupPaging(){
                 renderReaderContent(book, updatedChap);
                 editWrap.classList.add('hidden');
                 textWrap.classList.remove('hidden');
-                toast('本文を保存しました');
+                savedToast('本文を保存しました');
             });
 
             // 音声朗読
@@ -10443,7 +10455,7 @@ function setupPaging(){
             renderShelf();
             document.getElementById('modal-new-book').classList.add('hidden');
             if (opts && opts.noOpen) return newBook;
-            toast('新しい作品を登録しました');
+            savedToast('新しい作品を登録しました');
             openDetail(newBook.id);
         }
         function newBookFromFile() {
@@ -10455,7 +10467,7 @@ function setupPaging(){
                 const nb = handleCreateNewBook({ noOpen: true }); if (!nb) return;
                 const r = await importFilesIntoPart(nb, nb.parts[0], files);
                 save(); driveSoon(); renderShelf();
-                toast('新しい作品を登録しました' + (r.added ? '（' + r.added + '話を取り込みました）' : ''));
+                savedToast('新しい作品を登録しました' + (r.added ? '（' + r.added + '話を取り込みました）' : ''));
                 openDetail(nb.id);
             };
             input.click();
