@@ -4775,9 +4775,9 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         // ウィキに登録した言葉を、本文の中で、うっすら色づけ。押すと、小さなカードが出る
         let wkHlCache = { key: '', re: null, map: null };
         function wikiHlRegex(bookId) {
-            const es = wikiEntries(bookId).filter(e => e.name && e.name.trim().length >= 2), key = bookId + '|' + es.map(e => e.id + ':' + e.name).join('|');
+            const es = wikiEntries(bookId).filter(e => e.name && e.name.trim().length >= 2), key = bookId + '|' + wikiEntries(bookId).map(e => e.id + ':' + e.name + ':' + (e.aliases || []).join('/')).join('|');
             if (wkHlCache.key !== key) {
-                const map = {}; for (const e of es) map[wEsc(e.name.trim())] = e.id;
+                const map = {}; for (const e of wikiEntries(bookId)) for (const nm of [e.name].concat(e.aliases || [])) { const t = String(nm || '').trim(); if (t.length >= 2 && !map[wEsc(t)]) map[wEsc(t)] = e.id; }
                 const names = Object.keys(map).sort((a, b) => b.length - a.length).map(n => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
                 wkHlCache = { key, re: names.length ? new RegExp(names.join('|'), 'g') : null, map };
             }
@@ -6985,7 +6985,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         function wikiListHtml(bookId) {
             const entries = wikiEntries(bookId), groups = wikiGroups(bookId), q = (wikiState.q || '').trim(), f = wikiState.filter || 'all';
             if (!entries.length) return '<div class="wk-muted">まだ項目がありません</div>';
-            const match = e => !q || (e.name + ' ' + (e.basic || '')).indexOf(q) >= 0;
+            const match = e => !q || (e.name + ' ' + (e.aliases || []).join(' ') + ' ' + (e.basic || '')).indexOf(q) >= 0;
             const row = e => '<button class="wk-btn" data-w="open" data-id="' + wEsc(e.id) + '"><b>' + wEsc(e.name) + '</b><span class="wk-chip">' + wEsc(e.category) + '</span></button>';
             let h = '';
             if (!groups.length) { for (const e of entries.filter(match)) h += row(e); return h || '<div class="wk-muted">見つかりません</div>'; }
@@ -7080,6 +7080,9 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             const d = wikiState.draft; if (!d) return;
             const n = document.getElementById('wk-name'), c = document.getElementById('wk-cat'), b = document.getElementById('wk-basic');
             if (n) d.name = n.value; if (c) d.category = c.value; if (b) d.basic = b.value;
+            { const al = document.getElementById('wk-alias'); if (al) d.aliases = wikiSplitAliases(al.value); }
+            for (const el of document.querySelectorAll('#wiki-body .wk-nt')) { const nt = (d.notes || []).find(x => x.id === el.dataset.n); if (nt) nt.text = el.value; }
+            for (const el of document.querySelectorAll('#wiki-body .wk-ne')) { const nt = (d.notes || []).find(x => x.id === el.dataset.n); if (nt) nt.ep = Math.floor(Number(el.value)) || null; }
             for (const el of document.querySelectorAll('#wiki-body .wk-st')) { const sec = (d.sections || [])[Number(el.dataset.s)]; if (sec) sec.title = el.value; }
             for (const el of document.querySelectorAll('#wiki-body .wk-sr')) { const r = ((d.sections || [])[Number(el.dataset.s)] || { rows: [] }).rows[Number(el.dataset.r)]; if (!r) continue; const f2 = el.dataset.f; r[f2] = f2 === 'ep' ? (Math.floor(Number(el.value)) || null) : el.value; }
             if (document.querySelector('#wiki-body .wk-g, #wiki-body #wk-newg')) d.groups = [...document.querySelectorAll('#wiki-body .wk-g:checked')].map(x => x.value);
@@ -7158,6 +7161,8 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                 title.textContent = wikiState.editId ? '項目の編集' : '新しい項目';
                 h += '<label class="wk-label" for="wk-name">名前</label>';
                 h += `<input type="text" id="wk-name" value="${wEsc(d.name)}">`;
+                h += '<label class="wk-label" for="wk-alias">別の呼び方（表記ゆれ。、か , で区切って、まとめて入れられます）</label>';
+                h += `<input type="text" id="wk-alias" value="${wEsc((d.aliases || []).join('、'))}" placeholder="例：田中P、田中PD、田中プロデューサー">`;
                 h += '<label class="wk-label" for="wk-cat">カテゴリ</label>';
                 h += '<select id="wk-cat">' + wikiCats().map(c => `<option value="${wEsc(c)}"${c === d.category ? ' selected' : ''}>${wEsc(c)}</option>`).join('') + '</select>';
                 h += '<div class="wk-row"><input type="text" id="wk-newcat" placeholder="新しいカテゴリ名" style="margin-top:0"><button class="wk-btn" style="margin-top:0;width:auto;white-space:nowrap" data-w="addcat">追加</button></div>';
@@ -7188,7 +7193,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                     const label = n.ep ? `${n.ep}話 判明${future ? '予定' : ''}` : '話数なし';
                     h += `<div class="wk-ep${future ? ' wk-ep-future' : ''}"><div class="wk-ep-label">${wEsc(label)}</div>`;
                     if (locked) h += `<button class="wk-lock" data-w="reveal" data-nid="${wEsc(n.id)}">🔒 ${n.ep ? `現在の進捗(${cur}話)より先の設定です。` : 'ネタバレとして保存された追記です。'}<br>タップでネタバレを表示</button>`;
-                    else h += `<div class="wk-note">${wEsc(n.text)}</div>`;
+                    else h += `<textarea class="wk-nt" data-n="${wEsc(n.id)}" rows="3" style="margin-top:4px">${wEsc(n.text)}</textarea><div class="wk-row"><label>判明した話数</label><input type="number" class="wk-ne" data-n="${wEsc(n.id)}" min="1" value="${n.ep || ''}" placeholder="話数" style="margin-top:0;width:90px"><button type="button" class="wk-mini wk-danger" data-w="note-del" data-nid="${wEsc(n.id)}">この追記を消す</button></div>`;
                     h += '</div>';
                 }
                 h += '<textarea id="wk-note" placeholder="あとから追記する内容"></textarea>';
@@ -7199,7 +7204,8 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             }
             body.innerHTML = h;
         }
-        function wikiNewDraft(name, category) { return { name: name || '', category: category || '未分類', groups: [], sections: [], basic: '', notes: [] }; }
+        function wikiNewDraft(name, category) { return { name: name || '', category: category || '未分類', aliases: [], groups: [], sections: [], basic: '', notes: [] }; }
+        function wikiSplitAliases(t) { const seen = new Set(); return String(t || '').split(/[,、，;；\n]+/).map(x => x.trim()).filter(x => x && !seen.has(x) && seen.add(x)); }
         function wikiAct(act, el) {
             const bookId = state.currentBookId;
             if (act === 'pending' || act === 'inbox' || act === 'dismissed') { wikiState.view = act; wikiRender(); return; }
@@ -7264,7 +7270,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             if (act === 'open') {
                 const e = wikiEntries(bookId).find(x => x.id === el.dataset.id); if (!e) return;
                 wikiState.view = 'detail'; wikiState.editId = e.id; wikiState.pendingName = null; wikiState.confirmDel = false;
-                wikiState.draft = { name: e.name, category: e.category, groups: (e.groups || []).slice(), sections: JSON.parse(JSON.stringify(e.sections || [])), basic: e.basic || '', notes: (e.notes || []).map(n => ({ ...n })) }; wikiRender(); return;
+                wikiState.draft = { name: e.name, category: e.category, groups: (e.groups || []).slice(), sections: JSON.parse(JSON.stringify(e.sections || [])), basic: e.basic || '', aliases: (e.aliases || []).slice(), notes: (e.notes || []).map(n => ({ ...n })) }; wikiRender(); return;
             }
             if (act === 'sec-add') {
                 wikiReadDraft(); const t = el.dataset.t === '＋自由な欄' ? '' : el.dataset.t;
@@ -7301,6 +7307,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                 const gs = wikiGroups(bookId); if (!gs.includes(v)) wikiSetGroups(bookId, gs.concat(v));
                 wikiState.draft.groups = (wikiState.draft.groups || []).filter(x => x !== v).concat(v); wikiRender(); return;
             }
+            if (act === 'note-del') { wikiReadDraft(); wikiState.draft.notes = (wikiState.draft.notes || []).filter(x => x.id !== el.dataset.nid); toast('追記を消しました。「保存して閉じる」で確定します'); wikiRender(); return; }
             if (act === 'reveal') { wikiReadDraft(); wikiState.revealed[el.dataset.nid] = true; wikiRender(); return; }
             if (act === 'addcat') {
                 wikiReadDraft(); const v = document.getElementById('wk-newcat').value;
@@ -7317,7 +7324,10 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                 wikiReadDraft(); const d = wikiState.draft;
                 if (!d.name.trim()) { toast('名前を入れてください'); return; }
                 const entries = wikiEntries(bookId).slice();
-                const rec = { name: d.name.trim(), category: d.category, groups: d.groups || [], sections: (d.sections || []).map(x => ({ ...x, title: (x.title || '').trim() || '欄', rows: x.rows.filter(r => (r.k || '').trim() || (r.v || '').trim()) })).filter(x => x.rows.length), basic: d.basic, notes: d.notes };
+                const aliases = (d.aliases || []).filter(x => x !== d.name.trim());
+                { const others = entries.filter(e => e.id !== wikiState.editId), used = new Map(); others.forEach(e => [e.name].concat(e.aliases || []).forEach(x => used.set(String(x).trim(), e.name)));
+                  const dup = [d.name.trim()].concat(aliases).filter(x => used.has(x)); if (dup.length && !wikiState.dupOk) { wikiState.dupOk = true; toast('「' + dup[0] + '」は、「' + used.get(dup[0]) + '」でも使われています。このままなら、もう一度「保存して閉じる」を押してください'); return; } wikiState.dupOk = false; }
+                const rec = { name: d.name.trim(), aliases, category: d.category, groups: d.groups || [], sections: (d.sections || []).map(x => ({ ...x, title: (x.title || '').trim() || '欄', rows: x.rows.filter(r => (r.k || '').trim() || (r.v || '').trim()) })).filter(x => x.rows.length), basic: d.basic, notes: d.notes };
                 if (wikiState.editId) { const i = entries.findIndex(e => e.id === wikiState.editId); if (i >= 0) entries[i] = { ...entries[i], ...rec }; }
                 else entries.push({ id: 'w_' + Date.now(), at: Date.now(), ...rec });
                 if (!wikiSetEntries(bookId, entries)) return;
@@ -7570,7 +7580,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         }
         // 話の終わり・戻る・本の終わりで、読み終えた話から言葉を拾い、件数を小さく知らせる。読書は止めない
         // ===== 更新の確認：新しい版があれば、魚に青い点とメニュー（版の番号は version.json。公開のたびに、番号が変わる。番号が入っていない開発中は、確かめない） =====
-        const APP_BUILD = '20261104132757';
+        const APP_BUILD = '20261104154201';
         let updateCheckAt = 0;
         function paintBuild() {
             const el = document.getElementById('app-build-info'); if (!el) return;
@@ -8254,7 +8264,8 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             const same = raw.slice(li0, li1 + 1).join(NL) === disp.slice(li0, li1 + 1).join(NL);   // 名前を置き換えた行は、字の位置がずれるので、色はつけない
             return { li0, li1, selFrom: same ? dStart - starts[li0] : 0, selTo: same ? dEnd - starts[li0] : 0 };
         }
-        // 読む画面：文字を選ぶと、「ここだけ直す」が出る。編集画面を開かずに、その段落だけを直せる
+        let editPartial = null, partialEnterOnce = null;   // 「ここだけ直す」で、編集画面を、段落だけで開いているあいだの印
+        // 読む画面：文字を選ぶと、「ここだけ直す」が出る。押すと、編集画面（道具つき）が、その段落だけで開く
         function readerPartialOpen() {
             const sel = getSelection(); if (!sel || sel.isCollapsed || !sel.rangeCount) return;
             const box = document.getElementById('reader-content-text');
@@ -8270,10 +8281,10 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             const content = ref.chap.content || '', loc = partialLocate(content, ref.book, selText, dom);
             if (!loc) { toast('この文は、見つかりませんでした。編集ボタンから、直してください'); return; }
             const lines = content.split(String.fromCharCode(10)), block = lines.slice(loc.li0, loc.li1 + 1).join(String.fromCharCode(10));
-            partialCtx = { reader: true, bookId: state.currentBookId, chapId: state.currentChapterId, li0: loc.li0, li1: loc.li1, before: block };
-            document.getElementById('partial-hint').textContent = PARTIAL_HINT_READ;
-            const t = document.getElementById('partial-text'); t.value = block;
-            document.getElementById('partial-dialog').showModal(); t.focus(); try { t.setSelectionRange(loc.selFrom, loc.selTo); t.scrollTop = 0; } catch (e) {}
+            partialEnterOnce = { bookId: state.currentBookId, chapId: state.currentChapterId, li0: loc.li0, li1: loc.li1, before: block };
+            { const sl = getSelection(); if (sl) sl.removeAllRanges(); }
+            document.getElementById('btn-reader-edit-toggle').click();
+            toast('この段落だけを直します。直したら、上の「✓」を押してください');
         }
         function partialApplyReader(ctx, text) {
             const ref = commentFindChap(ctx.bookId, ctx.chapId); if (!ref) return;
@@ -8861,7 +8872,7 @@ function setupPaging(){
             if(visualDraft.composing){toast('文字の変換を確定してください');return false;}
             const book=state.books.find(b=>b.id===state.currentBookId);
             const chapter=getReaderSequence(book||{}).find(x=>x.chap.id===state.currentChapterId)?.chap;
-            return draftSource()===(chapter?.content||'') || confirm('保存していない編集を破棄して移動しますか？');
+            return draftSource()===(editPartial ? editPartial.before : (chapter?.content||'')) || confirm('保存していない編集を破棄して移動しますか？');
         }
         function closeReaderToLibrary() {
             if(!closeReaderToDetail())return;
@@ -10217,12 +10228,15 @@ function setupPaging(){
                         });
                     });
                     rubySelection = null; rubySelectionLocked = false;
-                    textarea.value = chapter ? (chapter.content || '') : '';
+                    editPartial = partialEnterOnce; partialEnterOnce = null;
+                    const initText = editPartial ? editPartial.before : (chapter ? (chapter.content || '') : '');
+                    textarea.value = initText;
                     updateEditorCharCounter();
-                    openVisualDraft(chapter ? (chapter.content || '') : '');
+                    openVisualDraft(initText);
                     rememberRubySelection();
                 } else {
                     if(!canLeaveReader())return;
+                    editPartial = null;
                     document.getElementById('view-reader').classList.remove('editing');
                     editWrap.classList.add('hidden');
                     textWrap.classList.remove('hidden');
@@ -10246,6 +10260,7 @@ function setupPaging(){
             textarea.addEventListener('input', updateEditorCharCounter);
 
             document.getElementById('btn-editor-cancel').addEventListener('click', () => {
+                editPartial = null;
                 document.getElementById('view-reader').classList.remove('editing');
                 editWrap.classList.add('hidden');
                 textWrap.classList.remove('hidden');
@@ -10255,9 +10270,17 @@ function setupPaging(){
             document.getElementById('btn-editor-save').addEventListener('click', () => {
                 if(visualDraft.composing){toast('文字の変換を確定してから保存してください');return;}
                 syncVisualDraft();
-                const newText = draftSource();
+                let newText = draftSource(); const wasPartial = !!editPartial;
                 const book = state.books.find(b => b.id === state.currentBookId);
                 if (!book) return;
+                if (editPartial) {   // 段落だけ：本文の、その段落の行だけを、入れ替える
+                    const ep = editPartial, ref = commentFindChap(ep.bookId, ep.chapId), NL = String.fromCharCode(10);
+                    if (!ref) { toast('この話が見つかりませんでした'); return; }
+                    const lines = (ref.chap.content || '').split(NL);
+                    if (lines.slice(ep.li0, ep.li1 + 1).join(NL) !== ep.before) { toast('本文が変わっているので、保存できませんでした。もう一度、選び直してください'); return; }
+                    newText = lines.slice(0, ep.li0).concat(newText.split(NL), lines.slice(ep.li1 + 1)).join(NL);
+                    editPartial = null;
+                }
 
                 let updatedChap = null;
                 book.parts?.forEach(p => {
@@ -10273,7 +10296,7 @@ function setupPaging(){
                 renderReaderContent(book, updatedChap);
                 editWrap.classList.add('hidden');
                 textWrap.classList.remove('hidden');
-                savedToast('本文を保存しました');
+                savedToast(wasPartial ? 'ここだけ直しました' : '本文を保存しました');
             });
 
             // 音声朗読
