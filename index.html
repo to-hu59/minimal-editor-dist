@@ -1832,6 +1832,7 @@
                         <span class="font-bold text-softMuted block mb-1">更新履歴</span>
                         <div id="changelog" class="text-[11px] text-softMuted leading-relaxed">
 <div class="mb-1.5"><b class="text-softText">2026-11-03（6）</b><br>編集の道具：「画面の枠」を「特殊演出」にして（動く人のマーク）、右端に固定した（「原文」のボタンはなくした）。「特殊な文字」（回転の矢印と星のマーク）を足して、縦書き（この部分だけ）・ななめ・左右反転・上下反転・回転・逆さを入れられるようにした（編集画面で、ルビや色と同じように、その場で見える。選ばないときは、いまの行ぜんぶ）。文字色の「カスタム」に「この色にする」を足して、選んだ色が本文と「A」の線に出るようにした。OCRのボタンのマークを変えた。特殊演出に、電光掲示板（右から左へ流れる・文字ごとの色・背景の色・折り返し）、駅の発車案内、空港の出発案内、文字化けするシステム画面、文字が崩れる配信コメント、ページがめくれない、ページが巻き戻る、を足した（🎬の演出ビューで動く）。作品のメニューに、Googleドキュメントへの書き出し（本文のみ）を足した。Driveの自動同期は、はじめは切にして、「いま同期する」で手動にできるようにした。Driveのフォルダ名とアプリ名を「読書リーダー(仮)」にした。</div>
+<div class="mb-1.5"><b class="text-softText">2026-11-05（10）</b><br>魚のメニューを直した。検索・Wiki・作品の詳細設定などを使っても、メニューが閉じない（魚をもう一度押すか、×で閉じる。ページ送りなど、読む画面を動かすものは、これまでどおり閉じる）。「Wiki（作品ごと）」は、見出しを押して、開く・たためる（はじめは、たたんでいる）。中は、ジャンルごとの見出し（これも、押して開く・たためる）の下に、作品が並ぶ。ジャンルがない作品は「未分類」。「今年の読んだ数」「ジャンル別の冊数」は、本棚の上のグラフにあるので、魚のメニューから外した。タグの候補を押すと、そのまま、その作品に追加される（すでに付いているものには「✓」）。</div>
 <div class="mb-1.5"><b class="text-softText">2026-11-05（9）</b><br>新しい版があると、魚のボタンの左上に青い点が付き、魚のメニューに「新しい版があります。更新する」が出る（押すと、保存が終わってから、読み込み直す）。公開側の版の番号（version.json）を、開いたとき・45分おき・画面に戻ったときに、確かめる。この機能が入った版から、働く。</div>
 <div class="mb-1.5"><b class="text-softText">2026-11-05（8）</b><br>「バックアップの一覧（フォルダ）」を足した（パソコンのChrome・Edge）。バックアップを置いたフォルダを1回選ぶと、中のバックアップ（日付・全部か一部か・作品の数）が、新しい順に並ぶ。押すと、読み込む作品を選ぶ画面になる。フォルダを選んでおくと、書き出しも、そのフォルダへ直接保存される。</div>
 <div class="mb-1.5"><b class="text-softText">2026-11-05（7）</b><br>バックアップを、選べるようにした。「選んだ作品だけ書き出す」（Wiki・言葉も、その作品の分だけ）を足した。読み込みは、「足す形」にした：ファイルの作品を選んで、今の作品に足す（今の作品は消えない。同じ作品は、ファイルの内容で上書き）。設定も戻すか、選べる。読んだ記録のカレンダーは、日ごとの数を「28話・1冊」のように出し、色は読んだ文字数で決める（1万字未満・1〜5万字・5万字以上）。全体の「読んだ話」は、「読んだ数」（話・章・冊）にした。</div>
@@ -3403,7 +3404,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             updateRemoveAll();
             const area=document.getElementById('metadata-candidates'),value=classificationKey(document.getElementById('input-new-tag-val').value);
             area.replaceChildren();
-            classificationChoices().forEach(label=>{const button=document.createElement('button');button.type='button';button.className='classification-choice'+(classificationIsGenre(label)?' is-genre':'');button.textContent=label;button.setAttribute('aria-pressed',String(label===value));button.onclick=()=>{document.getElementById('input-new-tag-val').value=label;renderMetadataChoices();};area.append(button);});
+            classificationChoices().forEach(label=>{const button=document.createElement('button');button.type='button';button.className='classification-choice'+(classificationIsGenre(label)?' is-genre':'');const cur=state.books.find(b=>b.id===state.currentBookId),on=metadataOriginal===null&&!!cur&&classificationLabels(cur).includes(label);button.textContent=(on?'✓ ':'')+label;button.setAttribute('aria-pressed',String(label===value));if(on)button.style.opacity='.6';button.onclick=()=>{if(metadataOriginal===null)addExistingClass(label);else{document.getElementById('input-new-tag-val').value=label;renderMetadataChoices();}};area.append(button);});
         }
         let registrationClassification={genre:'',tags:[]};
         function renderRegistrationClassifications() {
@@ -3463,6 +3464,14 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         function closeMetadataEditor() {
             document.getElementById('detail-new-tag-box').classList.add('hidden');
             metadataOriginal = null;
+        }
+        function addExistingClass(label) {   // 候補から、この作品に足す（保存先の「タグ／ジャンル」の選択に従う）
+            const book = state.books.find(b => b.id === state.currentBookId), v = classificationKey(label); if (!book || !v) return;
+            if (classificationLabels(book).includes(v)) { toast('「' + v + '」は、すでに付いています'); return; }
+            if (document.getElementById('metadata-kind').value === 'genre') book.genre = v; else (book.tags ||= []).push(v);
+            book.tags = uniqueClassificationTags(book.tags || []);
+            document.getElementById('inline-genre').value = book.genre || '';
+            save(); renderDetailTagChips(book.tags); renderShelf(); renderMetadataChoices(); savedToast('「' + v + '」を追加しました');
         }
         function removeClassFromBook(book, token) {   // この作品だけ、そのタグ（ジャンル）を外す
             const v = classificationKey(token); if (!book || !v) return;
@@ -6936,7 +6945,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             let h = '';
             if (!vis.length) h += '<div class="wi-empty">' + (hid.length ? 'すべて隠してあります。' : 'まだ、Wikiのある作品は、ありません。') + '</div>';
             else if (view === 'genre') {
-                const g = new Map(); vis.forEach(r => { const k = String(r.bk.genre || '').trim() || 'ジャンルなし'; if (!g.has(k)) g.set(k, []); g.get(k).push(r); });
+                const g = new Map(); vis.forEach(r => { const k = String(r.bk.genre || '').trim() || '未分類'; if (!g.has(k)) g.set(k, []); g.get(k).push(r); });
                 h += [...g].map(([k, arr]) => '<div class="wi-gh">' + wEsc(k) + '<span>' + arr.length + '作品</span></div>' + arr.map(r => row(r, false)).join('')).join('');
             } else h += vis.map(r => row(r, false)).join('');
             if (hid.length) h += '<button type="button" class="wi-toggle" data-wi="toggle">' + (wikiIndexShowHidden ? '▾' : '▸') + ' 隠した作品（' + hid.length + '件）</button>' + (wikiIndexShowHidden ? hid.map(r => row(r, true)).join('') : '');
@@ -7312,6 +7321,16 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         }
         assistFind.clean = q => (q || '').replace(/\s+/g, '').replace(/(って|とは)?(誰|だれ|何|なに|どんな人|どういう人)(ですか|なの|だ)?[?？]?$/, '');
         function assistIsDetail() { return assistScreen() === 'shelf' && !document.getElementById('view-detail').classList.contains('hidden'); }
+        function assistWikiGrouped(rows) {   // [{ bk, n, k }] を、ジャンルごとに（未分類は「未設定」で、いちばん下）
+            const groups = {}; rows.forEach(r => { const g = classificationKey(r.bk.genre) || '未分類'; (groups[g] = groups[g] || []).push(r); });
+            const keys = Object.keys(groups).sort((a, b) => a === '未分類' ? 1 : b === '未分類' ? -1 : a.localeCompare(b, 'ja'));
+            return keys.map(g => {
+                const open = assistWikiGenres.has(g), fresh = groups[g].some(r => r.k);
+                return '<button type="button" data-act="wiki-genre:' + wEsc(g) + '" aria-expanded="' + open + '" style="display:block;width:100%;text-align:left;margin-top:8px;padding:8px 10px;font-weight:700;font-size:13px;border-radius:10px;background:#b8923f22;color:#7a5a14;border:0">' + (open ? '▾' : '▸') + ' ' + wEsc(g) + '　' + groups[g].length + '冊' + (fresh ? '　●' : '') + '</button>' + (open ? groups[g].map(r => '<button type="button" class="a-btn" data-act="wiki-book:' + wEsc(r.bk.id) + '">' + wEsc(r.bk.title) + '　' + r.n + '件' + (r.k ? '　●新しい言葉' : '') + '</button>').join('') : '');
+            }).join('');
+        }
+        const assistWikiGenres = new Set();   // 開いているジャンル（魚のメニューのWiki）
+        let assistWikiOpen = false;   // 魚のメニューの Wiki の一覧を、開いているか（はじめは、たたんでいる）
         function assistRender() {
             const panel = document.getElementById('assist-panel'), screen = assistScreen(), bookId = state.currentBookId;
             const detail = assistIsDetail(), dBook = detail ? state.books.find(b => b.id === bookId) : null;
@@ -7349,12 +7368,11 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                 } else if (screen === 'shelf') {
                     h += '<button type="button" class="a-btn" data-act="add">📖 登録する</button>';
                     h += '<button type="button" class="a-btn" data-act="search">🔎 探す（全体検索）</button>';
-                    h += '<button type="button" class="a-btn" data-act="stats">今年の読んだ数</button>';
-                    h += '<button type="button" class="a-btn" data-act="genres">ジャンル別の冊数</button>';
                     {   // Wiki：作品ごとに並べて、押すと、その作品のWikiが開く
                         const rows = state.books.map(bk => { const i = termsBook(bk.id).inbox; return { bk, n: wikiEntries(bk.id).length, k: i.words.length + i.statuses.length }; }).filter(r => r.n || r.k);
-                        h += '<div class="a-msg" style="margin-top:8px;font-weight:700">📖 Wiki（作品ごと）</div>';
-                        h += rows.length ? '<div style="max-height:38vh;overflow-y:auto">' + rows.map(r => '<button type="button" class="a-btn" data-act="wiki-book:' + wEsc(r.bk.id) + '">' + wEsc(r.bk.title) + '　' + r.n + '件' + (r.k ? '　●新しい言葉' : '') + '</button>').join('') + '</div>' : '<div class="a-msg">まだ、Wikiのある作品は、ありません。</div>';
+                        const fresh2 = rows.filter(r => r.k).length;
+                        h += '<button type="button" class="a-btn" data-act="wiki-fold" aria-expanded="' + assistWikiOpen + '" style="background:#e9e0cc;font-weight:700">' + (assistWikiOpen ? '▾' : '▸') + ' 📖 Wiki（作品ごと）　' + rows.length + '冊' + (fresh2 ? '　●' : '') + '</button>';
+                        if (assistWikiOpen) h += rows.length ? '<div style="max-height:38vh;overflow-y:auto">' + assistWikiGrouped(rows) + '</div>' : '<div class="a-msg">まだ、Wikiのある作品は、ありません。</div>';
                     }
                 } else if (screen === 'read') {
                     const n = wikiPending(bookId).length, inbox = termsBook(bookId).inbox, fresh = inbox.words.length + inbox.statuses.length;
@@ -7381,10 +7399,12 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         function assistAct(act) {
             const bookId = state.currentBookId, click = id => document.getElementById(id)?.click();
             if (act === 'close') { assistOpen(false); return; }
+            if (act.startsWith('wiki-genre:')) { const g = act.slice(11); if (assistWikiGenres.has(g)) assistWikiGenres.delete(g); else assistWikiGenres.add(g); assistRender(); return; }
+            if (act === 'wiki-fold') { assistWikiOpen = !assistWikiOpen; assistRender(); return; }
             if (act === 'app-update') { Promise.resolve(KV.flush()).then(() => location.reload()); return; }   // 保存が終わってから、読み込み直す
-            if (act.startsWith('wiki-book:')) { assistOpen(false); wikiOpenForBook(act.slice(10)); return; }
+            if (act.startsWith('wiki-book:')) { wikiOpenForBook(act.slice(10)); return; }
             if (act === 'back' || act === 'ask-no') { assistState = { view: 'menu', entryId: null, spoiler: false, msg: '' }; assistRender(); return; }
-            if (act === 'add') { assistOpen(false); click('btn-add-new-book'); return; }
+            if (act === 'add') { click('btn-add-new-book'); return; }
             if (act === 'stats') {
                 const y = new Date().getFullYear(), n = state.books.filter(b => b.status === '読了' && Number(b.year) === y).length;
                 assistState.msg = `${y}年に読了した作品：${n}冊`; assistRender(); return;
@@ -7398,13 +7418,13 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                 termAddPending(t, { name, cat: wikiAutoCat(name, wikiEntries(bookId)), count: 1 }); delete t.dismissed[name]; termsSave(bookId, t);
                 assistState = { view: 'menu', entryId: null, spoiler: false, msg: `「${name}」を仮登録しました` }; assistRender(); return;
             }
-            if (act === 'search') { assistOpen(false); openUnifiedSearch(assistScreen() === 'shelf' && !assistIsDetail() ? 'all' : 'book'); return; }
-            if (act === 'locale') { assistOpen(false); openLocalePage(); return; }
-            if (act === 'book-settings') { assistOpen(false); openSpeechSettings('book'); return; }
-            if (act === 'notes') { assistOpen(false); click('btn-detail-open-notebook'); return; }
-            if (act === 'wiki-inbox') { assistOpen(false); wikiOpen('inbox'); return; }
-            if (act === 'wiki-pending') { assistOpen(false); wikiOpen('pending'); return; }
-            if (act === 'wiki-list') { assistOpen(false); wikiOpen('list'); return; }
+            if (act === 'search') { openUnifiedSearch(assistScreen() === 'shelf' && !assistIsDetail() ? 'all' : 'book'); return; }
+            if (act === 'locale') { openLocalePage(); return; }
+            if (act === 'book-settings') { openSpeechSettings('book'); return; }
+            if (act === 'notes') { click('btn-detail-open-notebook'); return; }
+            if (act === 'wiki-inbox') { wikiOpen('inbox'); return; }
+            if (act === 'wiki-pending') { wikiOpen('pending'); return; }
+            if (act === 'wiki-list') { wikiOpen('list'); return; }
             if (act === 'ask') { assistState = { view: 'ask', entryId: null, spoiler: false, msg: '' }; assistRender(); return; }
             if (act === 'ask-go') {
                 const e = assistFind(document.getElementById('assist-q').value, wikiEntries(bookId));
@@ -7447,7 +7467,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         }
         // 話の終わり・戻る・本の終わりで、読み終えた話から言葉を拾い、件数を小さく知らせる。読書は止めない
         // ===== 更新の確認：新しい版があれば、魚に青い点とメニュー（版の番号は version.json。公開のたびに、番号が変わる。番号が入っていない開発中は、確かめない） =====
-        const APP_BUILD = '20261104113944';
+        const APP_BUILD = '20261104120231';
         let updateCheckAt = 0;
         async function updateCheck(force) {
             if (APP_BUILD.startsWith('__') || window.__updateReady) return;
