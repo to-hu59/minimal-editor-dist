@@ -1756,7 +1756,7 @@
         <button type="button" id="assist-btn" aria-expanded="false" aria-controls="assist-panel" aria-label="アシスタントを開く">🐟</button>
         <div id="assist-panel" role="dialog" aria-label="アシスタント" hidden></div>
         <div id="wiki-proto-sheet" class="wiki-sheet" role="dialog" aria-label="Wiki（試作）">
-            <div class="wk-head"><button type="button" id="wiki-back" aria-label="戻る">‹</button><h3 id="wiki-title">Wiki</h3><button type="button" id="wiki-close" aria-label="閉じる">×</button></div>
+            <div class="wk-head"><button type="button" id="wiki-back" aria-label="戻る">‹</button><h3 id="wiki-title">Wiki</h3><button type="button" id="wiki-save" aria-label="保存して閉じる" title="保存して閉じる" hidden style="margin-left:auto;font-weight:700">✓</button><button type="button" id="wiki-close" aria-label="閉じる">×</button></div>
             <div class="wk-body" id="wiki-body"></div>
         </div>
         <div id="modal-wiki-index" class="hidden fixed inset-0 z-50 bg-black/40 flex items-end sm:items-center justify-center" role="dialog" aria-label="Wiki（作品ごと）">
@@ -1837,6 +1837,7 @@
                     <div class="pt-3 border-t border-woodBorder">
                         <span class="font-bold text-softMuted block mb-1">更新履歴</span>
                         <div id="changelog" class="text-[11px] text-softMuted leading-relaxed">
+<div class="mb-1.5"><b class="text-softText">2026-11-05（20）</b><br>Wikiの項目を直す画面の上のバーに、「✓」（保存して閉じる）を固定でつけた。保存していない変更があるまま、戻る・閉じるを押すと、確認が出る。</div>
 <div class="mb-1.5"><b class="text-softText">2026-11-05（19）</b><br>「Wikiに登録」で、新しい項目にするか、すでにある項目の「別の呼び方」に足すかを、えらべるようにした。Wikiを閉じたとき、名前や別の呼び方が変わっていれば、読む画面の色づけをすぐ直す。別の呼び方がかぶるときは、確認の窓を出す。「追記を追加」を押さずに保存しても、書きかけの追記がいっしょに入る（ボタンも目立つ形に）。</div>
 <div class="mb-1.5"><b class="text-softText">2026-11-05（18）</b><br>読む画面で言葉を選ぶと、「ここだけ直す」の隣に「Wikiに登録」が出る。押すと、選んだ言葉が名前に入った新しい項目の画面が開く（すでに登録があれば、その項目が開く）。Wikiの追記は、ふだんは読むだけにして、鉛筆のマークで直せるようにした。Driveの同期が失敗していたのを直した。</div>
 <div class="mb-1.5"><b class="text-softText">2026-11-05（17）</b><br>Driveの中を、作品ごとのフォルダにそろえられるようにした（全体設定の「Driveを作品ごとのフォルダにそろえる」。本体と、控えの新しい5件を、作品のフォルダに入れ、古い控えはDriveのごみ箱へ）。新しい控えは、作品のフォルダに入り、いつも新しい5件だけ残る。パソコンもスマホも新しい版にしてから押すこと。「ここだけ直す」は、別の話に移ったあとは、保存しないようにした。</div>
@@ -7286,6 +7287,8 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                 if (wikiState.editId) h += `<button class="wk-btn wk-danger" data-w="del">${wikiState.confirmDel ? 'もう一度押すと削除します' : '削除'}</button>`;
             }
             body.innerHTML = h;
+            { const sv = document.getElementById('wiki-save'); if (sv) sv.hidden = wikiState.view !== 'detail' || !wikiState.draft; }
+            if (wikiState.view === 'detail' && wikiState.draft && wikiState.snapFor !== wikiState.draft) { wikiState.snapFor = wikiState.draft; wikiState.snap = JSON.stringify(wikiState.draft); }
         }
         function wikiNewDraft(name, category) { return { name: name || '', category: category || '未分類', aliases: [], groups: [], sections: [], basic: '', notes: [] }; }
         function wikiSplitAliases(t) { const seen = new Set(); return String(t || '').split(/[,、，;；\n]+/).map(x => x.trim()).filter(x => x && !seen.has(x) && seen.add(x)); }
@@ -7650,10 +7653,18 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             panel.onclick = e => { const b = e.target.closest('[data-act]'); if (b) assistAct(b.dataset.act); };
             panel.onkeydown = e => { if (e.key === 'Enter' && e.target.id === 'assist-q') assistAct('ask-go'); };
             document.getElementById('wiki-proto-sheet').onclick = e => { const b = e.target.closest('[data-w]'); if (b) wikiAct(b.dataset.w, b); };
-            document.getElementById('wiki-close').onclick = wikiClose;
+            const wikiDirty = () => {
+                if (wikiState.view !== 'detail' || !wikiState.draft) return false;
+                wikiReadDraft(); const nt = document.getElementById('wk-note');
+                return JSON.stringify(wikiState.draft) !== wikiState.snap || !!(nt && nt.value.trim());
+            };
+            const wikiLeaveOk = () => !wikiDirty() || confirm('保存していない変更があります。破棄して戻りますか？');
+            document.getElementById('wiki-close').onclick = () => { if (wikiLeaveOk()) wikiClose(); };
+            document.getElementById('wiki-save').onclick = () => wikiAct('save', { dataset: {} });
             document.getElementById('wiki-proto-sheet').addEventListener('input', e => { if (e.target.id === 'wk-q') { wikiState.q = e.target.value; const l = document.getElementById('wk-list'); if (l) l.innerHTML = wikiListHtml(state.currentBookId); } });
             document.getElementById('wiki-back').onclick = () => {
                 if (wikiState.view === 'list') { wikiClose(); return; }
+                if (!wikiLeaveOk()) return;
                 wikiState.view = (wikiState.view === 'detail' && wikiState.pendingName) ? 'pending' : 'list';
                 wikiState.pendingName = null; wikiState.editId = null; wikiState.draft = null; wikiState.confirmDel = false; wikiRender();
             };
@@ -7667,7 +7678,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         }
         // 話の終わり・戻る・本の終わりで、読み終えた話から言葉を拾い、件数を小さく知らせる。読書は止めない
         // ===== 更新の確認：新しい版があれば、魚に青い点とメニュー（版の番号は version.json。公開のたびに、番号が変わる。番号が入っていない開発中は、確かめない） =====
-        const APP_BUILD = '20261104165721';
+        const APP_BUILD = '20261104170806';
         let updateCheckAt = 0;
         function paintBuild() {
             const el = document.getElementById('app-build-info'); if (!el) return;
