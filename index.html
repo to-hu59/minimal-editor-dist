@@ -1837,6 +1837,7 @@
                     <div class="pt-3 border-t border-woodBorder">
                         <span class="font-bold text-softMuted block mb-1">更新履歴</span>
                         <div id="changelog" class="text-[11px] text-softMuted leading-relaxed">
+<div class="mb-1.5"><b class="text-softText">2026-11-05（22）</b><br>プライバシーポリシーのページ（privacy.html）を足した。Driveの「長くつなぐ」（自分用・中継サーバー）の入れ口を足した（配布版には入っていない）。</div>
 <div class="mb-1.5"><b class="text-softText">2026-11-05（21）</b><br>Wikiの一覧で、複数のタグがある項目は、いちばん最初のタグのグループにだけ出し、ほかのタグは行の右に小さな印で出すようにした（タグでしぼったときは、そのタグの項目をぜんぶ出す）。「Wikiに登録」で既存の項目に足すときの一覧は、タグごとにおりたためる。</div>
 <div class="mb-1.5"><b class="text-softText">2026-11-05（20）</b><br>Wikiの項目を直す画面の上のバーに、「✓」（保存して閉じる）を固定でつけた。保存していない変更があるまま、戻る・閉じるを押すと、確認が出る。</div>
 <div class="mb-1.5"><b class="text-softText">2026-11-05（19）</b><br>「Wikiに登録」で、新しい項目にするか、すでにある項目の「別の呼び方」に足すかを、えらべるようにした。Wikiを閉じたとき、名前や別の呼び方が変わっていれば、読む画面の色づけをすぐ直す。別の呼び方がかぶるときは、確認の窓を出す。「追記を追加」を押さずに保存しても、書きかけの追記がいっしょに入る（ボタンも目立つ形に）。</div>
@@ -2880,7 +2881,8 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         function driveLogout() {
             clearTimeout(driveTimer);
             try { if (driveToken && window.google?.accounts?.oauth2) google.accounts.oauth2.revoke(driveToken.token, () => {}); } catch (e) {}
-            driveToken = null; driveTokenSave(); driveMeta = { connected: false, folderId: null, editedAt: 0, books: {} }; driveSaveMeta(); driveSetState('off');
+            let keepRelay = null;
+            driveToken = null; driveTokenSave(); driveMeta = { connected: false, folderId: null, editedAt: 0, books: {} }; if (keepRelay) driveMeta.relay = keepRelay; driveSaveMeta(); driveSetState('off');
         }
         function driveDisconnect() {
             if (!confirm('ログアウトして、この端末でDriveとの同期をやめますか？\n端末の作品とDriveの中身はどちらも残ります')) return;
@@ -7681,7 +7683,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         }
         // 話の終わり・戻る・本の終わりで、読み終えた話から言葉を拾い、件数を小さく知らせる。読書は止めない
         // ===== 更新の確認：新しい版があれば、魚に青い点とメニュー（版の番号は version.json。公開のたびに、番号が変わる。番号が入っていない開発中は、確かめない） =====
-        const APP_BUILD = '20261104171652';
+        const APP_BUILD = '20261104174003';
         let updateCheckAt = 0;
         function paintBuild() {
             const el = document.getElementById('app-build-info'); if (!el) return;
