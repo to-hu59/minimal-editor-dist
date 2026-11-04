@@ -550,6 +550,7 @@
 #detail-tags-chips-list { gap:4px; }
 .metadata-chip { background:transparent; padding:0; }
 .metadata-chip > span { display:inline-block; padding:5px 9px; border-radius:20px; background:#23594e15; }
+.metadata-chip.is-genre > span { background:#b8923f2e; color:#7a5a14; box-shadow:inset 0 0 0 1px #b8923f66; }
 #btn-show-add-tag-input { padding:0 8px; border:0; background:transparent; }
 .reader-actions { padding:2px 12px 6px; }
 #detail-contents-header { padding:0 12px; gap:4px; min-height:44px; }
@@ -756,6 +757,8 @@
 .classification-candidates { display:flex; flex-wrap:wrap; gap:4px; max-height:136px; overflow:auto; width:100%; }
 .classification-choice { min-height:36px; padding:5px 10px; border:1px solid #d9cfbf; border-radius:20px; font-size:12px; background:transparent; color:#6f6559; }
 .classification-choice[aria-pressed=true], #new-class-selected .classification-choice { background:#23594e15; color:#23594e; border-color:#23594e66; }
+.classification-choice.is-genre { background:#b8923f22; color:#7a5a14; border-color:#b8923f88; }
+.classification-choice.is-genre[aria-pressed=true] { background:#b8923f40; border-color:#b8923f; }
 .classification-choice:focus-visible { outline:2px solid #23594e; outline-offset:1px; }
 .classification-entry { display:flex; flex-wrap:wrap; gap:4px; margin:6px 0; }
 .classification-entry input { flex:1; min-width:100px; width:100px; border:1px solid #d9cfbf; border-radius:8px; padding:6px; }
@@ -1826,6 +1829,7 @@
                         <span class="font-bold text-softMuted block mb-1">更新履歴</span>
                         <div id="changelog" class="text-[11px] text-softMuted leading-relaxed">
 <div class="mb-1.5"><b class="text-softText">2026-11-03（6）</b><br>編集の道具：「画面の枠」を「特殊演出」にして（動く人のマーク）、右端に固定した（「原文」のボタンはなくした）。「特殊な文字」（回転の矢印と星のマーク）を足して、縦書き（この部分だけ）・ななめ・左右反転・上下反転・回転・逆さを入れられるようにした（編集画面で、ルビや色と同じように、その場で見える。選ばないときは、いまの行ぜんぶ）。文字色の「カスタム」に「この色にする」を足して、選んだ色が本文と「A」の線に出るようにした。OCRのボタンのマークを変えた。特殊演出に、電光掲示板（右から左へ流れる・文字ごとの色・背景の色・折り返し）、駅の発車案内、空港の出発案内、文字化けするシステム画面、文字が崩れる配信コメント、ページがめくれない、ページが巻き戻る、を足した（🎬の演出ビューで動く）。作品のメニューに、Googleドキュメントへの書き出し（本文のみ）を足した。Driveの自動同期は、はじめは切にして、「いま同期する」で手動にできるようにした。Driveのフォルダ名とアプリ名を「読書リーダー(仮)」にした。</div>
+<div class="mb-1.5"><b class="text-softText">2026-11-05（6）</b><br>ジャンルのチップを、金色にした（タグは、緑のまま）。作品の詳細の上のチップと、「＋分類」の候補の一覧と、作品を登録するときの候補が、同じ色分けになる。</div>
 <div class="mb-1.5"><b class="text-softText">2026-11-05（5）</b><br>タグを消せるようにした。作品の詳細の、タグの横に「×」を付けた（その作品だけから外れる）。「＋分類」で名前を入れると、「全作品から消す（○冊）」が出て、付いているすべての作品から、まとめて消せる（確認が出る）。前の「削除」の名前は、「この作品から外す」にした。</div>
 <div class="mb-1.5"><b class="text-softText">2026-11-05（4）</b><br>保存したときの知らせを、正しくした。「保存しました」は、IndexedDBへの書き込みが終わってから出る（それまでは「保存中…」）。書き込みに失敗したら、警告が出る。</div>
 <div class="mb-1.5"><b class="text-softText">2026-11-05（3）</b><br>保存場所を、IndexedDB（広い保存場所）に変えた。約5MBの制限がなくなり、長い作品や画像の多い作品も入る。はじめて開いたときだけ、古い保存場所から、作品・Wiki・設定をコピーする（古いほうは、消さない）。IndexedDBが使えないブラウザでは、これまでどおりの保存場所で動く。</div>
@@ -3386,22 +3390,23 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         // スクショ1枚目準拠のタグ表示（恋愛 ✕ と ＋タグ）
         function classificationKey(value) { return typeof value==='string'?value.trim():''; }
         function classificationLabels(book) { return [...new Set([book?.genre,...(Array.isArray(book?.tags)?book.tags:[])].map(classificationKey).filter(Boolean))]; }
+        function classificationIsGenre(label, draft) { return state.books.some(b => classificationKey(b.genre) === label) || (!!draft && classificationKey(draft.genre) === label); }
         function classificationChoices() { return [...new Set(state.books.flatMap(classificationLabels))]; }
         function uniqueClassificationTags(tags) { return [...new Set(tags.map(classificationKey).filter(Boolean))]; }
         function renderMetadataChoices() {
             updateRemoveAll();
             const area=document.getElementById('metadata-candidates'),value=classificationKey(document.getElementById('input-new-tag-val').value);
             area.replaceChildren();
-            classificationChoices().forEach(label=>{const button=document.createElement('button');button.type='button';button.className='classification-choice';button.textContent=label;button.setAttribute('aria-pressed',String(label===value));button.onclick=()=>{document.getElementById('input-new-tag-val').value=label;renderMetadataChoices();};area.append(button);});
+            classificationChoices().forEach(label=>{const button=document.createElement('button');button.type='button';button.className='classification-choice'+(classificationIsGenre(label)?' is-genre':'');button.textContent=label;button.setAttribute('aria-pressed',String(label===value));button.onclick=()=>{document.getElementById('input-new-tag-val').value=label;renderMetadataChoices();};area.append(button);});
         }
         let registrationClassification={genre:'',tags:[]};
         function renderRegistrationClassifications() {
             const draft=registrationClassification,selected=classificationLabels(draft);
             document.getElementById('new-book-genre').value=draft.genre;
             const area=document.getElementById('new-class-selected');area.replaceChildren();
-            selected.forEach(label=>{const button=document.createElement('button');button.type='button';button.className='classification-choice';button.textContent=label+' ×';button.setAttribute('aria-label',label+' を削除');button.onclick=()=>{if(classificationKey(draft.genre)===label)draft.genre='';draft.tags=draft.tags.filter(t=>classificationKey(t)!==label);renderRegistrationClassifications();};area.append(button);});
+            selected.forEach(label=>{const button=document.createElement('button');button.type='button';button.className='classification-choice'+(classificationIsGenre(label,draft)?' is-genre':'');button.textContent=label+' ×';button.setAttribute('aria-label',label+' を削除');button.onclick=()=>{if(classificationKey(draft.genre)===label)draft.genre='';draft.tags=draft.tags.filter(t=>classificationKey(t)!==label);renderRegistrationClassifications();};area.append(button);});
             const candidates=document.getElementById('new-class-candidates');candidates.replaceChildren();
-            [...new Set([...classificationChoices(),...selected])].forEach(label=>{const button=document.createElement('button');button.type='button';button.className='classification-choice';button.textContent=label;button.setAttribute('aria-pressed',String(selected.includes(label)));button.onclick=()=>{
+            [...new Set([...classificationChoices(),...selected])].forEach(label=>{const button=document.createElement('button');button.type='button';button.className='classification-choice'+(classificationIsGenre(label,draft)?' is-genre':'');button.textContent=label;button.setAttribute('aria-pressed',String(selected.includes(label)));button.onclick=()=>{
                 if(selected.includes(label)){if(classificationKey(draft.genre)===label)draft.genre='';draft.tags=draft.tags.filter(t=>classificationKey(t)!==label);}
                 else addRegistrationClassification(label);
                 renderRegistrationClassifications();
@@ -3431,7 +3436,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             const book = state.books.find(b => b.id === state.currentBookId);
             const tokens = classificationLabels(book);
             document.getElementById('detail-tags-chips-list').innerHTML = tokens.map((t,i) =>
-                `<button type="button" class="metadata-chip" data-token="${i}"><span>${escapeHtml(t)}<b data-xi="${i}" role="button" aria-label="${escapeHtml(t)}を、この作品から外す" style="margin-left:7px;padding:0 3px;opacity:.65;font-weight:700">×</b></span></button>`).join('');
+                `<button type="button" class="metadata-chip${classificationKey(book.genre) === t ? ' is-genre' : ''}" data-token="${i}" title="${classificationKey(book.genre) === t ? 'ジャンル' : 'タグ'}"><span>${escapeHtml(t)}<b data-xi="${i}" role="button" aria-label="${escapeHtml(t)}を、この作品から外す" style="margin-left:7px;padding:0 3px;opacity:.65;font-weight:700">×</b></span></button>`).join('');
             updateDetailClassFold(book, tokens);
             document.querySelectorAll('[data-token]').forEach(btn => btn.onclick = (ev) => {
                 const token = tokens[Number(btn.dataset.token)];
