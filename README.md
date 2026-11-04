@@ -28,5 +28,5 @@ Tip: In Word for Windows, turn on View → Navigation Pane to browse the manuals
 - Google Drive setup in detail: [Illustrated PDF](docs/drive-setup-detail.pdf) / [Word](https://raw.githubusercontent.com/to-hu59/minimal-editor-dist/main/docs/drive-setup-detail.docx)
 - Special text effects: [Read PDF](docs/effects.pdf) / [Word](https://raw.githubusercontent.com/to-hu59/minimal-editor-dist/main/docs/effects.docx)
 
-If browser translation makes the instructions hard to read, open the PDF or Word manual instead. Keep a separate backup of important text.
+If browser translation makes the instructions hard to read, open the PDF or Word manual instead. 
 
