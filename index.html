@@ -242,8 +242,10 @@
         #wi-body .wi-toggle { display:block; width:100%; text-align:left; margin-top:14px; padding:8px 4px; font-size:12px; font-weight:700; color:#8a7a68; }
         #wi-body .wi-empty { padding:24px 8px; text-align:center; color:#8a7a68; font-size:12px; }
         .wiki-sheet .wk-head { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; border-bottom: 2px solid #b8923f; background: #23352c; }
-        .wiki-sheet .wk-head button { min-width: 44px; min-height: 44px; border: none; background: transparent; font-size: 22px; }
-        .wiki-sheet .wk-head h3 { margin: 0; font-size: 15px; color: #e3c783; letter-spacing: .08em; }
+        .wiki-sheet .wk-head button { min-width: 40px; min-height: 44px; border: none; background: transparent; font-size: 22px; padding: 0 4px; }
+        .wiki-sheet .wk-head { position: sticky; top: 0; z-index: 2; }
+        .wiki-sheet #wiki-home, .wiki-sheet #wiki-book { font-size: 19px; }
+        .wiki-sheet .wk-head h3 { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: center; margin: 0; font-size: 15px; color: #e3c783; letter-spacing: .08em; }
         .wiki-sheet .wk-head button { color: #e3c783; }
         #cand-notice button.cn-main { color: #23352c; }
         #assist-btn { background: #23352c; border: 1px solid #b8923f; }
@@ -1757,7 +1759,7 @@
         <button type="button" id="assist-btn" aria-expanded="false" aria-controls="assist-panel" aria-label="アシスタントを開く">🐟</button>
         <div id="assist-panel" role="dialog" aria-label="アシスタント" hidden></div>
         <div id="wiki-proto-sheet" class="wiki-sheet" role="dialog" aria-label="Wiki（試作）">
-            <div class="wk-head"><button type="button" id="wiki-back" aria-label="戻る">‹</button><h3 id="wiki-title">Wiki</h3><button type="button" id="wiki-edit" aria-label="編集する" title="編集する" hidden style="margin-left:auto;font-size:18px">✎</button><button type="button" id="wiki-save" aria-label="保存して閉じる" title="保存して閉じる" hidden style="margin-left:auto;font-weight:700">✓</button><button type="button" id="wiki-close" aria-label="閉じる">×</button></div>
+            <div class="wk-head"><button type="button" id="wiki-back" aria-label="戻る">‹</button><h3 id="wiki-title">Wiki</h3><button type="button" id="wiki-home" aria-label="本棚（TOP）へ" title="本棚（TOP）へ">🏠</button><button type="button" id="wiki-book" aria-label="この作品のページへ" title="この作品のページへ">📖</button><button type="button" id="wiki-edit" aria-label="編集する" title="編集する" hidden style="margin-left:auto;font-size:18px">✎</button><button type="button" id="wiki-save" aria-label="保存して閉じる" title="保存して閉じる" hidden style="margin-left:auto;font-weight:700">✓</button><button type="button" id="wiki-close" aria-label="閉じる">×</button></div>
             <div class="wk-body" id="wiki-body"></div>
         </div>
         <div id="modal-wiki-index" class="hidden fixed inset-0 z-50 bg-black/40 flex items-end sm:items-center justify-center" role="dialog" aria-label="Wiki（作品ごと）">
@@ -1838,6 +1840,7 @@
                     <div class="pt-3 border-t border-woodBorder">
                         <span class="font-bold text-softMuted block mb-1">更新履歴</span>
                         <div id="changelog" class="text-[11px] text-softMuted leading-relaxed">
+<div class="mb-1.5"><b class="text-softText">2026-11-05（28）</b><br>Wikiの上のバー（固定）に、🏠（本棚TOPへ）と📖（この作品のページへ）を足した。</div>
 <div class="mb-1.5"><b class="text-softText">2026-11-05（27）</b><br>「関連を足す」の窓に、「名前を入れて、作ってつなぐ」を足した（まだ項目にない作品名などを、打つだけで、項目を作ってつなげる。出演作品の役は、ひとことに）。</div>
 <div class="mb-1.5"><b class="text-softText">2026-11-05（26）</b><br>Wikiに、さらに足した。①関連の詳細（評価・特記事項など。名前は自由。○話からも付けられ、ページは、いまの進捗までの最新値を出す）と、関連の期間（所属の移り変わりを、矢印で）。詳細は、ふつうは、つないだ側だけに出るが、「向こうにも出す」で、メンバーの役割なども出せる。②Wikiの一覧を、関連（所属など）で分けて見る。③説明文の書式（## 見出し・- 箇条書き・**太字**・> 引用・---、{{3話}}で話へのリンク）と、目次。④項目のページに「初出」（本文に初めて出る話）。⑤一覧に一行説明、並べ方（名前・初出の話・最近出てきた順）。⑥読む画面の魚のメニューに「この話に出てくる人・用語」。</div>
 <div class="mb-1.5"><b class="text-softText">2026-11-05（25）</b><br>魚の赤い点を、画面に合わせて、つけ直すようにした（本棚TOPでは、どれかの作品に新しい言葉があるとき。作品の詳細・読む画面では、その作品だけ）。画面を切り替えたとき、Wikiを閉じたときにも、見直す。</div>
@@ -8273,6 +8276,29 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             };
             const wikiLeaveOk = () => !wikiDirty() || confirm('保存していない変更があります。破棄して戻りますか？');
             document.getElementById('wiki-close').onclick = () => { if (wikiLeaveOk()) wikiClose(); };
+            // 家：本棚（TOP）へ／本：このWikiの作品のページへ
+            const wikiGoShelf = () => {
+                if (!wikiLeaveOk()) return;
+                for (const id of ['sum-box', 'who-box', 'wk-reg-choice', 'wk-rel-pick', 'bulkfix-box']) { const x = document.getElementById(id); if (x) x.remove(); }
+                wikiClose();
+                const rv = document.getElementById('view-reader');
+                if (rv && !rv.classList.contains('hidden')) { if (closeReaderToDetail() === false) return; }
+                if (!document.getElementById('view-detail').classList.contains('hidden')) document.getElementById('btn-detail-go-home').click();
+                else try { renderShelf(); } catch (e) {}
+            };
+            const wikiGoBook = () => {
+                if (!wikiLeaveOk()) return;
+                const bid = state.currentBookId;
+                for (const id of ['sum-box', 'who-box', 'wk-reg-choice', 'wk-rel-pick', 'bulkfix-box']) { const x = document.getElementById(id); if (x) x.remove(); }
+                wikiClose();
+                const rv = document.getElementById('view-reader');
+                if (rv && !rv.classList.contains('hidden')) { if (closeReaderToDetail() === false) return; return; }
+                const dv = document.getElementById('view-detail');
+                if (dv && !dv.classList.contains('hidden') && state.currentBookId === bid) return;
+                if (bid && state.books.some(b => b.id === bid)) openDetail(bid);
+            };
+            document.getElementById('wiki-home').onclick = wikiGoShelf;
+            document.getElementById('wiki-book').onclick = wikiGoBook;
             document.getElementById('wiki-save').onclick = () => wikiAct('save', { dataset: {} });
             document.getElementById('wiki-edit').onclick = () => { if (wikiState.view === 'page' && wikiState.pageId) wikiAct('open', { dataset: { id: wikiState.pageId } }); };
             document.getElementById('wiki-proto-sheet').addEventListener('change', e => { if (e.target.id === 'wk-sort') { wikiState.sort = e.target.value || ''; wikiRender(); } });
@@ -8298,7 +8324,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         }
         // 話の終わり・戻る・本の終わりで、読み終えた話から言葉を拾い、件数を小さく知らせる。読書は止めない
         // ===== 更新の確認：新しい版があれば、魚に青い点とメニュー（版の番号は version.json。公開のたびに、番号が変わる。番号が入っていない開発中は、確かめない） =====
-        const APP_BUILD = '20261105064710';
+        const APP_BUILD = '20261105065619';
         let updateCheckAt = 0;
         function paintBuild() {
             const el = document.getElementById('app-build-info'); if (!el) return;
