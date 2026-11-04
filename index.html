@@ -2678,13 +2678,20 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             driveMeta.folderId = id; driveSaveMeta();
             return id;
         }
-        async function driveList(folderId) {
+        // 本体は、いちばん上のフォルダと、作品ごとのフォルダの、どちらにあっても見つける
+        async function driveListIn(q) {
             const files = []; let page = '';
             do {
-                const q = encodeURIComponent(`appProperties has { key='yomimonoBook' } and trashed=false`);
-                const r = await driveJson(`files?q=${q}&pageSize=1000&fields=nextPageToken,files(id,name,modifiedTime,parents,appProperties)${page ? '&pageToken=' + encodeURIComponent(page) : ''}`);
+                const r = await driveJson(`files?q=${encodeURIComponent(q)}&pageSize=1000&fields=nextPageToken,files(id,name,mimeType,modifiedTime,parents,appProperties)${page ? '&pageToken=' + encodeURIComponent(page) : ''}`);
                 files.push(...(r.files || [])); page = r.nextPageToken || '';
             } while (page);
+            return files;
+        }
+        async function driveList(folderId) {
+            const top = await driveListIn(`'${folderId}' in parents and trashed=false`);
+            const files = top.filter(x => x.mimeType !== 'application/vnd.google-apps.folder');
+            const subs = top.filter(x => x.mimeType === 'application/vnd.google-apps.folder' && x.appProperties?.yomimonoBookFolder).map(x => x.id);
+            for (let i = 0; i < subs.length; i += 15) files.push(...await driveListIn('(' + subs.slice(i, i + 15).map(id => `'${id}' in parents`).join(' or ') + ') and trashed=false'));
             return files;
         }
         async function driveBackup(folderId, book, text) {
@@ -7150,6 +7157,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         }
         function wikiRender() {
             const body = document.getElementById('wiki-body'), title = document.getElementById('wiki-title');
+            if (wikiState.view !== 'detail') wikiState.editNote = null;
             const bookId = state.currentBookId, entries = wikiEntries(bookId), book = wikiBook();
             let h = '';
             if (wikiState.view === 'list') {
@@ -7252,9 +7260,11 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                     const locked = wikiNoteLocked(n, cur) && !wikiState.revealed[n.id];
                     const future = wikiNoteLocked(n, cur);
                     const label = n.ep ? `${n.ep}話 判明${future ? '予定' : ''}` : '話数なし';
-                    h += `<div class="wk-ep${future ? ' wk-ep-future' : ''}"><div class="wk-ep-label">${wEsc(label)}</div>`;
+                    const editing = wikiState.editNote === n.id && !locked;
+                    h += `<div class="wk-ep${future ? ' wk-ep-future' : ''}"><div class="wk-ep-label" style="display:flex;align-items:center;justify-content:space-between"><span>${wEsc(label)}</span>${locked || editing ? '' : `<button type="button" class="wk-pen" data-w="note-edit" data-nid="${wEsc(n.id)}" aria-label="この追記を直す" title="直す" style="background:none;border:0;padding:4px 6px;cursor:pointer;color:inherit;opacity:.7"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4l10.5-10.5-4-4L4 16z"/><path d="m13.5 6.5 4 4"/></svg></button>`}</div>`;
                     if (locked) h += `<button class="wk-lock" data-w="reveal" data-nid="${wEsc(n.id)}">🔒 ${n.ep ? `現在の進捗(${cur}話)より先の設定です。` : 'ネタバレとして保存された追記です。'}<br>タップでネタバレを表示</button>`;
-                    else h += `<textarea class="wk-nt" data-n="${wEsc(n.id)}" rows="3" style="margin-top:4px">${wEsc(n.text)}</textarea><div class="wk-row"><label>判明した話数</label><input type="number" class="wk-ne" data-n="${wEsc(n.id)}" min="1" value="${n.ep || ''}" placeholder="話数" style="margin-top:0;width:90px"><button type="button" class="wk-mini wk-danger" data-w="note-del" data-nid="${wEsc(n.id)}">この追記を消す</button></div>`;
+                    else if (!editing) h += `<div class="wk-note">${wEsc(n.text)}</div>`;
+                    else h += `<textarea class="wk-nt" data-n="${wEsc(n.id)}" rows="4" style="margin-top:4px">${wEsc(n.text)}</textarea><div class="wk-row"><label>判明した話数</label><input type="number" class="wk-ne" data-n="${wEsc(n.id)}" min="1" value="${n.ep || ''}" placeholder="話数" style="margin-top:0;width:90px"></div><div class="wk-row"><button type="button" class="wk-mini wk-danger" data-w="note-del" data-nid="${wEsc(n.id)}">この追記を消す</button><button type="button" class="wk-mini" data-w="note-done">直し終わり</button></div>`;
                     h += '</div>';
                 }
                 h += '<textarea id="wk-note" placeholder="あとから追記する内容"></textarea>';
@@ -7368,7 +7378,9 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                 const gs = wikiGroups(bookId); if (!gs.includes(v)) wikiSetGroups(bookId, gs.concat(v));
                 wikiState.draft.groups = (wikiState.draft.groups || []).filter(x => x !== v).concat(v); wikiRender(); return;
             }
-            if (act === 'note-del') { wikiReadDraft(); wikiState.draft.notes = (wikiState.draft.notes || []).filter(x => x.id !== el.dataset.nid); toast('追記を消しました。「保存して閉じる」で確定します'); wikiRender(); return; }
+            if (act === 'note-edit') { wikiReadDraft(); wikiState.editNote = el.dataset.nid; wikiRender(); return; }
+            if (act === 'note-done') { wikiReadDraft(); wikiState.editNote = null; wikiRender(); return; }
+            if (act === 'note-del') { wikiReadDraft(); wikiState.draft.notes = (wikiState.draft.notes || []).filter(x => x.id !== el.dataset.nid); wikiState.editNote = null; toast('追記を消しました。「保存して閉じる」で確定します'); wikiRender(); return; }
             if (act === 'reveal') { wikiReadDraft(); wikiState.revealed[el.dataset.nid] = true; wikiRender(); return; }
             if (act === 'addcat') {
                 wikiReadDraft(); const v = document.getElementById('wk-newcat').value;
@@ -7641,7 +7653,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         }
         // 話の終わり・戻る・本の終わりで、読み終えた話から言葉を拾い、件数を小さく知らせる。読書は止めない
         // ===== 更新の確認：新しい版があれば、魚に青い点とメニュー（版の番号は version.json。公開のたびに、番号が変わる。番号が入っていない開発中は、確かめない） =====
-        const APP_BUILD = '20261104161405';
+        const APP_BUILD = '20261104162448';
         let updateCheckAt = 0;
         function paintBuild() {
             const el = document.getElementById('app-build-info'); if (!el) return;
