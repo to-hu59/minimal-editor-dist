@@ -1837,6 +1837,7 @@
                     <div class="pt-3 border-t border-woodBorder">
                         <span class="font-bold text-softMuted block mb-1">更新履歴</span>
                         <div id="changelog" class="text-[11px] text-softMuted leading-relaxed">
+<div class="mb-1.5"><b class="text-softText">2026-11-05（21）</b><br>Wikiの一覧で、複数のタグがある項目は、いちばん最初のタグのグループにだけ出し、ほかのタグは行の右に小さな印で出すようにした（タグでしぼったときは、そのタグの項目をぜんぶ出す）。「Wikiに登録」で既存の項目に足すときの一覧は、タグごとにおりたためる。</div>
 <div class="mb-1.5"><b class="text-softText">2026-11-05（20）</b><br>Wikiの項目を直す画面の上のバーに、「✓」（保存して閉じる）を固定でつけた。保存していない変更があるまま、戻る・閉じるを押すと、確認が出る。</div>
 <div class="mb-1.5"><b class="text-softText">2026-11-05（19）</b><br>「Wikiに登録」で、新しい項目にするか、すでにある項目の「別の呼び方」に足すかを、えらべるようにした。Wikiを閉じたとき、名前や別の呼び方が変わっていれば、読む画面の色づけをすぐ直す。別の呼び方がかぶるときは、確認の窓を出す。「追記を追加」を押さずに保存しても、書きかけの追記がいっしょに入る（ボタンも目立つ形に）。</div>
 <div class="mb-1.5"><b class="text-softText">2026-11-05（18）</b><br>読む画面で言葉を選ぶと、「ここだけ直す」の隣に「Wikiに登録」が出る。押すと、選んだ言葉が名前に入った新しい項目の画面が開く（すでに登録があれば、その項目が開く）。Wikiの追記は、ふだんは読むだけにして、鉛筆のマークで直せるようにした。Driveの同期が失敗していたのを直した。</div>
@@ -7057,16 +7058,18 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             const entries = wikiEntries(bookId), groups = wikiGroups(bookId), q = (wikiState.q || '').trim(), f = wikiState.filter || 'all';
             if (!entries.length) return '<div class="wk-muted">まだ項目がありません</div>';
             const match = e => !q || (e.name + ' ' + (e.aliases || []).join(' ') + ' ' + (e.basic || '')).indexOf(q) >= 0;
-            const row = e => '<button class="wk-btn" data-w="open" data-id="' + wEsc(e.id) + '"><b>' + wEsc(e.name) + '</b><span class="wk-chip">' + wEsc(e.category) + '</span></button>';
+            const row = (e, secName) => '<button class="wk-btn" data-w="open" data-id="' + wEsc(e.id) + '"><b>' + wEsc(e.name) + '</b><span style="display:flex;flex-wrap:wrap;gap:4px;justify-content:flex-end">' + (e.groups || []).filter(g => groups.includes(g) && g !== secName).map(g => '<span class="wk-chip" style="background:#ecdcae">' + wEsc(g) + '</span>').join('') + '<span class="wk-chip">' + wEsc(e.category) + '</span></span></button>';
             let h = '';
-            if (!groups.length) { for (const e of entries.filter(match)) h += row(e); return h || '<div class="wk-muted">見つかりません</div>'; }
-            const secs = groups.map(g => ({ name: g, list: entries.filter(e => (e.groups || []).includes(g) && match(e)) }));
+            if (!groups.length) { for (const e of entries.filter(match)) h += row(e, ''); return h || '<div class="wk-muted">見つかりません</div>'; }
+            // ふだんは、いちばん最初のタグのグループにだけ出す（ほかのタグは、行の右に小さな印で出す）。タグをしぼったときは、そのタグの項目を、ぜんぶ出す
+            const primary = e => (e.groups || []).find(g => groups.includes(g)) || '';
+            const secs = groups.map(g => ({ name: g, list: entries.filter(e => match(e) && (f === 'all' ? primary(e) === g : (e.groups || []).includes(g))) }));
             secs.push({ name: '未分類', list: entries.filter(e => !(e.groups || []).some(g => groups.includes(g)) && match(e)) });
             for (const sec of secs) {
                 if (f !== 'all' && f !== sec.name) continue; if (!sec.list.length) continue;
                 const closed = !!wikiState.closed[sec.name] && !q && f === 'all';
                 h += '<button class="wk-gh" data-w="gtoggle" data-g="' + wEsc(sec.name) + '"><span>' + (closed ? '▸ ' : '▾ ') + wEsc(sec.name) + '</span><span class="wk-chip">' + sec.list.length + '</span></button>';
-                if (!closed) for (const e of sec.list) h += row(e);
+                if (!closed) for (const e of sec.list) h += row(e, sec.name);
             }
             return h || '<div class="wk-muted">見つかりません</div>';
         }
@@ -7678,7 +7681,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         }
         // 話の終わり・戻る・本の終わりで、読み終えた話から言葉を拾い、件数を小さく知らせる。読書は止めない
         // ===== 更新の確認：新しい版があれば、魚に青い点とメニュー（版の番号は version.json。公開のたびに、番号が変わる。番号が入っていない開発中は、確かめない） =====
-        const APP_BUILD = '20261104170806';
+        const APP_BUILD = '20261104171652';
         let updateCheckAt = 0;
         function paintBuild() {
             const el = document.getElementById('app-build-info'); if (!el) return;
@@ -8418,11 +8421,24 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             const h = document.createElement('div'); h.style.cssText = 'font-weight:700;margin-bottom:4px'; h.textContent = '「' + name + '」をWikiに登録'; card.appendChild(h);
             card.appendChild(mk('新しい項目として登録', '', () => { wikiOpen('list'); asNew(); }, true));
             const lab = document.createElement('div'); lab.style.cssText = 'margin-top:14px;font-size:12px;opacity:.75'; lab.textContent = 'すでにある項目の「別の呼び方」に足す'; card.appendChild(lab);
-            for (const e of all.slice().sort((x, y) => String(x.name).localeCompare(String(y.name), 'ja'))) card.appendChild(mk(e.name, e.category || '', () => {
+            // 登録してあるタグ（グループ）ごとに、おりたたんで並べる
+            const pick = e => () => {
                 wikiOpen('list'); wikiAct('open', { dataset: { id: e.id } });
                 const d = wikiState.draft; if (d && name !== d.name.trim() && !(d.aliases || []).includes(name)) d.aliases = (d.aliases || []).concat(name);
                 wikiRender(); toast('「' + e.name + '」の、別の呼び方に足しました。「保存して閉じる」で確定します');
-            }));
+            };
+            const byName = (x, y) => String(x.name).localeCompare(String(y.name), 'ja');
+            const gs = wikiGroups(bookId), secs = gs.map(g => ({ name: g, list: all.filter(e => (e.groups || []).includes(g)).sort(byName) }));
+            secs.push({ name: '未分類', list: all.filter(e => !(e.groups || []).some(g => gs.includes(g))).sort(byName) });
+            for (const sec of secs.filter(x => x.list.length)) {
+                const head = document.createElement('button'); head.type = 'button';
+                head.style.cssText = 'display:flex;justify-content:space-between;align-items:center;width:100%;margin-top:10px;padding:10px 12px;border-radius:10px;border:1px solid #c9b88f;background:#eadfc6;color:#3b2f1e;font-weight:700;font-size:13px';
+                const body = document.createElement('div'); body.hidden = true;
+                const paint = () => { head.innerHTML = ''; const l = document.createElement('span'); l.textContent = (body.hidden ? '▸ ' : '▾ ') + sec.name; const c = document.createElement('span'); c.style.cssText = 'font-weight:400;font-size:11px;opacity:.7'; c.textContent = sec.list.length; head.append(l, c); };
+                head.onclick = () => { body.hidden = !body.hidden; paint(); }; paint();
+                for (const e of sec.list) body.appendChild(mk(e.name, e.category || '', pick(e)));
+                card.append(head, body);
+            }
             const cancel = mk('やめる', '', () => {}); cancel.style.textAlign = 'center'; cancel.style.marginTop = '14px'; card.appendChild(cancel);
             ov.appendChild(card); ov.onclick = ev => { if (ev.target === ov) ov.remove(); };
             document.body.appendChild(ov);
