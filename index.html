@@ -1781,8 +1781,9 @@
                             <i class="fa-solid fa-download text-woodAccent"></i>
                             <span>作品・Wiki・設定をJSONで書き出し保存</span>
                         </button>
+                        <button id="btn-export-pick" class="w-full py-2.5 bg-white hover:bg-kinariDark text-softText border border-woodBorder rounded-xl font-bold flex items-center justify-center space-x-2 shadow-xs mb-2 active:scale-95 transition"><i class="fa-solid fa-list-check text-woodAccent"></i><span>選んだ作品だけ書き出す</span></button>
                         <p class="text-[10px] text-softMuted mb-1">追加したフォントと、Googleのログイン情報は、入りません。</p>
-                        <label class="block text-[10px] text-softMuted mb-1">JSONファイルから復元:</label>
+                        <label class="block text-[10px] text-softMuted mb-1">JSONファイルから読み込み（今の作品に足します。今の作品は消えません）:</label>
                         <input type="file" id="input-import-json" accept=".json" class="w-full text-xs text-softMuted file:mr-2 file:py-1 file:px-3 file:rounded-xl file:border-0 file:bg-white file:border-woodBorder file:text-softText file:font-bold">
                     </div>
                     <div class="pt-3 border-t border-woodBorder">
@@ -1829,6 +1830,7 @@
                         <span class="font-bold text-softMuted block mb-1">更新履歴</span>
                         <div id="changelog" class="text-[11px] text-softMuted leading-relaxed">
 <div class="mb-1.5"><b class="text-softText">2026-11-03（6）</b><br>編集の道具：「画面の枠」を「特殊演出」にして（動く人のマーク）、右端に固定した（「原文」のボタンはなくした）。「特殊な文字」（回転の矢印と星のマーク）を足して、縦書き（この部分だけ）・ななめ・左右反転・上下反転・回転・逆さを入れられるようにした（編集画面で、ルビや色と同じように、その場で見える。選ばないときは、いまの行ぜんぶ）。文字色の「カスタム」に「この色にする」を足して、選んだ色が本文と「A」の線に出るようにした。OCRのボタンのマークを変えた。特殊演出に、電光掲示板（右から左へ流れる・文字ごとの色・背景の色・折り返し）、駅の発車案内、空港の出発案内、文字化けするシステム画面、文字が崩れる配信コメント、ページがめくれない、ページが巻き戻る、を足した（🎬の演出ビューで動く）。作品のメニューに、Googleドキュメントへの書き出し（本文のみ）を足した。Driveの自動同期は、はじめは切にして、「いま同期する」で手動にできるようにした。Driveのフォルダ名とアプリ名を「読書リーダー(仮)」にした。</div>
+<div class="mb-1.5"><b class="text-softText">2026-11-05（7）</b><br>バックアップを、選べるようにした。「選んだ作品だけ書き出す」（Wiki・言葉も、その作品の分だけ）を足した。読み込みは、「足す形」にした：ファイルの作品を選んで、今の作品に足す（今の作品は消えない。同じ作品は、ファイルの内容で上書き）。設定も戻すか、選べる。読んだ記録のカレンダーは、日ごとの数を「28話・1冊」のように出し、色は読んだ文字数で決める（1万字未満・1〜5万字・5万字以上）。全体の「読んだ話」は、「読んだ数」（話・章・冊）にした。</div>
 <div class="mb-1.5"><b class="text-softText">2026-11-05（6）</b><br>ジャンルのチップを、金色にした（タグは、緑のまま）。作品の詳細の上のチップと、「＋分類」の候補の一覧と、作品を登録するときの候補が、同じ色分けになる。</div>
 <div class="mb-1.5"><b class="text-softText">2026-11-05（5）</b><br>タグを消せるようにした。作品の詳細の、タグの横に「×」を付けた（その作品だけから外れる）。「＋分類」で名前を入れると、「全作品から消す（○冊）」が出て、付いているすべての作品から、まとめて消せる（確認が出る）。前の「削除」の名前は、「この作品から外す」にした。</div>
 <div class="mb-1.5"><b class="text-softText">2026-11-05（4）</b><br>保存したときの知らせを、正しくした。「保存しました」は、IndexedDBへの書き込みが終わってから出る（それまでは「保存中…」）。書き込みに失敗したら、警告が出る。</div>
@@ -8901,6 +8903,7 @@ function setupPaging(){
         function actState() { if (!state.act) { const n = new Date(); state.act = { mode: 'month', y: n.getFullYear(), m: n.getMonth() + 1, day: '' }; } return state.act; }
         function actFilter(all, A) { const p2 = n => String(n).padStart(2, '0'); const pre = A.mode === 'month' ? A.y + '-' + p2(A.m) : A.mode === 'year' ? String(A.y) : ''; return all.filter(x => x.d.startsWith(pre)); }
         function actPrevRange(A) { return A.mode === 'month' ? (A.m === 1 ? { ...A, y: A.y - 1, m: 12 } : { ...A, m: A.m - 1 }) : A.mode === 'year' ? { ...A, y: A.y - 1 } : null; }
+        const actLvl = ch => ch >= 50000 ? 6 : ch >= 10000 ? 3 : ch > 0 ? 1 : 0;   // 色の段階（文字数から）
         let actRankAll = false;   // 「よく読んだ」を、ぜんぶ見るか（false＝上位5つ）
         function actParse(items) {
             let unit = '話';
@@ -8943,7 +8946,7 @@ function setupPaging(){
             document.getElementById('act-next').style.visibility = nav && !isNow ? 'visible' : 'hidden';
             const rows = actFilter(all, A), chaps = rows.length, chars = rows.reduce((n, x) => n + x.n, 0), days = new Set(rows.map(x => x.d)).size, books = new Set(rows.map(x => x.bid)).size;
             const card = (lab, val) => '<div class="bg-white border border-woodBorder rounded-xl p-2 shadow-xs"><span class="text-[10px] text-softMuted block">' + lab + '</span><span class="text-sm font-bold text-softText">' + val + '</span></div>';
-            document.getElementById('act-summary').innerHTML = card('読んだ話', chaps.toLocaleString() + ' 話') + card('作品', books + ' 冊') + card('読んだ日', days + ' 日') + card('文字数', chars.toLocaleString() + ' 字');
+            document.getElementById('act-summary').innerHTML = card('読んだ数', actUnitTotal(rows) || '0') + card('作品', books + ' 冊') + card('読んだ日', days + ' 日') + card('文字数', chars.toLocaleString() + ' 字');
             const prev = actPrevRange(A); let msg = '';
             if (!all.length) msg = 'まだ記録がありません。話を、最後まで読むと、その日の記録が、ここに残ります（この機能を入れた日から）。';
             else if (prev) { const pc = actFilter(all, prev).length, diff = chaps - pc; msg = (A.mode === 'month' ? '前の月' : '前の年') + 'より、' + (diff === 0 ? '同じ数です。' : Math.abs(diff) + ' 話、' + (diff > 0 ? '多いです。' : '少ないです。')) + '（前は ' + pc + ' 話）'; }
@@ -8953,13 +8956,13 @@ function setupPaging(){
             if (state.actChart) { state.actChart.destroy(); state.actChart = null; }
             if (A.mode === 'month') {
                 bars.classList.add('hidden'); cal.classList.remove('hidden');
-                const first = new Date(A.y, A.m - 1, 1), nd = new Date(A.y, A.m, 0).getDate(), lead = first.getDay(), per = {};
-                rows.forEach(x => { per[x.d] = (per[x.d] || 0) + 1; });
+                const first = new Date(A.y, A.m - 1, 1), nd = new Date(A.y, A.m, 0).getDate(), lead = first.getDay(), per = {}, perC = {};
+                rows.forEach(x => { per[x.d] = (per[x.d] || 0) + 1; perC[x.d] = (perC[x.d] || 0) + (x.n || 0); });
                 let h = '<div class="grid grid-cols-7 gap-1 text-center text-[10px] text-softMuted mb-1">' + ['日', '月', '火', '水', '木', '金', '土'].map(w => '<span>' + w + '</span>').join('') + '</div><div class="grid grid-cols-7 gap-1">';
                 for (let i = 0; i < lead; i++) h += '<span></span>';
                 for (let d = 1; d <= nd; d++) {
                     const key = A.y + '-' + String(A.m).padStart(2, '0') + '-' + String(d).padStart(2, '0'), n = per[key] || 0;
-                    const bg = n >= 6 ? '#23594e' : n >= 3 ? '#5b9279' : n >= 1 ? '#bcd8c6' : '#f3eee3', fg = n >= 3 ? '#fff' : '#6b5f55';
+                    const lvl = n ? Math.max(actLvl(perC[key] || 0), 1) : 0, bg = lvl >= 6 ? '#23594e' : lvl >= 3 ? '#5b9279' : lvl >= 1 ? '#bcd8c6' : '#f3eee3', fg = lvl >= 3 ? '#fff' : '#6b5f55';
                     h += '<button type="button" data-act-day="' + key + '" class="rounded-lg text-[11px] font-bold" style="height:34px;background:' + bg + ';color:' + fg + ';' + (A.day === key ? 'outline:2px solid #6f5a47;' : '') + '">' + d + (n ? '<span class="block text-[8px] font-normal leading-none">' + n + '</span>' : '') + '</button>';
                 }
                 cal.innerHTML = h + '</div><p class="text-[10px] text-softMuted mt-2">日をタップすると、その日の記録が出ます。色が濃いほど、たくさん読んだ日です。</p>';
@@ -8996,7 +8999,7 @@ function setupPaging(){
                 const nd = new Date(A.y, A.m, 0).getDate(), lead = new Date(A.y, A.m - 1, 1).getDay(), weekOf = d => Math.floor((d + lead - 1) / 7), nw = weekOf(nd) + 1, per = {}, perChars = {};
                 rows.forEach(x => { const d = Number(x.d.slice(8, 10)); per[d] = (per[d] || 0) + 1; perChars[d] = (perChars[d] || 0) + x.n; });
                 for (let w = 0; w < nw; w++) { const from = Math.max(1, w * 7 - lead + 1), to = Math.min(nd, w * 7 - lead + 7); labels.push(from + '〜' + to + '日'); let c = 0, n = 0; for (let d = from; d <= to; d++) { c += per[d] || 0; n += perChars[d] || 0; } chapters.push(c); chars.push(n); bookCnt.push(actBookCount(rows.filter(x => { const d = Number(x.d.slice(8, 10)); return d >= from && d <= to; }))); }
-                axis = '週ごと'; cal = []; for (let w = 0; w < nw; w++) { const line = []; for (let k = 0; k < 7; k++) { const d = w * 7 + k - lead + 1; line.push(d >= 1 && d <= nd ? { d, n: per[d] || 0 } : null); } cal.push(line); }
+                axis = '週ごと'; cal = []; for (let w = 0; w < nw; w++) { const line = []; for (let k = 0; k < 7; k++) { const d = w * 7 + k - lead + 1; line.push(d >= 1 && d <= nd ? { d, t: actUnitTotal(rows.filter(x => Number(x.d.slice(8, 10)) === d)), c: perChars[d] || 0, n: per[d] || 0 } : null); } cal.push(line); }
                 dayRows = Array.from({ length: nd }, (_, i) => [(i + 1) + '日', per[i + 1] || 0, perChars[i + 1] || 0]);
             }
             else if (A.mode === 'year') { const keys = Array.from({ length: 12 }, (_, i) => i + 1); labels = keys.map(m => m + '月'); bucket(x => Number(x.d.slice(5, 7)), keys); axis = '月ごと'; }
@@ -9019,10 +9022,10 @@ function setupPaging(){
                 let sl = pptx.addSlide(); sl.background = { color: 'F3EDE0' };
                 sl.addText('読書の記録', { x: 0.8, y: 1.5, w: 11.5, h: 1, fontFace: FONT, fontSize: 44, bold: true, color: GREEN });
                 sl.addText(D.title, { x: 0.8, y: 2.5, w: 11.5, h: 0.8, fontFace: FONT, fontSize: 32, color: INK });
-                [['読んだ話', D.rows.length.toLocaleString() + ' 話'], ['作品', D.books + ' 冊'], ['読んだ日', D.days + ' 日'], ['文字数', D.totalChars.toLocaleString() + ' 字']].forEach(([lab, val], i) => {
+                [['読んだ数', actUnitTotal(D.rows) || '0'], ['作品', D.books + ' 冊'], ['読んだ日', D.days + ' 日'], ['文字数', D.totalChars.toLocaleString() + ' 字']].forEach(([lab, val], i) => {
                     sl.addShape(pptx.ShapeType.roundRect, { x: 0.8 + i * 3.0, y: 4.0, w: 2.8, h: 1.5, fill: { color: 'FFFFFF' }, line: { color: 'D9CDB8', width: 1 }, rectRadius: 0.1 });
                     sl.addText(lab, { x: 0.8 + i * 3.0, y: 4.1, w: 2.8, h: 0.5, fontFace: FONT, fontSize: 14, color: SOFT, align: 'center' });
-                    sl.addText(val, { x: 0.8 + i * 3.0, y: 4.6, w: 2.8, h: 0.8, fontFace: FONT, fontSize: 24, bold: true, color: INK, align: 'center' });
+                    sl.addText(val, { x: 0.8 + i * 3.0, y: 4.6, w: 2.8, h: 0.8, fontFace: FONT, fontSize: String(val).length > 9 ? 17 : 24, bold: true, color: INK, align: 'center' });
                 });
                 sl.addText('読書リーダー(仮)で書き出し　' + new Date().toLocaleDateString('ja-JP'), { x: 0.8, y: 6.7, w: 11.5, h: 0.4, fontFace: FONT, fontSize: 12, color: SOFT });
                 sl = pptx.addSlide(); head(sl, '読んだ話の数と、文字数（' + D.axis + '）');
@@ -9031,12 +9034,12 @@ function setupPaging(){
                     { type: pptx.charts.LINE, data: [{ name: '文字数（右の目盛り）', labels: D.labels, values: D.chars }], options: { chartColors: ['C97064'], secondaryValAxis: true, secondaryCatAxis: true, lineSize: 3, lineDataSymbolSize: 9 } }
                 ], { x: 0.6, y: 1.3, w: 12.1, h: 5.6, valAxes: [{ valAxisMinVal: 0, valAxisLabelFontSize: 12, valGridLine: { color: 'E5DDCE', size: 0.75 }, showValAxisTitle: true, valAxisTitle: '読んだ話', valAxisTitleFontSize: 12 }, { valAxisMinVal: 0, valAxisLabelFontSize: 12, valAxisLabelFormatCode: '#,##0', valGridLine: { style: 'none' }, showValAxisTitle: true, valAxisTitle: '文字数', valAxisTitleFontSize: 12 }], catAxes: [{ catAxisLabelFontFace: FONT, catAxisLabelFontSize: 14 }, { catAxisHidden: true }], showLegend: true, legendPos: 'b', legendFontFace: FONT, legendFontSize: 12 });
                 if (D.cal) {   // 月：日ごとは、カレンダーの表（読んだ話の数で、色の濃さが変わる）
-                    sl = pptx.addSlide(); head(sl, D.title + 'のカレンダー（日ごとの、読んだ話の数）');
+                    sl = pptx.addSlide(); head(sl, D.title + 'のカレンダー（日ごとの、読んだ数）');
                     const fillOf = n => n >= 6 ? '23594E' : n >= 3 ? '5B9279' : n >= 1 ? 'BCD8C6' : 'F3EEE3', fgOf = n => n >= 3 ? 'FFFFFF' : INK;
                     const wk = ['日', '月', '火', '水', '木', '金', '土'].map(w => ({ text: w, options: { bold: true, color: 'FFFFFF', fill: { color: GREEN }, align: 'center' } }));
-                    const body = D.cal.map(line => line.map(c => c ? { text: c.d + '日' + (c.n ? '\n' + c.n + '話' : ''), options: { fill: { color: fillOf(c.n) }, color: fgOf(c.n), align: 'center', valign: 'middle', bold: c.n > 0 } } : { text: '', options: { fill: { color: 'FFFFFF' } } }));
+                    const body = D.cal.map(line => line.map(c => c ? { text: c.d + '日' + (c.n ? '\n' + c.t : ''), options: { fontSize: 12, fill: { color: fillOf(actLvl(c.c)) }, color: fgOf(actLvl(c.c)), align: 'center', valign: 'middle', bold: c.n > 0 } } : { text: '', options: { fill: { color: 'FFFFFF' } } }));
                     sl.addTable([wk].concat(body), { x: 0.6, y: 1.4, w: 12.1, colW: Array(7).fill(12.1 / 7), rowH: [0.45].concat(Array(D.cal.length).fill(0.85)), fontFace: FONT, fontSize: 14, border: { type: 'solid', color: 'FFFFFF', pt: 2 } });
-                    sl.addText('色が濃いほど、たくさん読んだ日です（1〜2話・3〜5話・6話以上）。', { x: 0.6, y: 6.85, w: 12.1, h: 0.4, fontFace: FONT, fontSize: 12, color: SOFT });
+                    sl.addText('色が濃いほど、たくさん読んだ日です（読んだ文字数：1万字未満・1〜5万字・5万字以上）。話は話、巻は冊で数えています。', { x: 0.6, y: 6.85, w: 12.1, h: 0.4, fontFace: FONT, fontSize: 12, color: SOFT });
                 }
                 sl = pptx.addSlide(); head(sl, '読んだ冊数と、文字数（' + D.axis + '）');
                 sl.addChart([
@@ -9126,10 +9129,10 @@ function setupPaging(){
                 const sheets = [{ name: '記録', xml: sheetXml(recs, { header: true, widths: [12, 30, 14, 22, 14, 10] }) }, { name: '集計', xml: sheetXml(sum, { header: true, widths: [14, 12, 12, 12], drawing: true }), drawing: true }];
                 if (D.dayRows) {
                     sheets.push({ name: '日ごと', xml: sheetXml([['日', '読んだ話', '文字数']].concat(D.dayRows), { header: true, widths: [10, 12, 12] }) });
-                    const lv = n => n >= 6 ? 4 : n >= 3 ? 3 : n >= 1 ? 2 : 5, calRows = [[{ v: D.title + '　読んだ話のカレンダー', s: 15 }], [], ['日', '月', '火', '水', '木', '金', '土'].map(w => ({ v: w, s: 14 }))];   // s=6〜9：上段（枠は上・左・右）／10〜13：下段（枠は下・左・右）／14：曜日／15：タイトル
+                    const lv = n => n >= 6 ? 4 : n >= 3 ? 3 : n >= 1 ? 2 : 5, calRows = [[{ v: D.title + '　読んだ数のカレンダー（色は、読んだ文字数：1万字未満・1〜5万字・5万字以上）', s: 15 }], [], ['日', '月', '火', '水', '木', '金', '土'].map(w => ({ v: w, s: 14 }))];   // s=6〜9：上段（枠は上・左・右）／10〜13：下段（枠は下・左・右）／14：曜日／15：タイトル
                     const sty = (n, low) => (low ? 10 : 6) + (n >= 6 ? 2 : n >= 3 ? 1 : n >= 1 ? 0 : 3);
-                    D.cal.forEach(line => { calRows.push(line.map(c => c ? { v: c.d, s: sty(c.n, false) } : { v: '', s: 0 })); calRows.push(line.map(c => c ? { v: c.n ? c.n + '話' : '', s: sty(c.n, true) } : { v: '', s: 0 })); });   // 1週＝2行：上は日、下は読んだ話の数
-                    sheets.push({ name: 'カレンダー', xml: sheetXml(calRows, { widths: [12, 12, 12, 12, 12, 12, 12] }) });
+                    D.cal.forEach(line => { calRows.push(line.map(c => c ? { v: c.d, s: sty(actLvl(c.c), false) } : { v: '', s: 0 })); calRows.push(line.map(c => c ? { v: c.n ? c.t : '', s: sty(actLvl(c.c), true) } : { v: '', s: 0 })); });   // 1週＝2行：上は日、下は読んだ話の数
+                    sheets.push({ name: 'カレンダー', xml: sheetXml(calRows, { widths: [17, 17, 17, 17, 17, 17, 17] }) });
                 }
                 sheets.push({ name: 'ランキング', xml: sheetXml(rk, { header: true, widths: [30, 10, 3, 18, 10, 3, 18, 10, 3, 16, 3, 16, 3, 16], drawing: true }) });
                 const dmerge = []; for (let i = 1; i < dlines.length;) { let j = i; while (j + 1 < dlines.length && typeof dlines[i][0] === 'string' && dlines[j + 1][0] === dlines[i][0]) j++; if (j > i) { dmerge.push('A' + (i + 1) + ':A' + (j + 1)); for (let k = i + 1; k <= j; k++) dlines[k][0] = ''; } i = j + 1; }
@@ -9642,30 +9645,91 @@ function setupPaging(){
             });
             // ===== バックアップ（作品・Wiki・言葉・設定）。追加フォントは、大きいうえ、配布の決まりがあるので、入れない =====
             const BACKUP_SKIP = new Set(['yomimono_books_v11', 'yomimono_drive_tok', 'yomimono_drive_v1', 'yomimono_drive_cid', 'yomimono_sample_long_v1']);   // 作品は別に入れる／ログイン・Driveの対応表・サンプルの印は、別の端末に持ち込まない
-            function backupBuild() {
-                const data = {};
-                try { for (let i = 0; i < KV.length; i++) { const k = KV.key(i); if (k && k.indexOf('yomimono_') === 0 && !BACKUP_SKIP.has(k)) data[k] = KV.getItem(k); } } catch (e) {}
-                return { app: 'yomimono', format: 2, exportedAt: new Date().toISOString(), books: state.books, data };
+            function backupBuild(ids) {   // ids があれば、その作品だけ（Wiki・言葉も、その作品の分だけ。設定は入れない）
+                const partial = Array.isArray(ids), idset = new Set(ids || []), data = {};
+                try {
+                    if (partial) { for (const key of [WIKI_KEY, TERMS_KEY]) { const all = wJson(key, {}), o = {}; Object.keys(all).forEach(id => { if (idset.has(id)) o[id] = all[id]; }); if (Object.keys(o).length) data[key] = JSON.stringify(o); } }
+                    else for (let i = 0; i < KV.length; i++) { const k = KV.key(i); if (k && k.indexOf('yomimono_') === 0 && !BACKUP_SKIP.has(k)) data[k] = KV.getItem(k); }
+                } catch (e) {}
+                return Object.assign({ app: 'yomimono', format: 2, exportedAt: new Date().toISOString(), books: partial ? state.books.filter(b => idset.has(b.id)) : state.books, data }, partial ? { partial: true } : {});
             }
-            function backupRestore(parsed) {   // 古い形（作品の一覧だけ）も読める。戻り値：Wiki・設定などを戻した件数
-                const books = Array.isArray(parsed) ? parsed : (parsed && Array.isArray(parsed.books) ? parsed.books : null);
-                if (!books) return -1;
-                state.books = books; save();   // 先に作品を保存する（save は設定も書くので、そのあとで、バックアップの設定を上書きする）
+            function backupDownload(obj, name) {
+                const a = document.createElement('a');
+                a.href = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(obj, null, 2));
+                a.download = name; document.body.appendChild(a); a.click(); a.remove();
+            }
+            function backupPlan(parsed) {   // 読み込む前の確認用：何冊を足し、何冊を上書きするか
+                const books = Array.isArray(parsed) ? parsed : (parsed && Array.isArray(parsed.books) ? parsed.books : null); if (!books) return null;
+                const have = new Set(state.books.map(b => b.id));
+                return { books, add: books.filter(b => !have.has(b.id)).length, over: books.filter(b => have.has(b.id)).length };
+            }
+            function backupRestore(parsed) {   // 足す形（今の作品は、消さない）。戻り値：Wiki・設定などを戻した件数。-1＝バックアップではない
+                const plan = backupPlan(parsed); if (!plan) return -1;
+                const byId = new Map(plan.books.map(b => [b.id, b])), have = new Set(state.books.map(b => b.id));
+                const merged = state.books.map(b => byId.has(b.id) ? byId.get(b.id) : b); plan.books.forEach(b => { if (!have.has(b.id)) merged.push(b); });
+                state.books = merged; save();   // 先に作品を保存する（save は設定も書くので、そのあとで、バックアップの設定を上書きする）
                 let n = 0;
                 if (!Array.isArray(parsed) && parsed.data && typeof parsed.data === 'object') {
-                    for (const [k, v] of Object.entries(parsed.data)) { if (k.indexOf('yomimono_') !== 0 || BACKUP_SKIP.has(k) || typeof v !== 'string') continue; try { KV.setItem(k, v); n++; } catch (e) {} }
+                    for (const [k, v] of Object.entries(parsed.data)) {
+                        if (k.indexOf('yomimono_') !== 0 || BACKUP_SKIP.has(k) || typeof v !== 'string') continue;
+                        try {
+                            if (k === WIKI_KEY || k === TERMS_KEY) { let add = {}; try { add = JSON.parse(v) || {}; } catch (e) {} KV.setItem(k, JSON.stringify(Object.assign({}, wJson(k, {}), add))); }   // 作品のIDごとに足す（ほかの作品の分は、そのまま）
+                            else if (!parsed.partial) KV.setItem(k, v);
+                            n++;
+                        } catch (e) {}
+                    }
                 }
                 return n;
             }
+            function restorePicker(parsed, plan, done) {
+                const have = new Set(state.books.map(b => b.id)), isArr = Array.isArray(parsed);
+                const hasSettings = !isArr && !parsed.partial && parsed.data && Object.keys(parsed.data).some(k => k !== WIKI_KEY && k !== TERMS_KEY && !BACKUP_SKIP.has(k));
+                const old = document.getElementById('restore-picker'); if (old) old.remove();
+                const ov = document.createElement('div'); ov.id = 'restore-picker'; ov.style.cssText = 'position:fixed;inset:0;z-index:100000;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;padding:12px';
+                const badge = b => have.has(b.id) ? '<span style="color:#b45309;font-size:10px;flex:none">上書き</span>' : '<span style="color:#23594e;font-size:10px;flex:none">新しい</span>';
+                const rows = plan.books.map((b, i) => '<label style="display:flex;align-items:center;gap:8px;padding:8px 2px;border-bottom:1px solid #e3d9c4"><input type="checkbox" value="' + i + '" checked><span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + escapeHtml(String(b.title || '無題').split('\n').join(' ')) + '</span>' + badge(b) + '</label>').join('');
+                const setRow = hasSettings ? '<label style="display:flex;align-items:center;gap:8px;padding:8px 2px"><input type="checkbox" id="rp-settings" checked><span>設定も戻す（文字の大きさ・本棚の並び順など）</span></label>' : '';
+                ov.innerHTML = '<div class="bg-kinari rounded-2xl border border-woodBorder text-xs" style="width:100%;max-width:420px;max-height:80vh;display:flex;flex-direction:column"><div style="padding:14px 16px 4px;font-weight:700;font-size:13px">読み込む作品を選ぶ</div><div style="padding:0 16px 8px;color:#7a6a52">選んだ作品を、今の作品に足します。今の作品は、消えません。「上書き」の作品は、ファイルの内容に置き換わります。</div><div style="padding:0 16px 8px;display:flex;gap:8px"><button type="button" id="rp-all" class="px-3 py-1 rounded-xl border border-woodBorder bg-white">全部選ぶ</button><button type="button" id="rp-none" class="px-3 py-1 rounded-xl border border-woodBorder bg-white">全部外す</button><span id="rp-count" style="margin-left:auto;align-self:center;color:#7a6a52"></span></div><div style="overflow:auto;padding:0 16px;flex:1">' + rows + setRow + '</div><div style="padding:12px 16px;display:flex;gap:8px;justify-content:flex-end"><button type="button" id="rp-close" class="px-4 py-2 rounded-xl border border-woodBorder bg-white">やめる</button><button type="button" id="rp-go" class="px-4 py-2 rounded-xl text-white font-bold" style="background:#b8923f">読み込む</button></div></div>';
+                document.body.appendChild(ov);
+                const boxes = () => [...ov.querySelectorAll('input[type=checkbox][value]')], upd = () => { const sel = boxes().filter(x => x.checked), over = sel.filter(x => have.has(plan.books[Number(x.value)].id)).length; ov.querySelector('#rp-count').textContent = sel.length + ' / ' + plan.books.length + '冊（上書き ' + over + '冊）'; const go = ov.querySelector('#rp-go'); go.disabled = !sel.length && !(ov.querySelector('#rp-settings') || {}).checked; go.style.opacity = go.disabled ? '.45' : '1'; };
+                ov.addEventListener('change', upd); upd();
+                ov.querySelector('#rp-all').onclick = () => { boxes().forEach(x => x.checked = true); upd(); };
+                ov.querySelector('#rp-none').onclick = () => { boxes().forEach(x => x.checked = false); upd(); };
+                ov.querySelector('#rp-close').onclick = () => ov.remove();
+                ov.querySelector('#rp-go').onclick = () => {
+                    const sel = boxes().filter(x => x.checked).map(x => plan.books[Number(x.value)]), ids = new Set(sel.map(b => b.id)), wantSettings = !!(ov.querySelector('#rp-settings') || {}).checked;
+                    let out;
+                    if (isArr) out = sel;
+                    else {
+                        const data = {};
+                        for (const [k, v] of Object.entries(parsed.data || {})) {
+                            if (k === WIKI_KEY || k === TERMS_KEY) { try { const all = JSON.parse(v) || {}, o = {}; Object.keys(all).forEach(id => { if (ids.has(id)) o[id] = all[id]; }); if (Object.keys(o).length) data[k] = JSON.stringify(o); } catch (e) {} }
+                            else if (wantSettings) data[k] = v;
+                        }
+                        out = Object.assign({}, parsed, { books: sel, data });
+                    }
+                    ov.remove(); done(out);
+                };
+            }
             document.getElementById('btn-export-json').addEventListener('click', () => {
-                const str = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backupBuild(), null, 2));
-                const a = document.createElement('a');
-                a.href = str;
-                a.download = `yomimono_backup_${new Date().toISOString().slice(0,10)}.json`;
-                document.body.appendChild(a);
-                a.click();
-                a.remove();
-                toast('全データをバックアップ保存しました');
+                backupDownload(backupBuild(), 'yomimono_backup_' + new Date().toISOString().slice(0, 10) + '.json');
+                toast('バックアップを保存しました（作品・Wiki・設定）');
+            });
+            // 選んだ作品だけ書き出す
+            document.getElementById('btn-export-pick').addEventListener('click', () => {
+                if (!state.books.length) { toast('作品がありません'); return; }
+                const old = document.getElementById('backup-picker'); if (old) old.remove();
+                const ov = document.createElement('div'); ov.id = 'backup-picker'; ov.style.cssText = 'position:fixed;inset:0;z-index:100000;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;padding:12px';
+                const rows = state.books.map(b => '<label style="display:flex;align-items:center;gap:8px;padding:8px 2px;border-bottom:1px solid #e3d9c4"><input type="checkbox" value="' + escapeHtml(b.id) + '"><span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + escapeHtml(String(b.title || '無題').split('\n').join(' ')) + '</span></label>').join('');
+                ov.innerHTML = '<div class="bg-kinari rounded-2xl border border-woodBorder text-xs" style="width:100%;max-width:420px;max-height:80vh;display:flex;flex-direction:column"><div style="padding:14px 16px 8px;font-weight:700;font-size:13px">書き出す作品を選ぶ</div><div style="padding:0 16px 8px;display:flex;gap:8px"><button type="button" id="bp-all" class="px-3 py-1 rounded-xl border border-woodBorder bg-white">全部選ぶ</button><button type="button" id="bp-none" class="px-3 py-1 rounded-xl border border-woodBorder bg-white">全部外す</button><span id="bp-count" style="margin-left:auto;align-self:center;color:#7a6a52"></span></div><div style="overflow:auto;padding:0 16px;flex:1">' + rows + '</div><div style="padding:12px 16px;display:flex;gap:8px;justify-content:flex-end"><button type="button" id="bp-close" class="px-4 py-2 rounded-xl border border-woodBorder bg-white">閉じる</button><button type="button" id="bp-go" class="px-4 py-2 rounded-xl text-white font-bold" style="background:#b8923f">書き出す</button></div></div>';
+                document.body.appendChild(ov);
+                const boxes = () => [...ov.querySelectorAll('input[type=checkbox]')], upd = () => { const n = boxes().filter(x => x.checked).length; ov.querySelector('#bp-count').textContent = n + ' / ' + state.books.length + '冊'; const go = ov.querySelector('#bp-go'); go.disabled = !n; go.style.opacity = n ? '1' : '.45'; };
+                ov.addEventListener('change', upd); upd();
+                ov.querySelector('#bp-all').onclick = () => { boxes().forEach(x => x.checked = true); upd(); };
+                ov.querySelector('#bp-none').onclick = () => { boxes().forEach(x => x.checked = false); upd(); };
+                ov.querySelector('#bp-close').onclick = () => ov.remove();
+                ov.addEventListener('click', e => { if (e.target === ov) ov.remove(); });
+                ov.querySelector('#bp-go').onclick = () => { const ids = boxes().filter(x => x.checked).map(x => x.value); if (!ids.length) return; backupDownload(backupBuild(ids), 'yomimono_backup_一部_' + new Date().toISOString().slice(0, 10) + '.json'); ov.remove(); toast(ids.length + '冊を書き出しました（Wiki・言葉を含む。設定は入りません）'); };
             });
             document.getElementById('input-import-json').addEventListener('change', (e) => {
                 const file = e.target.files[0];
@@ -9673,16 +9737,17 @@ function setupPaging(){
                 const reader = new FileReader();
                 reader.onload = (evt) => {
                     try {
-                        const parsed = JSON.parse(evt.target.result);
-                        const restored = backupRestore(parsed);
-                        if (restored >= 0) {
+                        const parsed = JSON.parse(evt.target.result), plan = backupPlan(parsed);
+                        if (!plan) { toast('このファイルは、バックアップではないようです'); return; }
+                        restorePicker(parsed, plan, (picked) => {
+                            const restored = backupRestore(picked);
                             document.getElementById('modal-global-settings').classList.add('hidden');
-                            toast(restored ? 'データを読み込みました（Wiki・設定も戻します）' : 'データを正常に読み込みました');
-                            if (restored) setTimeout(() => location.reload(), 900); else { renderYearOptions(); renderShelf(); }   // Wiki・設定は、読み込み直しで、全部の画面に反映する
-                        } else toast('このファイルは、バックアップではないようです');
+                            toast(restored > 0 ? 'データを足しました（Wiki・設定も戻します）' : 'データを足しました');
+                            if (restored > 0) setTimeout(() => location.reload(), 900); else { renderYearOptions(); renderShelf(); }   // Wiki・設定は、読み込み直しで、全部の画面に反映する
+                        });
                     } catch(err) { toast('読み込みエラーが発生しました'); }
                 };
-                reader.readAsText(file);
+                reader.readAsText(file); e.target.value = '';
             });
             document.getElementById('btn-reset-sample').addEventListener('click', () => {
                 state.books = DEMO_BOOKS;
