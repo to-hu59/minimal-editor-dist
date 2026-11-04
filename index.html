@@ -1823,6 +1823,7 @@
                             <label class="flex items-center gap-2 text-[11px]"><input type="checkbox" id="drive-relogin"> <span>ログインが切れたら、さわったときに自動でやり直す（小さな窓が、一瞬ひらきます）</span></label>
                             <label class="flex items-center gap-2 text-[11px]"><input type="checkbox" id="drive-auto"> <span>自動で同期する（切ると、電池の減りがおだやかになります）</span></label>
                             <button id="btn-drive-now" class="w-full py-2 bg-woodAccent text-white border border-woodBorder rounded-xl font-bold active:scale-95 transition">いま同期する（上げる・取ってくる）</button>
+                            <button id="btn-drive-tidy" class="w-full py-2 bg-kinariDark text-softText hover:bg-kinari border border-woodBorder rounded-xl font-bold active:scale-95 transition">Driveを作品ごとのフォルダにそろえる</button>
                             <button id="btn-drive-switch" class="w-full py-2 bg-kinariDark text-softText hover:bg-kinari border border-woodBorder rounded-xl font-bold active:scale-95 transition">別のGoogleアカウントに切り替える</button>
                             <button id="btn-drive-disconnect" class="w-full py-2 bg-kinariDark text-softMuted hover:text-softText border border-woodBorder rounded-xl font-bold active:scale-95 transition">ログアウト（この端末でDriveをやめる）</button>
                             <p class="text-[10px] text-softMuted leading-relaxed">ログアウトしても、この端末の作品とDriveの中身はどちらも残ります。</p>
@@ -1836,6 +1837,9 @@
                     <div class="pt-3 border-t border-woodBorder">
                         <span class="font-bold text-softMuted block mb-1">更新履歴</span>
                         <div id="changelog" class="text-[11px] text-softMuted leading-relaxed">
+<div class="mb-1.5"><b class="text-softText">2026-11-05（17）</b><br>Driveの中を、作品ごとのフォルダにそろえられるようにした（全体設定の「Driveを作品ごとのフォルダにそろえる」。本体と、控えの新しい5件を、作品のフォルダに入れ、古い控えはDriveのごみ箱へ）。新しい控えは、作品のフォルダに入り、いつも新しい5件だけ残る。パソコンもスマホも新しい版にしてから押すこと。「ここだけ直す」は、別の話に移ったあとは、保存しないようにした。</div>
+<div class="mb-1.5"><b class="text-softText">2026-11-05（16）</b><br>Wikiの追記を、あとから直せるようにした（中身と話数を直す・「この追記を消す」。「保存して閉じる」で確定）。項目に「別の呼び方」の欄を足した（「田中P、田中PD,田中プロデューサー」のように、、か , で区切って、まとめて入れられる）。本文の色づけ・カード・一覧の検索が、別の呼び方でも同じ項目として反応する。ほかの項目と呼び方がかぶると知らせる。</div>
+<div class="mb-1.5"><b class="text-softText">2026-11-05（15）</b><br>読む画面の「ここだけ直す」を、編集画面（太字・ルビ・特殊な文字などの道具つき）で、選んだ段落だけが開くようにした。上の「✓」でその段落だけ本文に戻り、「×」でやめると本文は変わらない。</div>
 <div class="mb-1.5"><b class="text-softText">2026-11-03（6）</b><br>編集の道具：「画面の枠」を「特殊演出」にして（動く人のマーク）、右端に固定した（「原文」のボタンはなくした）。「特殊な文字」（回転の矢印と星のマーク）を足して、縦書き（この部分だけ）・ななめ・左右反転・上下反転・回転・逆さを入れられるようにした（編集画面で、ルビや色と同じように、その場で見える。選ばないときは、いまの行ぜんぶ）。文字色の「カスタム」に「この色にする」を足して、選んだ色が本文と「A」の線に出るようにした。OCRのボタンのマークを変えた。特殊演出に、電光掲示板（右から左へ流れる・文字ごとの色・背景の色・折り返し）、駅の発車案内、空港の出発案内、文字化けするシステム画面、文字が崩れる配信コメント、ページがめくれない、ページが巻き戻る、を足した（🎬の演出ビューで動く）。作品のメニューに、Googleドキュメントへの書き出し（本文のみ）を足した。Driveの自動同期は、はじめは切にして、「いま同期する」で手動にできるようにした。Driveのフォルダ名とアプリ名を「読書リーダー(仮)」にした。</div>
 <div class="mb-1.5"><b class="text-softText">2026-11-05（14）</b><br>魚のメニューの「探す（全体検索）」を、本棚（TOP）が見えているときは、いつも「本棚ぜんぶ」から始めるようにした（作品を開いたあとに、「この作品」から始まることがあったため）。</div>
 <div class="mb-1.5"><b class="text-softText">2026-11-05（13）</b><br>「ファイルから」の取り込みを作り直した。ファイルを選ぶと、「取り込む話を選ぶ」の画面が出て、見つかった巻・話を、チェックで選べる。形式は、自動で判別／話だけ／1つの話にまとめる。空の話（「1話」など）があれば、番号で合わせて、題名と中身を入れる（題名を変えないこともできる）。なければ、新しい話として追加。中身がある話は、はじめは触らない（上書き・別の話として追加に、変えられる）。「第2巻」「1巻」「Vol.2」の見出しは、巻として、同じ番号の巻に入れる（なければ、新しく作る）。「＋」の「ファイルから作る」で、バックアップのJSONも選べるようにした（読み込む作品を選ぶ画面が出る）。</div>
@@ -2677,16 +2681,72 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         async function driveList(folderId) {
             const files = []; let page = '';
             do {
-                const q = encodeURIComponent(`'${folderId}' in parents and trashed=false`);
-                const r = await driveJson(`files?q=${q}&pageSize=1000&fields=nextPageToken,files(id,name,modifiedTime,appProperties)${page ? '&pageToken=' + encodeURIComponent(page) : ''}`);
+                const q = encodeURIComponent(`appProperties has { key='yomimonoBook' } and trashed=false`);
+                const r = await driveJson(`files?q=${q}&pageSize=1000&fields=nextPageToken,files(id,name,modifiedTime,parents,appProperties)${page ? '&pageToken=' + encodeURIComponent(page) : ''}`);
                 files.push(...(r.files || [])); page = r.nextPageToken || '';
             } while (page);
             return files;
         }
         async function driveBackup(folderId, book, text) {
             const stamp = new Date().toLocaleString('ja-JP', { hour12: false }).replace(/[\/:]/g, '-');
-            await driveUpload(null, { name: driveFileName(book).replace(/\.json$/, `（控え ${stamp}）.json`), parents: [folderId], appProperties: { yomimonoBackup: book.id } }, text);
+            const parent = await driveBookFolder(folderId, book.id, book.title);
+            await driveUpload(null, { name: driveFileName(book).replace(/\.json$/, `（控え ${stamp}）.json`), parents: [parent], appProperties: { yomimonoBackup: book.id } }, text);
+            try { await driveTrimBackups(book.id, 5); } catch (e) {}
         }
+        // 作品ごとのフォルダ（なければ作る）
+        async function driveBookFolder(rootId, bookId, title) {
+            driveMeta.bookFolders = driveMeta.bookFolders || {};
+            const name = (driveFileName({ title }).replace(/\.json$/, '') || '無題');
+            const cached = driveMeta.bookFolders[bookId];
+            if (cached) { try { const cur = await driveJson('files/' + cached + '?fields=id,trashed'); if (cur && !cur.trashed) return cached; } catch (e) { if (e.code !== 'error') throw e; } }
+            const q = encodeURIComponent(`appProperties has { key='yomimonoBookFolder' and value='${bookId}' } and trashed=false`);
+            const found = await driveJson(`files?q=${q}&fields=files(id)&spaces=drive`);
+            const id = found.files?.[0]?.id || (await driveJson('files?fields=id', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, mimeType: 'application/vnd.google-apps.folder', parents: [rootId], appProperties: { yomimonoBookFolder: bookId } }) })).id;
+            driveMeta.bookFolders[bookId] = id; driveSaveMeta();
+            return id;
+        }
+        // 控えは、新しい keep 件だけ残す。古いものは、Driveのごみ箱へ（30日は戻せる）
+        async function driveTrimBackups(bookId, keep) {
+            const q = encodeURIComponent(`appProperties has { key='yomimonoBackup' and value='${bookId}' } and trashed=false`);
+            const r = await driveJson(`files?q=${q}&pageSize=200&orderBy=createdTime desc&fields=files(id)`);
+            const old = (r.files || []).slice(keep); let n = 0;
+            for (const x of old) { await driveJson(`files/${x.id}?fields=id`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ trashed: true }) }); n++; }
+            return n;
+        }
+        // いまのDriveを、作品ごとのフォルダにそろえる（本体と、控えの新しい5件を、作品のフォルダへ）
+        let driveTidying = false;
+        async function driveTidy() {
+            if (driveTidying) return; if (!driveMeta.connected) { toast('先に、Driveにつないでください'); return; }
+            if (!confirm('Driveの中を、作品ごとのフォルダにそろえます。\n・本体と、控えの新しい5件を、作品のフォルダに入れます\n・それより古い控えは、Driveのごみ箱に送ります（30日は戻せます）\n\n※ パソコンもスマホも、すべて新しい版にしてから押してください。古い版の端末は、フォルダの中の作品が見えなくなります。\n続けますか？')) return;
+            driveTidying = true;
+            try {
+                await driveEnsureToken(''); if (driveSyncing) await driveSyncing;
+                const rootId = await driveFolder(), files = await driveList(rootId), titleOf = new Map(state.books.map(b => [b.id, b.title]));
+                let moved = 0, trashed = 0;
+                for (const file of files) {
+                    const id = file.appProperties?.yomimonoBook; if (!id) continue;
+                    const title = titleOf.get(id) || String(file.name || '').replace(/\.json$/, '');
+                    const folder = await driveBookFolder(rootId, id, title);
+                    if (!(file.parents || []).includes(folder) || (file.parents || []).length !== 1) {
+                        const rm = (file.parents || []).filter(p => p !== folder).join(',');
+                        await driveJson(`files/${file.id}?addParents=${folder}${rm ? '&removeParents=' + rm : ''}&fields=id`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: '{}' }); moved++;
+                    }
+                    // 控え
+                    const q = encodeURIComponent(`appProperties has { key='yomimonoBackup' and value='${id}' } and trashed=false`);
+                    const r = await driveJson(`files?q=${q}&pageSize=200&orderBy=createdTime desc&fields=files(id,parents)`);
+                    const list = r.files || [];
+                    for (const x of list.slice(0, 5)) {
+                        if (!(x.parents || []).includes(folder) || (x.parents || []).length !== 1) { const rm = (x.parents || []).filter(p => p !== folder).join(','); await driveJson(`files/${x.id}?addParents=${folder}${rm ? '&removeParents=' + rm : ''}&fields=id`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: '{}' }); }
+                    }
+                    for (const x of list.slice(5)) { await driveJson(`files/${x.id}?fields=id`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ trashed: true }) }); trashed++; }
+                }
+                driveMeta.tidy = true; driveSaveMeta();
+                toast(`作品ごとのフォルダにそろえました（本体 ${moved}件を移動、古い控え ${trashed}件をごみ箱へ）`);
+                try { await driveSync(true); } catch (e) {}
+            } catch (e) { toast(e.code === 'offline' ? 'ネットにつながっていません' : e.code === 'tap' ? '上の☁を押して、つなぎ直してください' : 'そろえられませんでした。もう一度ためしてください'); console.warn(e); }
+            finally { driveTidying = false; }
+        }
+
 
         // 開いている作品は、閉じるまで Drive からの上書きを待つ
         function driveBookBusy(id) {
@@ -2741,7 +2801,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                     // 別の端末で消された作品
                     state.books = state.books.filter(b => b.id !== book.id); delete driveMeta.books[book.id]; try { purgeBookData([book.id]); } catch (e) {} changedLocal = true; removed++; continue;
                 }
-                record(book.id, await driveUpload(null, { name: driveFileName(book), parents: [folderId], appProperties: { yomimonoBook: book.id } }, text), text);
+                record(book.id, await driveUpload(null, { name: driveFileName(book), parents: [driveMeta.tidy ? await driveBookFolder(folderId, book.id, book.title) : folderId], appProperties: { yomimonoBook: book.id } }, text), text);
             }
             driveSaveMeta();
             if (changedLocal) {
@@ -2840,6 +2900,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             document.getElementById('btn-drive-now')?.addEventListener('click', () => driveConnect());
             document.getElementById('btn-drive').addEventListener('click', e => { e.stopPropagation(); driveConnect(); });
             document.getElementById('btn-drive-disconnect').addEventListener('click', driveDisconnect);
+            document.getElementById('btn-drive-tidy').addEventListener('click', driveTidy);
             document.getElementById('btn-drive-switch').addEventListener('click', driveSwitchAccount);
             // 許可の窓はタップの直後でないと開けないので、Googleの部品は先に読んでおく
             if (DRIVE_CLIENT_ID) setTimeout(() => driveLoadGis().catch(() => {}), driveMeta.connected ? 0 : 3000);
@@ -7580,7 +7641,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         }
         // 話の終わり・戻る・本の終わりで、読み終えた話から言葉を拾い、件数を小さく知らせる。読書は止めない
         // ===== 更新の確認：新しい版があれば、魚に青い点とメニュー（版の番号は version.json。公開のたびに、番号が変わる。番号が入っていない開発中は、確かめない） =====
-        const APP_BUILD = '20261104154201';
+        const APP_BUILD = '20261104161405';
         let updateCheckAt = 0;
         function paintBuild() {
             const el = document.getElementById('app-build-info'); if (!el) return;
@@ -8267,6 +8328,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         let editPartial = null, partialEnterOnce = null;   // 「ここだけ直す」で、編集画面を、段落だけで開いているあいだの印
         // 読む画面：文字を選ぶと、「ここだけ直す」が出る。押すと、編集画面（道具つき）が、その段落だけで開く
         function readerPartialOpen() {
+            if (!document.getElementById('reader-editor-box').classList.contains('hidden')) return;
             const sel = getSelection(); if (!sel || sel.isCollapsed || !sel.rangeCount) return;
             const box = document.getElementById('reader-content-text');
             if (!box.contains(sel.anchorNode) || !box.contains(sel.focusNode)) return;
@@ -10236,7 +10298,7 @@ function setupPaging(){
                     rememberRubySelection();
                 } else {
                     if(!canLeaveReader())return;
-                    editPartial = null;
+                    editPartial = null; partialEnterOnce = null;
                     document.getElementById('view-reader').classList.remove('editing');
                     editWrap.classList.add('hidden');
                     textWrap.classList.remove('hidden');
@@ -10276,6 +10338,7 @@ function setupPaging(){
                 if (editPartial) {   // 段落だけ：本文の、その段落の行だけを、入れ替える
                     const ep = editPartial, ref = commentFindChap(ep.bookId, ep.chapId), NL = String.fromCharCode(10);
                     if (!ref) { toast('この話が見つかりませんでした'); return; }
+                    if (ep.bookId !== state.currentBookId || ep.chapId !== state.currentChapterId) { editPartial = null; toast('別の話に移ったので、保存しませんでした'); return; }
                     const lines = (ref.chap.content || '').split(NL);
                     if (lines.slice(ep.li0, ep.li1 + 1).join(NL) !== ep.before) { toast('本文が変わっているので、保存できませんでした。もう一度、選び直してください'); return; }
                     newText = lines.slice(0, ep.li0).concat(newText.split(NL), lines.slice(ep.li1 + 1)).join(NL);
