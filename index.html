@@ -1837,6 +1837,8 @@
                     <div class="pt-3 border-t border-woodBorder">
                         <span class="font-bold text-softMuted block mb-1">更新履歴</span>
                         <div id="changelog" class="text-[11px] text-softMuted leading-relaxed">
+<div class="mb-1.5"><b class="text-softText">2026-11-05（19）</b><br>「Wikiに登録」で、新しい項目にするか、すでにある項目の「別の呼び方」に足すかを、えらべるようにした。Wikiを閉じたとき、名前や別の呼び方が変わっていれば、読む画面の色づけをすぐ直す。別の呼び方がかぶるときは、確認の窓を出す。「追記を追加」を押さずに保存しても、書きかけの追記がいっしょに入る（ボタンも目立つ形に）。</div>
+<div class="mb-1.5"><b class="text-softText">2026-11-05（18）</b><br>読む画面で言葉を選ぶと、「ここだけ直す」の隣に「Wikiに登録」が出る。押すと、選んだ言葉が名前に入った新しい項目の画面が開く（すでに登録があれば、その項目が開く）。Wikiの追記は、ふだんは読むだけにして、鉛筆のマークで直せるようにした。Driveの同期が失敗していたのを直した。</div>
 <div class="mb-1.5"><b class="text-softText">2026-11-05（17）</b><br>Driveの中を、作品ごとのフォルダにそろえられるようにした（全体設定の「Driveを作品ごとのフォルダにそろえる」。本体と、控えの新しい5件を、作品のフォルダに入れ、古い控えはDriveのごみ箱へ）。新しい控えは、作品のフォルダに入り、いつも新しい5件だけ残る。パソコンもスマホも新しい版にしてから押すこと。「ここだけ直す」は、別の話に移ったあとは、保存しないようにした。</div>
 <div class="mb-1.5"><b class="text-softText">2026-11-05（16）</b><br>Wikiの追記を、あとから直せるようにした（中身と話数を直す・「この追記を消す」。「保存して閉じる」で確定）。項目に「別の呼び方」の欄を足した（「田中P、田中PD,田中プロデューサー」のように、、か , で区切って、まとめて入れられる）。本文の色づけ・カード・一覧の検索が、別の呼び方でも同じ項目として反応する。ほかの項目と呼び方がかぶると知らせる。</div>
 <div class="mb-1.5"><b class="text-softText">2026-11-05（15）</b><br>読む画面の「ここだけ直す」を、編集画面（太字・ルビ・特殊な文字などの道具つき）で、選んだ段落だけが開くようにした。上の「✓」でその段落だけ本文に戻り、「×」でやめると本文は変わらない。</div>
@@ -4841,7 +4843,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             return out.length?out:[para];
         }
         // ウィキに登録した言葉を、本文の中で、うっすら色づけ。押すと、小さなカードが出る
-        let wkHlCache = { key: '', re: null, map: null };
+        let wkHlCache = { key: '', re: null, map: null }, wkRenderedKey = null;
         function wikiHlRegex(bookId) {
             const es = wikiEntries(bookId).filter(e => e.name && e.name.trim().length >= 2), key = bookId + '|' + wikiEntries(bookId).map(e => e.id + ':' + e.name + ':' + (e.aliases || []).join('/')).join('|');
             if (wkHlCache.key !== key) {
@@ -4896,7 +4898,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             const kkMsg = (f, li, body) => '<div class="pnote"><div class="pnh"><i class="kki"></i><span>カカオトーク</span></div><div class="kkq">' + body + '</div><div class="kkbtn"><button type="button" class="y">はい</button><button type="button" class="n">いいえ</button></div></div>';
             const bbsOpen = f => '<div class="fxbbs ' + (BBS_CLS[f.look] || 'classic') + sm(f) + (f.notype ? ' notype' : '') + '">' + (f.board || f.title ? '<div class="bbh">' + (f.board ? '<div class="bbn">' + escapeHtml(f.board) + '</div>' : '') + (f.title ? '<div class="bbt">' + escapeHtml(f.title) + '</div>' : '') + '</div>' : '');
             const bbsPost = (f, li, body) => { const p = f.posts[li - f.from] || {}; if (p.compact) return '<div class="bpost bpc' + (p.depth ? ' bd' + Math.min(p.depth, 3) : '') + '"><div class="bpb">' + (p.depth ? '<span class="bpa">└ </span>' : '') + body + '</div></div>'; return '<div class="bpost' + (p.depth ? ' bd' + Math.min(p.depth, 3) : '') + '"><div class="bpm">' + p.n + '：<b>' + escapeHtml(p.name || '名無しさん') + '</b>' + (p.id ? '　ID:' + escapeHtml(p.id) : '') + '</div>' + (p.depth && p.rp ? '<div class="bpr">└ &gt;&gt;' + escapeHtml(p.rp) + '</div>' : '') + '<div class="bpb">' + body + '</div></div>'; };
-            const wkR = (() => { try { const bk = state.books.find(b => b.id === state.currentBookId); return bk && fxSettingsFor(bk).wikiHl ? wikiHlRegex(bk.id) : null; } catch (e) { return null; } })();
+            const wkR = (() => { try { const bk = state.books.find(b => b.id === state.currentBookId); const r = bk && fxSettingsFor(bk).wikiHl ? wikiHlRegex(bk.id) : null; wkRenderedKey = r ? r.key : ''; return r; } catch (e) { return null; } })();
             const smallAll = (() => { try { return !!fxSettingsFor(state.books.find(b => b.id === state.currentBookId)).small; } catch (e) { return false; } })();
             const sm = f => (smallAll || f.small) ? ' small' : '';
             const defCol = (() => { try { return fxSettingsFor(state.books.find(b => b.id === state.currentBookId)).frameColor || ''; } catch (e) { return ''; } })();
@@ -7142,6 +7144,16 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         }
         function wikiClose() {
             document.getElementById('wiki-proto-sheet').classList.remove('open');
+            try {
+                const rv = document.getElementById('view-reader');
+                if (rv && !rv.classList.contains('hidden') && !rv.classList.contains('editing')) {
+                    const bk = state.books.find(b => b.id === state.currentBookId), R = bk && fxSettingsFor(bk).wikiHl ? wikiHlRegex(bk.id) : null;
+                    if ((R ? R.key : '') !== wkRenderedKey) {
+                        const ref = commentFindChap(state.currentBookId, state.currentChapterId), wrap = document.getElementById('reader-body-wrap'), top = wrap ? wrap.scrollTop : 0;
+                        if (ref) { const vol = ref.volId ? ((ref.book.parts[ref.partIdx].volumes || []).find(v => v.id === ref.volId) || null) : null; renderReaderContent(ref.book, ref.chap, vol); if (wrap) wrap.scrollTop = top; }
+                    }
+                }
+            } catch (e) {}
             if (wikiShelfPrev) { state.currentBookId = wikiShelfPrev.id; wikiShelfPrev = null; }
         }
         function wikiReadDraft() {
@@ -7267,9 +7279,9 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                     else h += `<textarea class="wk-nt" data-n="${wEsc(n.id)}" rows="4" style="margin-top:4px">${wEsc(n.text)}</textarea><div class="wk-row"><label>判明した話数</label><input type="number" class="wk-ne" data-n="${wEsc(n.id)}" min="1" value="${n.ep || ''}" placeholder="話数" style="margin-top:0;width:90px"></div><div class="wk-row"><button type="button" class="wk-mini wk-danger" data-w="note-del" data-nid="${wEsc(n.id)}">この追記を消す</button><button type="button" class="wk-mini" data-w="note-done">直し終わり</button></div>`;
                     h += '</div>';
                 }
-                h += '<textarea id="wk-note" placeholder="あとから追記する内容"></textarea>';
+                h += '<textarea id="wk-note" placeholder="追記する内容（話数ごとに、わかったこと）"></textarea>';
                 h += `<div class="wk-row"><label for="wk-ep">判明した話数</label><input type="number" id="wk-ep" min="1" value="${cur || ''}" placeholder="話数" style="margin-top:0;width:90px"></div>`;
-                h += '<button class="wk-btn" data-w="addnote">追記を追加</button>';
+                h += '<button class="wk-btn" data-w="addnote" style="background:#b8923f;color:#fff;border-color:#b8923f;font-weight:700">＋ この内容を、追記に入れる</button><div class="wk-muted" style="margin-top:4px">書いたら、このボタンで追記に入ります（押さずに保存しても、いっしょに入ります）</div>';
                 h += '<button class="wk-btn wk-accent" data-w="save">保存して閉じる</button>';
                 if (wikiState.editId) h += `<button class="wk-btn wk-danger" data-w="del">${wikiState.confirmDel ? 'もう一度押すと削除します' : '削除'}</button>`;
             }
@@ -7395,11 +7407,13 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             }
             if (act === 'save') {
                 wikiReadDraft(); const d = wikiState.draft;
+                // 「追記を追加」を押さずに書いたままの追記も、いっしょに入れる（書いた文が消えないように）
+                { const nt = document.getElementById('wk-note'), tx = nt ? nt.value.trim() : ''; if (tx) { const ep = Math.floor(Number((document.getElementById('wk-ep') || {}).value)) || null; d.notes = (d.notes || []).concat({ id: 'n_' + Date.now(), text: tx, ep, at: Date.now() }); toast('書きかけの追記も、いっしょに入れました'); } }
                 if (!d.name.trim()) { toast('名前を入れてください'); return; }
                 const entries = wikiEntries(bookId).slice();
                 const aliases = (d.aliases || []).filter(x => x !== d.name.trim());
                 { const others = entries.filter(e => e.id !== wikiState.editId), used = new Map(); others.forEach(e => [e.name].concat(e.aliases || []).forEach(x => used.set(String(x).trim(), e.name)));
-                  const dup = [d.name.trim()].concat(aliases).filter(x => used.has(x)); if (dup.length && !wikiState.dupOk) { wikiState.dupOk = true; toast('「' + dup[0] + '」は、「' + used.get(dup[0]) + '」でも使われています。このままなら、もう一度「保存して閉じる」を押してください'); return; } wikiState.dupOk = false; }
+                  const dup = [d.name.trim()].concat(aliases).filter(x => used.has(x)); if (dup.length && !confirm('「' + dup[0] + '」は、「' + used.get(dup[0]) + '」でも使われています。\nそのまま保存しますか？\n（本文の色づけは、先に登録した項目のほうになります）')) return; }
                 const rec = { name: d.name.trim(), aliases, category: d.category, groups: d.groups || [], sections: (d.sections || []).map(x => ({ ...x, title: (x.title || '').trim() || '欄', rows: x.rows.filter(r => (r.k || '').trim() || (r.v || '').trim()) })).filter(x => x.rows.length), basic: d.basic, notes: d.notes };
                 if (wikiState.editId) { const i = entries.findIndex(e => e.id === wikiState.editId); if (i >= 0) entries[i] = { ...entries[i], ...rec }; }
                 else entries.push({ id: 'w_' + Date.now(), at: Date.now(), ...rec });
@@ -7653,7 +7667,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         }
         // 話の終わり・戻る・本の終わりで、読み終えた話から言葉を拾い、件数を小さく知らせる。読書は止めない
         // ===== 更新の確認：新しい版があれば、魚に青い点とメニュー（版の番号は version.json。公開のたびに、番号が変わる。番号が入っていない開発中は、確かめない） =====
-        const APP_BUILD = '20261104162448';
+        const APP_BUILD = '20261104165721';
         let updateCheckAt = 0;
         function paintBuild() {
             const el = document.getElementById('app-build-info'); if (!el) return;
@@ -8369,15 +8383,54 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             save(); renderReaderContent(ref.book, ref.chap); if (wrap) wrap.scrollTop = top;
             toast('ここだけ直しました');
         }
+        // 選んだ言葉を、Wikiに登録する（すでにあれば、その項目を開く）
+        function readerWikiRegister() {
+            const sel = getSelection(); if (!sel || sel.isCollapsed || !sel.rangeCount) return;
+            const box = document.getElementById('reader-content-text'); if (!box.contains(sel.anchorNode) || !box.contains(sel.focusNode)) return;
+            const frag = sel.getRangeAt(0).cloneContents(); frag.querySelectorAll('rt,rp').forEach(x => x.remove());
+            const name = (frag.textContent || '').replace(new RegExp(String.fromCharCode(92) + 's+', 'g'), ' ').trim();
+            if (!name) return;
+            if (name.length > 30) { toast('長すぎます。名前になる、短い言葉だけを選んでください'); return; }
+            const bookId = state.currentBookId, hit = wikiEntries(bookId).find(e => [e.name].concat(e.aliases || []).some(x => String(x).trim() === name));
+            sel.removeAllRanges();
+            if (hit) { wikiOpen('list'); wikiAct('open', { dataset: { id: hit.id } }); toast('「' + name + '」は、もう登録があります。開きました'); return; }
+            const all = wikiEntries(bookId);
+            const asNew = () => { wikiState.view = 'detail'; wikiState.editId = null; wikiState.pendingName = null; wikiState.draft = wikiNewDraft(name, '未分類'); wikiRender(); };
+            if (!all.length) { wikiOpen('list'); asNew(); return; }
+            // 新しい項目にするか、すでにある項目の「別の呼び方」に足すか、えらぶ
+            let ov = document.getElementById('wk-reg-choice'); if (ov) ov.remove();
+            ov = document.createElement('div'); ov.id = 'wk-reg-choice';
+            ov.style.cssText = 'position:fixed;inset:0;z-index:90;background:rgba(0,0,0,.4);display:flex;align-items:flex-end;justify-content:center';
+            const card = document.createElement('div');
+            card.style.cssText = 'width:100%;max-width:520px;max-height:80vh;overflow:auto;background:#f5ede0;border-radius:18px 18px 0 0;padding:16px 16px calc(env(safe-area-inset-bottom,0px) + 16px);color:#3b2f1e;font-size:14px';
+            const mk = (t, sub, fn, strong) => { const b = document.createElement('button'); b.type = 'button'; b.style.cssText = 'display:block;width:100%;text-align:left;margin-top:8px;padding:12px 14px;border-radius:12px;border:1px solid #c9b88f;background:' + (strong ? '#23594e' : '#fff') + ';color:' + (strong ? '#fff' : 'inherit') + ';font-weight:700;font-size:14px'; b.textContent = t; if (sub) { const sp = document.createElement('span'); sp.style.cssText = 'font-weight:400;font-size:11px;margin-left:8px;opacity:.7'; sp.textContent = sub; b.appendChild(sp); } b.onclick = () => { ov.remove(); fn(); }; return b; };
+            const h = document.createElement('div'); h.style.cssText = 'font-weight:700;margin-bottom:4px'; h.textContent = '「' + name + '」をWikiに登録'; card.appendChild(h);
+            card.appendChild(mk('新しい項目として登録', '', () => { wikiOpen('list'); asNew(); }, true));
+            const lab = document.createElement('div'); lab.style.cssText = 'margin-top:14px;font-size:12px;opacity:.75'; lab.textContent = 'すでにある項目の「別の呼び方」に足す'; card.appendChild(lab);
+            for (const e of all.slice().sort((x, y) => String(x.name).localeCompare(String(y.name), 'ja'))) card.appendChild(mk(e.name, e.category || '', () => {
+                wikiOpen('list'); wikiAct('open', { dataset: { id: e.id } });
+                const d = wikiState.draft; if (d && name !== d.name.trim() && !(d.aliases || []).includes(name)) d.aliases = (d.aliases || []).concat(name);
+                wikiRender(); toast('「' + e.name + '」の、別の呼び方に足しました。「保存して閉じる」で確定します');
+            }));
+            const cancel = mk('やめる', '', () => {}); cancel.style.textAlign = 'center'; cancel.style.marginTop = '14px'; card.appendChild(cancel);
+            ov.appendChild(card); ov.onclick = ev => { if (ev.target === ov) ov.remove(); };
+            document.body.appendChild(ov);
+        }
         function partialChipPaint() {
             let chip = document.getElementById('reader-partial-chip');
             if (!chip) {
                 chip = document.createElement('button'); chip.type = 'button'; chip.id = 'reader-partial-chip'; chip.hidden = true;
                 chip.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4l10.5-10.5-4-4L4 16z"/><path d="m13 7 4 4"/></svg> ここだけ直す';
-                chip.style.cssText = 'position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 84px);z-index:60;display:none;align-items:center;gap:6px;padding:10px 16px;border-radius:999px;background:#23594e;color:#fff;font-weight:700;font-size:13px;box-shadow:0 4px 14px rgba(0,0,0,.3);border:0';
+                chip.style.cssText = 'position:fixed;left:50%;transform:translateX(calc(-100% - 5px));bottom:calc(env(safe-area-inset-bottom,0px) + 84px);z-index:60;display:none;align-items:center;gap:6px;padding:10px 16px;border-radius:999px;background:#23594e;color:#fff;font-weight:700;font-size:13px;box-shadow:0 4px 14px rgba(0,0,0,.3);border:0';
                 chip.onpointerdown = e => e.preventDefault(); chip.onmousedown = e => e.preventDefault();
-                chip.onclick = () => { chip.hidden = true; chip.style.display = 'none'; readerPartialOpen(); };
+                chip.onclick = () => { chip.hidden = true; chip.style.display = 'none'; const c2 = document.getElementById('reader-wiki-chip'); if (c2) c2.style.display = 'none'; readerPartialOpen(); };
                 document.body.appendChild(chip);
+                const c2 = document.createElement('button'); c2.type = 'button'; c2.id = 'reader-wiki-chip';
+                c2.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"/><path d="M4 19V5"/><path d="M12 8v6M9 11h6"/></svg> Wikiに登録';
+                c2.style.cssText = chip.style.cssText.replace('translateX(calc(-100% - 5px))', 'translateX(5px)').replace('background:#23594e', 'background:#8a6d2b');
+                c2.onpointerdown = e => e.preventDefault(); c2.onmousedown = e => e.preventDefault();
+                c2.onclick = () => { chip.hidden = true; chip.style.display = 'none'; c2.style.display = 'none'; readerWikiRegister(); };
+                document.body.appendChild(c2);
             }
             const sel = getSelection(), box = document.getElementById('reader-content-text');
             const editing = !document.getElementById('reader-editor-box').classList.contains('hidden');
@@ -8392,6 +8445,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                 } catch (e) { shown = false; }
             }
             chip.hidden = !shown; chip.style.display = shown ? 'inline-flex' : 'none';
+            { const c2 = document.getElementById('reader-wiki-chip'); if (c2) c2.style.display = shown ? 'inline-flex' : 'none'; }
             clearTimeout(partialChipPaint._poll); if (shown || (sel && !sel.isCollapsed && sel.anchorNode && box && box.contains(sel.anchorNode))) partialChipPaint._poll = setTimeout(partialChipPaint, shown ? 500 : 900);   // 出ているあいだは、500ミリ秒ごとに見直す（画面を移ったのに残るのを防ぐ）
         }
         const partialChipSoon = () => { clearTimeout(partialChipPaint._t); partialChipPaint._t = setTimeout(partialChipPaint, 120); };
