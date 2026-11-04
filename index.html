@@ -1832,6 +1832,7 @@
                         <span class="font-bold text-softMuted block mb-1">更新履歴</span>
                         <div id="changelog" class="text-[11px] text-softMuted leading-relaxed">
 <div class="mb-1.5"><b class="text-softText">2026-11-03（6）</b><br>編集の道具：「画面の枠」を「特殊演出」にして（動く人のマーク）、右端に固定した（「原文」のボタンはなくした）。「特殊な文字」（回転の矢印と星のマーク）を足して、縦書き（この部分だけ）・ななめ・左右反転・上下反転・回転・逆さを入れられるようにした（編集画面で、ルビや色と同じように、その場で見える。選ばないときは、いまの行ぜんぶ）。文字色の「カスタム」に「この色にする」を足して、選んだ色が本文と「A」の線に出るようにした。OCRのボタンのマークを変えた。特殊演出に、電光掲示板（右から左へ流れる・文字ごとの色・背景の色・折り返し）、駅の発車案内、空港の出発案内、文字化けするシステム画面、文字が崩れる配信コメント、ページがめくれない、ページが巻き戻る、を足した（🎬の演出ビューで動く）。作品のメニューに、Googleドキュメントへの書き出し（本文のみ）を足した。Driveの自動同期は、はじめは切にして、「いま同期する」で手動にできるようにした。Driveのフォルダ名とアプリ名を「読書リーダー(仮)」にした。</div>
+<div class="mb-1.5"><b class="text-softText">2026-11-05（11）</b><br>タグ・ジャンルの候補の動きを直した。金色の候補（ジャンル）を押すと、ジャンルとして付く（別のジャンルが付いていたら、切り替わる。タグに付いていたら、ジャンルに移る）。緑・灰色の候補（タグ）は、続けて何個でも押して追加できる。すでに付いているもの（✓）は、もう一度押すと外れる。</div>
 <div class="mb-1.5"><b class="text-softText">2026-11-05（10）</b><br>魚のメニューを直した。検索・Wiki・作品の詳細設定などを使っても、メニューが閉じない（魚をもう一度押すか、×で閉じる。ページ送りなど、読む画面を動かすものは、これまでどおり閉じる）。「Wiki（作品ごと）」は、見出しを押して、開く・たためる（はじめは、たたんでいる）。中は、ジャンルごとの見出し（これも、押して開く・たためる）の下に、作品が並ぶ。ジャンルがない作品は「未分類」。「今年の読んだ数」「ジャンル別の冊数」は、本棚の上のグラフにあるので、魚のメニューから外した。タグの候補を押すと、そのまま、その作品に追加される（すでに付いているものには「✓」）。</div>
 <div class="mb-1.5"><b class="text-softText">2026-11-05（9）</b><br>新しい版があると、魚のボタンの左上に青い点が付き、魚のメニューに「新しい版があります。更新する」が出る（押すと、保存が終わってから、読み込み直す）。公開側の版の番号（version.json）を、開いたとき・45分おき・画面に戻ったときに、確かめる。この機能が入った版から、働く。</div>
 <div class="mb-1.5"><b class="text-softText">2026-11-05（8）</b><br>「バックアップの一覧（フォルダ）」を足した（パソコンのChrome・Edge）。バックアップを置いたフォルダを1回選ぶと、中のバックアップ（日付・全部か一部か・作品の数）が、新しい順に並ぶ。押すと、読み込む作品を選ぶ画面になる。フォルダを選んでおくと、書き出しも、そのフォルダへ直接保存される。</div>
@@ -3404,7 +3405,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             updateRemoveAll();
             const area=document.getElementById('metadata-candidates'),value=classificationKey(document.getElementById('input-new-tag-val').value);
             area.replaceChildren();
-            classificationChoices().forEach(label=>{const button=document.createElement('button');button.type='button';button.className='classification-choice'+(classificationIsGenre(label)?' is-genre':'');const cur=state.books.find(b=>b.id===state.currentBookId),on=metadataOriginal===null&&!!cur&&classificationLabels(cur).includes(label);button.textContent=(on?'✓ ':'')+label;button.setAttribute('aria-pressed',String(label===value));if(on)button.style.opacity='.6';button.onclick=()=>{if(metadataOriginal===null)addExistingClass(label);else{document.getElementById('input-new-tag-val').value=label;renderMetadataChoices();}};area.append(button);});
+            classificationChoices().forEach(label=>{const button=document.createElement('button');button.type='button';button.className='classification-choice'+(classificationIsGenre(label)?' is-genre':'');const cur=state.books.find(b=>b.id===state.currentBookId),on=metadataOriginal===null&&!!cur&&(classificationIsGenre(label)?classificationKey(cur.genre)===label:classificationLabels(cur).includes(label));button.textContent=(on?'✓ ':'')+label;button.setAttribute('aria-pressed',String(label===value));if(on)button.style.opacity='.6';button.onclick=()=>{if(metadataOriginal===null)addExistingClass(label);else{document.getElementById('input-new-tag-val').value=label;renderMetadataChoices();}};area.append(button);});
         }
         let registrationClassification={genre:'',tags:[]};
         function renderRegistrationClassifications() {
@@ -3465,20 +3466,28 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             document.getElementById('detail-new-tag-box').classList.add('hidden');
             metadataOriginal = null;
         }
-        function addExistingClass(label) {   // 候補から、この作品に足す（保存先の「タグ／ジャンル」の選択に従う）
+        function addExistingClass(label) {   // 候補から、この作品に足す
             const book = state.books.find(b => b.id === state.currentBookId), v = classificationKey(label); if (!book || !v) return;
-            if (classificationLabels(book).includes(v)) { toast('「' + v + '」は、すでに付いています'); return; }
-            if (document.getElementById('metadata-kind').value === 'genre') book.genre = v; else (book.tags ||= []).push(v);
+            const isGenreName = classificationIsGenre(v), curGenre = classificationKey(book.genre), asTag = (book.tags || []).some(t => classificationKey(t) === v);
+            let msg;
+            if (curGenre === v) { removeClassFromBook(book, v); return; }   // すでに、この作品のジャンル：もう一度押すと、外れる
+            if (isGenreName || document.getElementById('metadata-kind').value === 'genre') {   // ジャンルとして付ける（タグに付いていたら、ジャンルに移す）
+                book.genre = v; book.tags = (book.tags || []).filter(t => classificationKey(t) !== v);
+                msg = '「' + v + '」を、ジャンルにしました' + (curGenre ? '（前のジャンル「' + curGenre + '」は、外れました）' : '');
+            } else {
+                if (asTag) { removeClassFromBook(book, v); return; }   // すでに付いているタグ：もう一度押すと、外れる
+                (book.tags ||= []).push(v); msg = '「' + v + '」を追加しました';
+            }
             book.tags = uniqueClassificationTags(book.tags || []);
             document.getElementById('inline-genre').value = book.genre || '';
-            save(); renderDetailTagChips(book.tags); renderShelf(); renderMetadataChoices(); savedToast('「' + v + '」を追加しました');
+            save(); renderDetailTagChips(book.tags); renderShelf(); renderMetadataChoices(); savedToast(msg);
         }
         function removeClassFromBook(book, token) {   // この作品だけ、そのタグ（ジャンル）を外す
             const v = classificationKey(token); if (!book || !v) return;
             if (classificationKey(book.genre) === v) book.genre = '';
             book.tags = (book.tags || []).filter(t => classificationKey(t) !== v);
             document.getElementById('inline-genre').value = book.genre || '';
-            save(); renderDetailTagChips(book.tags); renderShelf(); closeMetadataEditor(); savedToast('「' + v + '」を、この作品から外しました');
+            save(); renderDetailTagChips(book.tags); renderShelf(); if (metadataOriginal === null && !document.getElementById('detail-new-tag-box').classList.contains('hidden')) renderMetadataChoices(); else closeMetadataEditor(); savedToast('「' + v + '」を、この作品から外しました');
         }
         function updateRemoveAll() {   // 入力の欄の名前が、どれかの作品に付いているとき、「全作品から消す」を出す
             const btn = document.getElementById('metadata-remove-all'); if (!btn) return;
@@ -7467,7 +7476,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         }
         // 話の終わり・戻る・本の終わりで、読み終えた話から言葉を拾い、件数を小さく知らせる。読書は止めない
         // ===== 更新の確認：新しい版があれば、魚に青い点とメニュー（版の番号は version.json。公開のたびに、番号が変わる。番号が入っていない開発中は、確かめない） =====
-        const APP_BUILD = '20261104120231';
+        const APP_BUILD = '20261104121205';
         let updateCheckAt = 0;
         async function updateCheck(force) {
             if (APP_BUILD.startsWith('__') || window.__updateReady) return;
