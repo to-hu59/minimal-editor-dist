@@ -1794,6 +1794,7 @@
                     <div class="pt-3 border-t border-woodBorder">
                         <span class="font-bold text-softMuted block mb-1">アプリの更新</span>
                         <p id="app-build-info" class="text-[11px] text-softMuted mb-1.5"></p>
+                        <div id="app-update-notes" class="text-[11px] text-softMuted mb-1.5" hidden></div>
                         <button id="btn-pwa-update" class="w-full py-2 bg-kinariDark text-softText hover:bg-kinari border border-woodBorder rounded-xl font-bold active:scale-95 transition">最新版にする</button>
                         <p class="text-[10px] text-softMuted leading-relaxed mt-1.5">新しい版があるかを確かめて、あれば、読み込み直します。新しい版が見つかると、魚のボタンの左上に、青い点が付きます。</p>
                     </div>
@@ -1840,6 +1841,7 @@
                     <div class="pt-3 border-t border-woodBorder">
                         <span class="font-bold text-softMuted block mb-1">更新履歴</span>
                         <div id="changelog" class="text-[11px] text-softMuted leading-relaxed">
+<div class="mb-1.5"><b class="text-softText">2026-11-05（31）</b><br>新しい版があるとき、魚のメニューと、全体設定の「アプリの更新」に、「この更新の内容」が出るようにした（いまの版より新しい分だけ）。</div>
 <div class="mb-1.5"><b class="text-softText">2026-11-05（30）</b><br>Wikiの一覧の下に、「Wiki関連の機能は、順次、実装しています」と表示した。配布版の更新履歴から、自分用の項目を外した。</div>
 <div class="mb-1.5"><b class="text-softText">2026-11-05（28）</b><br>Wikiの上のバー（固定）に、🏠（本棚TOPへ）と📖（この作品のページへ）を足した。</div>
 <div class="mb-1.5"><b class="text-softText">2026-11-05（27）</b><br>「関連を足す」の窓に、「名前を入れて、作ってつなぐ」を足した（まだ項目にない作品名などを、打つだけで、項目を作ってつなげる。出演作品の役は、ひとことに）。</div>
@@ -8164,7 +8166,11 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                 h += '<button type="button" class="a-btn" data-act="ask">別の人を調べる</button><button type="button" class="a-btn" data-act="back">戻る</button>';
             } else {
                 if (assistState.msg) h += `<div class="a-msg">${wEsc(assistState.msg)}</div>`;
-                if (window.__updateReady) h += '<button type="button" class="a-btn a-main" data-act="app-update">🔄 最新版にする</button>';
+                if (window.__updateReady) {
+                    h += '<button type="button" class="a-btn a-main" data-act="app-update">🔄 最新版にする</button>';
+                    const un = window.__updateNotes || [];
+                    if (un.length) h += '<details class="a-msg" style="margin-top:4px" open><summary style="cursor:pointer;font-weight:700">この更新の内容</summary><ul style="margin:4px 0 0 16px;padding:0;font-size:12px;line-height:1.6">' + un.flatMap(n => n.items).slice(0, 12).map(x => '<li>' + wEsc(x) + '</li>').join('') + '</ul></details>';
+                }
                 if (detail) {
                     const n = wikiPending(bookId).length, inbox = termsBook(bookId).inbox, fresh = inbox.words.length + inbox.statuses.length;
                     if (fresh) h += `<button type="button" class="a-btn a-main" data-act="wiki-inbox">新しい言葉（${fresh}件）</button>`;
@@ -8325,12 +8331,14 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         }
         // 話の終わり・戻る・本の終わりで、読み終えた話から言葉を拾い、件数を小さく知らせる。読書は止めない
         // ===== 更新の確認：新しい版があれば、魚に青い点とメニュー（版の番号は version.json。公開のたびに、番号が変わる。番号が入っていない開発中は、確かめない） =====
-        const APP_BUILD = '20261105124942';
+        const APP_BUILD = '20261105164214';
         let updateCheckAt = 0;
         function paintBuild() {
             const el = document.getElementById('app-build-info'); if (!el) return;
             const m = /^(\d{4})(\d\d)(\d\d)(\d\d)(\d\d)/.exec(APP_BUILD);
             el.textContent = (m ? 'いまの版：' + m[1] + '年' + Number(m[2]) + '月' + Number(m[3]) + '日 ' + m[4] + ':' + m[5] : 'いまの版：開発中') + (window.__updateReady ? '　→ 新しい版があります' : '');
+            const nb = document.getElementById('app-update-notes');
+            if (nb) { const un = window.__updateNotes || []; if (window.__updateReady && un.length) { nb.hidden = false; nb.innerHTML = '<b>この更新の内容</b><ul style="margin:2px 0 0 16px;padding:0;line-height:1.6">' + un.flatMap(n => n.items).slice(0, 12).map(x => '<li>' + wEsc(x) + '</li>').join('') + '</ul>'; } else { nb.hidden = true; nb.innerHTML = ''; } }
         }
         paintBuild();
         async function updateCheck(force) {
@@ -8340,6 +8348,8 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             try {
                 const r = await fetch('version.json?t=' + Date.now(), { cache: 'no-store' }); if (!r.ok) return;
                 const j = await r.json(); if (!j || !j.v || j.v === APP_BUILD) return;
+                // 更新の内容：いまの版より新しい分だけ
+                window.__updateNotes = (Array.isArray(j.notes) ? j.notes : []).filter(n => n && String(n.at) > APP_BUILD && Array.isArray(n.items) && n.items.length);
                 window.__updateReady = j.v; paintBuild();
                 const b = document.getElementById('assist-btn'); if (b) b.dataset.update = '1';
                 if (!b || b.hidden) toast('新しい版があります。アプリを閉じて開き直すと、更新されます');
