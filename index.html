@@ -1376,6 +1376,14 @@
                     <i class="fa-solid fa-plus text-woodAccent text-sm w-5 text-center"></i>
                     <span>この巻に、章を追加</span>
                 </button>
+                <button type="button" id="btn-sheet-move" onclick="moveSheetItem()" class="hidden w-full py-3 px-3 rounded-2xl hover:bg-kinariDark/60 flex items-center space-x-3 text-xs font-bold text-softText active:scale-98 transition text-left">
+                    <i class="fa-solid fa-right-left text-woodAccent text-sm w-5 text-center"></i>
+                    <span id="btn-sheet-move-label"></span>
+                </button>
+                <button type="button" id="btn-sheet-bulk-in" onclick="bulkInSheet()" class="hidden w-full py-3 px-3 rounded-2xl hover:bg-kinariDark/60 flex items-center space-x-3 text-xs font-bold text-softText active:scale-98 transition text-left">
+                    <i class="fa-solid fa-layer-group text-woodAccent text-sm w-5 text-center"></i>
+                    <span id="btn-sheet-bulk-in-label">部なしの話を、ここへ入れる（範囲）</span>
+                </button>
                 <button type="button" id="btn-sheet-edit-item" class="w-full py-3 px-3 rounded-2xl hover:bg-kinariDark/60 flex items-center space-x-3 text-xs font-bold text-softText active:scale-98 transition text-left">
                     <i class="fa-solid fa-pen text-woodAccent text-sm w-5 text-center"></i>
                     <span>名前・形式を変更</span>
@@ -1841,6 +1849,7 @@
                     <div class="pt-3 border-t border-woodBorder">
                         <span class="font-bold text-softMuted block mb-1">更新履歴</span>
                         <div id="changelog" class="text-[11px] text-softMuted leading-relaxed">
+<div class="mb-1.5"><b class="text-softText">2026-11-06（32）</b><br>部なしの作品を作れるようにした（登録で「部をつくる」を外す）。話・巻は、⋮から部へ入れたり、部なしへ出したりできる。部の⋮から、部なしの話を範囲でまとめて入れられる。</div>
 <div class="mb-1.5"><b class="text-softText">2026-11-05（31）</b><br>新しい版があるとき、魚のメニューと、全体設定の「アプリの更新」に、「この更新の内容」が出るようにした（いまの版より新しい分だけ）。</div>
 <div class="mb-1.5"><b class="text-softText">2026-11-05（30）</b><br>Wikiの一覧の下に、「Wiki関連の機能は、順次、実装しています」と表示した。配布版の更新履歴から、自分用の項目を外した。</div>
 <div class="mb-1.5"><b class="text-softText">2026-11-05（28）</b><br>Wikiの上のバー（固定）に、🏠（本棚TOPへ）と📖（この作品のページへ）を足した。</div>
@@ -1979,8 +1988,9 @@
                     </div>
 
                     <div>
-                        <label class="block font-bold text-softText mb-1">初期の部名</label>
+                        <label class="flex items-center gap-2 font-bold text-softText mb-1"><input type="checkbox" id="new-book-use-part" checked class="w-4 h-4 accent-woodAccent"> 部をつくる</label>
                         <input type="text" id="new-book-init-part" value="第1部" class="w-full bg-white border border-woodBorder rounded-xl px-3 py-2 text-xs text-softText outline-none focus:border-woodAccent">
+                        <p class="text-[10px] text-softMuted mt-1">外すと、部なしで作ります（話や巻が、作品の直下に並びます。あとから部を足せます）。C・Dは、部が必要なので、外せません。</p>
                     </div>
                 </div>
                 <div class="p-4 bg-kinariDark border-t border-woodBorder flex justify-end space-x-2 font-sans">
@@ -3810,6 +3820,12 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             if(!projection.length){container.innerHTML=typeC?'<p role="status" class="p-8 text-center text-xs text-softMuted">まだありません</p>':'<p id="toc-empty-favorites" role="status">お気に入りの話・章はありません。各話の星を押すと、ここに表示されます。</p>';if(typeC)renderTocTypeTabs(container,tocTab);return;}
             tocRenderCtx = { book, numbers: tocNumberMap(book), last: pageReader.last[book.id]?.chapter || null };
             container.innerHTML = projection.map(({part, pIdx}) => {
+                // 部なし（隠れた部）：見出しを出さず、話・巻を直接並べる。中身がなく、ほかに部があるときは出さない
+                if (part.hidden) {
+                    const empty = !(part.chapters || []).length && !(part.volumes || []).length;
+                    if (empty && book.parts.length > 1) return '';
+                    return `<div class="part-accordion-card toc-part-hidden" data-part-idx="${pIdx}"><div id="part-items-container-${pIdx}" class="block font-sans">${renderPartInnerContent(part, pIdx, part.formatType || 'simple')}</div></div>`;
+                }
                 const partKey = `${book.id}_part_${pIdx}`;
                 const isPartCollapsed = !!state.collapsedParts[partKey];
 
@@ -3873,8 +3889,11 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             const m = document.createElement('div'); m.id = 'modal-add-menu';
             m.className = 'fixed inset-0 z-50 bg-black/40 flex items-end sm:items-center justify-center';
             const btn = 'w-full text-left px-4 py-3 bg-white border border-woodBorder rounded-xl text-xs font-bold text-softText active:scale-[0.99]';
-            const partLabel = (p, i) => { const n = p.partName || ('第' + (i + 1) + '部'), k = (p.formatType || 'simple') === 'ebook' ? 'ebook' : '単話'; return n === k ? n : n + '（' + k + '）'; };
-            let sel = Math.max(0, parts.findIndex(p => !state.collapsedParts[book.id + '_part_' + parts.indexOf(p)])), selV = -1;
+            const partLabel = (p, i) => { if (p.hidden) return '部なし（直下）'; const n = p.partName || ('第' + (i + 1) + '部'), k = (p.formatType || 'simple') === 'ebook' ? 'ebook' : '単話'; return n === k ? n : n + '（' + k + '）'; };
+            // 初めに選ぶのは、普通の部（部なしの場所は、部がないときだけ）
+            let sel = Math.max(0, parts.findIndex(p => !p.hidden && !state.collapsedParts[book.id + '_part_' + parts.indexOf(p)]));
+            if (parts.length && parts[sel] && parts[sel].hidden) sel = parts.findIndex(p => p.hidden);
+            let selV = -1;
             const draw = () => {
                 const p = parts[sel], fmt = p ? (p.formatType || 'simple') : '', empty = p && !(p.chapters || []).length && !(p.volumes || []).length, mixedD = book.structureType === 'mixed_parts';
                 const rows = [];
@@ -4269,6 +4288,22 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             state.sheetTarget = { type, partIdx, volId, chapId, title: targetTitle, formatType };
             document.getElementById('btn-sheet-comments').classList.toggle('hidden', type !== 'chapter');
             document.getElementById('btn-sheet-add-chapter').classList.toggle('hidden', type !== 'volume');
+            // 部なし⇄部：話・巻は「部へ入れる／部なしへ出す」、部は「部なしの話を範囲で入れる」
+            {
+                const hid = book.parts.findIndex(p => p.hidden), vis = book.parts.findIndex(p => !p.hidden);
+                const moveBtn = document.getElementById('btn-sheet-move'), bulkBtn = document.getElementById('btn-sheet-bulk-in');
+                moveBtn.classList.add('hidden'); bulkBtn.classList.add('hidden');
+                const hiddenHasItems = hid >= 0 && ((book.parts[hid].chapters || []).length || (book.parts[hid].volumes || []).length);
+                if ((type === 'chapter' || type === 'volume') && hid >= 0 && vis >= 0) {
+                    const fromHidden = partIdx === hid;
+                    const dest = fromHidden ? vis : hid;
+                    const destName = fromHidden ? (book.parts[vis].partName || `第${vis + 1}部`) : '';
+                    document.getElementById('btn-sheet-move-label').textContent = fromHidden ? `「${destName}」へ入れる` : '部なしへ出す（直下へ）';
+                    moveBtn.classList.remove('hidden');
+                    state.sheetTarget = { type, partIdx, volId, chapId, title: targetTitle, formatType, dest };
+                }
+                if (type === 'part' && hiddenHasItems && hid !== partIdx && !book.parts[partIdx].hidden) bulkBtn.classList.remove('hidden');
+            }
 
             document.getElementById('sheet-target-title').textContent = targetTitle;
             
@@ -4287,6 +4322,42 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             }, 10);
         };
 
+        // 話・巻を、部へ入れる／部なしへ出す（話は簡単な形式の部、巻はebookの部の間で動かす）
+        window.moveSheetItem = function() {
+            const book = state.books.find(b => b.id === state.currentBookId), t = state.sheetTarget;
+            if (!book || !t || t.dest === undefined) return;
+            const src = book.parts[t.partIdx], dst = book.parts[t.dest];
+            if (!src || !dst) return;
+            if (t.type === 'chapter' && !t.volId) {
+                if ((src.formatType || 'simple') !== 'simple' || (dst.formatType || 'simple') !== 'simple') { toast('ebookの話は、ここでは動かせません'); return; }
+                const i = (src.chapters || []).findIndex(c => c.id === t.chapId); if (i < 0) return;
+                const [c] = src.chapters.splice(i, 1); (dst.chapters = dst.chapters || []).push(c);
+            } else if (t.type === 'volume') {
+                if ((src.formatType || 'simple') !== 'ebook' || (dst.formatType || 'simple') !== 'ebook') { toast('巻は、ebookの部の間で動かせます'); return; }
+                const i = (src.volumes || []).findIndex(v => v.id === t.volId); if (i < 0) return;
+                const [v] = src.volumes.splice(i, 1); (dst.volumes = dst.volumes || []).push(v);
+            } else { toast('この項目は、ここでは動かせません'); return; }
+            save(); closeBottomSheet(); renderDetailAccordion(); updateDetailStats();
+            toast(t.dest === book.parts.findIndex(p => p.hidden) ? '部なしへ出しました' : '部へ入れました');
+        };
+        // 部なしの話を、この部へ範囲で入れる（最初から何件か）
+        window.bulkInSheet = function() {
+            const book = state.books.find(b => b.id === state.currentBookId), t = state.sheetTarget;
+            if (!book || !t) return;
+            const hid = book.parts.findIndex(p => p.hidden), dst = book.parts[t.partIdx];
+            if (hid < 0 || !dst) return;
+            const src = book.parts[hid], isEb = (dst.formatType || 'simple') === 'ebook', unit = isEb ? '巻' : '話';
+            if ((src.formatType || 'simple') !== (dst.formatType || 'simple')) { toast('部なしと、この部の形式が違うので、入れられません'); return; }
+            const arr = isEb ? (src.volumes || []) : (src.chapters || []);
+            if (!arr.length) return;
+            const ans = prompt(`部なしの${unit}（全${arr.length}${unit}）のうち、この部に入れる数を入れてください（最初から）。空欄なら全部、0なら入れない`, String(arr.length));
+            if (ans === null) return;
+            const n = ans.trim() === '' ? arr.length : Math.max(0, Math.min(arr.length, parseInt(ans, 10) || 0));
+            const moved = arr.splice(0, n);
+            if (isEb) dst.volumes = (dst.volumes || []).concat(moved); else dst.chapters = (dst.chapters || []).concat(moved);
+            save(); closeBottomSheet(); renderDetailAccordion(); updateDetailStats();
+            toast(`${n}${unit}を、この部へ入れました`);
+        };
         function closeBottomSheet() {
             const backdrop = document.getElementById('modal-bottom-sheet-backdrop');
             const menu = document.getElementById('sheet-actions-menu');
@@ -8331,7 +8402,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         }
         // 話の終わり・戻る・本の終わりで、読み終えた話から言葉を拾い、件数を小さく知らせる。読書は止めない
         // ===== 更新の確認：新しい版があれば、魚に青い点とメニュー（版の番号は version.json。公開のたびに、番号が変わる。番号が入っていない開発中は、確かめない） =====
-        const APP_BUILD = '20261105164214';
+        const APP_BUILD = '20261106022554';
         let updateCheckAt = 0;
         function paintBuild() {
             const el = document.getElementById('app-build-info'); if (!el) return;
@@ -10989,17 +11060,27 @@ function setupPaging(){
             window.addPartByPrompt = () => {
                 const book = state.books.find(b => b.id === state.currentBookId);
                 if (!book) return;
-                const nextPartNum = (book.parts || []).length + 1;
-                const newPartName = prompt('追加する部の名前を入力してください', `第${nextPartNum}部`);
+                const visibleCount = (book.parts || []).filter(p => !p.hidden).length;
+                const newPartName = prompt('追加する部の名前を入力してください', `第${visibleCount + 1}部`);
                 if (!newPartName) return;
 
                 if (!book.parts) book.parts = [];
-                book.parts.push({
-                    partName: newPartName.trim(),
-                    formatType: 'simple', // デフォルトは単話形式
-                    chapters: [],
-                    volumes: []
-                });
+                // 部なし（隠れた部）に、話・巻があるときは、この部へ入れる数を聞く（最初から）
+                const hid = book.parts.find(p => p.hidden);
+                const fmt = hid ? (hid.formatType || 'simple') : 'simple';
+                const newPart = { partName: newPartName.trim(), formatType: fmt, chapters: [], volumes: [] };
+                if (hid) {
+                    const isEb = fmt === 'ebook', unit = isEb ? '巻' : '話';
+                    const arr = isEb ? (hid.volumes || []) : (hid.chapters || []);
+                    if (arr.length) {
+                        const ans = prompt(`部なしの${unit}（全${arr.length}${unit}）のうち、この部に入れる数を入れてください（最初から）。空欄なら全部、0なら入れない`, String(arr.length));
+                        if (ans === null) return;
+                        const n = ans.trim() === '' ? arr.length : Math.max(0, Math.min(arr.length, parseInt(ans, 10) || 0));
+                        const moved = arr.splice(0, n);
+                        if (isEb) newPart.volumes = moved; else newPart.chapters = moved;
+                    }
+                }
+                book.parts.push(newPart);
 
                 save();
                 updateDetailStats();
@@ -11677,12 +11758,24 @@ function setupPaging(){
          document.addEventListener('click', e => {
              const b = e.target.closest('#new-book-type [data-type]'); if (!b) return;
              document.querySelectorAll('#new-book-type [data-type]').forEach(x => x.setAttribute('aria-checked', x === b));
+             syncUsePartBox();
          });
+         // 「部をつくる」：C・D は部が必要なので、チェックを入れたまま外せない
+         function syncUsePartBox() {
+             const cb = document.getElementById('new-book-use-part'); if (!cb) return;
+             const t = (document.querySelector('#new-book-type [aria-checked="true"]') || {}).dataset?.type || 'D';
+             const forced = t === 'C' || t === 'D';
+             if (forced) cb.checked = true;
+             cb.disabled = forced;
+         }
          function newBookStructure(name) {
              const t = (document.querySelector('#new-book-type [aria-checked="true"]') || {}).dataset?.type || 'D';
              const part = (n, f) => ({ partName: n, formatType: f, chapters: [], volumes: [] });
-             if (t === 'A') return { structureType: 'simple', parts: [part(name, 'simple')] };
-             if (t === 'B') return { structureType: 'ebook', parts: [part(name, 'ebook')] };
+             // 部なし（A・B のときだけ）：隠れた部を1つ持たせて、話・巻を、その中に入れる。画面では、部の見出しを出さない
+             const usePart = (t === 'C' || t === 'D') || !!document.getElementById('new-book-use-part')?.checked;
+             const hidden = (p) => usePart ? p : { ...p, hidden: true, partName: '' };
+             if (t === 'A') return { structureType: 'simple', parts: [hidden(part(name, 'simple'))] };
+             if (t === 'B') return { structureType: 'ebook', parts: [hidden(part(name, 'ebook'))] };
              if (t === 'C') return { structureType: 'mixed_type', parts: [part('単話', 'simple'), part('ebook', 'ebook')] };
              return { structureType: 'mixed_parts', parts: [part(name, 'simple')] };
          }
