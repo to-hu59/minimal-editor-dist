@@ -34,6 +34,8 @@ PDFはそのまま読めます。Wordはダウンロードして開きます。
 
 ヒント：Windows版のWordは 「表示」→「ナビゲーションウィンドウ」をオンにすると 見出しの一覧から読みたい所へ移れます。
 
+Wordで2ページが横に並んで表示されるときは 「表示」→「1ページ」→「100%」の順に押してください。倍率だけ変えるのではなく **先に「1ページ」を押す**のがポイントです。縦1列で表示できます。
+
 ブラウザの自動翻訳で この説明が読みにくいときは 上の日本語の説明か PDF・Wordのマニュアルを開いてください。
 
 ---
@@ -75,6 +77,8 @@ No extra setup is needed to start reading. The Google Drive guide is needed only
 The manuals are written in Japanese. A PDF can be read directly, and a Word file can be downloaded.
 
 Tip: In Word for Windows, turning on View → Navigation Pane shows a heading list for browsing the manuals.
+
+If Word shows two pages side by side, click View → One Page → 100% in that order. The key is to press One Page first, not to change only the zoom. This shows the pages in a single column.
 
 - Quick start (with screenshots): [Read PDF](docs/start.pdf) / [Download Word](https://raw.githubusercontent.com/to-hu59/minimal-editor-dist/main/docs/start.docx)
 - Screens guide, advanced (editing, special text and effects, reading aloud, wiki and more): [Read PDF](docs/app.pdf) / [Download Word](https://raw.githubusercontent.com/to-hu59/minimal-editor-dist/main/docs/app.docx)
