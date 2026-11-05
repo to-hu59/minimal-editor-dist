@@ -1380,6 +1380,10 @@
                     <i class="fa-solid fa-right-left text-woodAccent text-sm w-5 text-center"></i>
                     <span id="btn-sheet-move-label"></span>
                 </button>
+                <button type="button" id="btn-sheet-new-part" onclick="closeBottomSheet(); addPartByPrompt()" class="hidden w-full py-3 px-3 rounded-2xl hover:bg-kinariDark/60 flex items-center space-x-3 text-xs font-bold text-softText active:scale-98 transition text-left">
+                    <i class="fa-solid fa-plus text-woodAccent text-sm w-5 text-center"></i>
+                    <span>部を作って、部なしの話・巻を入れる</span>
+                </button>
                 <button type="button" id="btn-sheet-bulk-in" onclick="bulkInSheet()" class="hidden w-full py-3 px-3 rounded-2xl hover:bg-kinariDark/60 flex items-center space-x-3 text-xs font-bold text-softText active:scale-98 transition text-left">
                     <i class="fa-solid fa-layer-group text-woodAccent text-sm w-5 text-center"></i>
                     <span id="btn-sheet-bulk-in-label">部なしの話を、ここへ入れる（範囲）</span>
@@ -3649,7 +3653,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             const book = state.books.find(b => b.id === state.currentBookId);
             if (!book || !book.parts) return;
 
-            let totalParts = book.parts.length;
+            let totalParts = book.parts.filter(p => !p.hidden).length; // 部なし（隠れた部）は数えない
             let totalChapters = 0;
             let totalChars = 0;
 
@@ -3672,7 +3676,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                 }
             });
 
-            document.getElementById('detail-summary-line').textContent = `全${totalParts}部`;
+            document.getElementById('detail-summary-line').textContent = totalParts ? `全${totalParts}部` : '部なし';
             document.getElementById('detail-count-badge').textContent = `${totalChapters} 話`;
             document.getElementById('detail-char-badge').textContent = `${totalChars.toLocaleString()} 文字`;
         }
@@ -4268,6 +4272,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
 
             let targetTitle = '';
             let formatType = 'simple';
+            if (type === 'hidden') { targetTitle = '部なし（直下）'; state.sheetTarget = { type, partIdx, volId, chapId, title: targetTitle, formatType }; }
 
             if (type === 'part') {
                 const part = book.parts[partIdx];
@@ -4288,6 +4293,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             state.sheetTarget = { type, partIdx, volId, chapId, title: targetTitle, formatType };
             document.getElementById('btn-sheet-comments').classList.toggle('hidden', type !== 'chapter');
             document.getElementById('btn-sheet-add-chapter').classList.toggle('hidden', type !== 'volume');
+            document.getElementById('btn-sheet-new-part').classList.toggle('hidden', type !== 'hidden');
             // 部なし⇄部：話・巻は「部へ入れる／部なしへ出す」、部は「部なしの話を範囲で入れる」
             {
                 const hid = book.parts.findIndex(p => p.hidden), vis = book.parts.findIndex(p => !p.hidden);
@@ -8402,7 +8408,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         }
         // 話の終わり・戻る・本の終わりで、読み終えた話から言葉を拾い、件数を小さく知らせる。読書は止めない
         // ===== 更新の確認：新しい版があれば、魚に青い点とメニュー（版の番号は version.json。公開のたびに、番号が変わる。番号が入っていない開発中は、確かめない） =====
-        const APP_BUILD = '20261106022554';
+        const APP_BUILD = '20261106023201';
         let updateCheckAt = 0;
         function paintBuild() {
             const el = document.getElementById('app-build-info'); if (!el) return;
@@ -11761,12 +11767,14 @@ function setupPaging(){
              syncUsePartBox();
          });
          // 「部をつくる」：C・D は部が必要なので、チェックを入れたまま外せない
+         document.getElementById('new-book-use-part')?.addEventListener('change', () => syncUsePartBox());
          function syncUsePartBox() {
              const cb = document.getElementById('new-book-use-part'); if (!cb) return;
              const t = (document.querySelector('#new-book-type [aria-checked="true"]') || {}).dataset?.type || 'D';
              const forced = t === 'C' || t === 'D';
              if (forced) cb.checked = true;
              cb.disabled = forced;
+             const nm = document.getElementById('new-book-init-part'); if (nm) nm.disabled = !cb.checked;
          }
          function newBookStructure(name) {
              const t = (document.querySelector('#new-book-type [aria-checked="true"]') || {}).dataset?.type || 'D';
