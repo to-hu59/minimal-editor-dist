@@ -1376,7 +1376,7 @@
                     <i class="fa-solid fa-plus text-woodAccent text-sm w-5 text-center"></i>
                     <span>この巻に、章を追加</span>
                 </button>
-                <button type="button" id="btn-sheet-move" onclick="moveSheetItem()" class="hidden w-full py-3 px-3 rounded-2xl hover:bg-kinariDark/60 flex items-center space-x-3 text-xs font-bold text-softText active:scale-98 transition text-left">
+                <button type="button" id="btn-sheet-move" onclick="openMoveChooser()" class="hidden w-full py-3 px-3 rounded-2xl hover:bg-kinariDark/60 flex items-center space-x-3 text-xs font-bold text-softText active:scale-98 transition text-left">
                     <i class="fa-solid fa-right-left text-woodAccent text-sm w-5 text-center"></i>
                     <span id="btn-sheet-move-label"></span>
                 </button>
@@ -1853,6 +1853,7 @@
                     <div class="pt-3 border-t border-woodBorder">
                         <span class="font-bold text-softMuted block mb-1">更新履歴</span>
                         <div id="changelog" class="text-[11px] text-softMuted leading-relaxed">
+<div class="mb-1.5"><b class="text-softText">2026-11-06（36）</b><br>話・巻の⋮に「部へ動かす…」を足した。動かす先の一覧（形式が合う部・部なし・新しい部）から選ぶ。巻は、中の章も一緒に動く。</div>
 <div class="mb-1.5"><b class="text-softText">2026-11-06（35）</b><br>登録画面：C（単話＋ebook）も「部をつくる」を外せるようにした（A・Bと同じ。外すと、見出しなしで「単話」「ebook」のタブだけ）。開いた直後は、最初のタイプD（部が必要）に合わせて、☑を入れたまま固定にした。</div>
 <div class="mb-1.5"><b class="text-softText">2026-11-06（34）</b><br>部なしの作品：「話を追加」「話をまとめて作る」の窓に、「対象:」の行を出さない。</div>
 <div class="mb-1.5"><b class="text-softText">2026-11-06（33）</b><br>部なしの作品：「＋ 追加」の「追加する部」の欄を出さない。話・巻の⋮に「部を作って、この話を入れる」を足した。部の見出しは出さず、「全1部」の数えも直した。</div>
@@ -4298,23 +4299,23 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             document.getElementById('btn-sheet-comments').classList.toggle('hidden', type !== 'chapter');
             document.getElementById('btn-sheet-add-chapter').classList.toggle('hidden', type !== 'volume');
             document.getElementById('btn-sheet-new-part').classList.toggle('hidden', type !== 'hidden');
-            // 部なし⇄部：話・巻は「部へ入れる／部なしへ出す」、部は「部なしの話を範囲で入れる」
+            // 話・巻の⋮：別の部（または部なし）へ動かす。動かす先は、形式が合う部だけ。部の⋮：部なしの話を、範囲で入れる
             {
-                const hid = book.parts.findIndex(p => p.hidden), vis = book.parts.findIndex(p => !p.hidden);
+                const hid = book.parts.findIndex(p => p.hidden);
                 const moveBtn = document.getElementById('btn-sheet-move'), bulkBtn = document.getElementById('btn-sheet-bulk-in');
                 moveBtn.classList.add('hidden'); bulkBtn.classList.add('hidden');
                 const hiddenHasItems = hid >= 0 && ((book.parts[hid].chapters || []).length || (book.parts[hid].volumes || []).length);
-                if ((type === 'chapter' || type === 'volume') && hid >= 0 && vis < 0 && partIdx === hid) {
-                    document.getElementById('btn-sheet-move-label').textContent = type === 'volume' ? '部を作って、この巻を入れる' : '部を作って、この話を入れる';
+                if (type === 'volume' || (type === 'chapter' && !volId)) {
+                    const want = type === 'volume' ? 'ebook' : 'simple', dests = [];
+                    book.parts.forEach((p, i) => {
+                        if (i === partIdx || (p.formatType || 'simple') !== want) return;
+                        const label = p.hidden ? (book.structureType === 'mixed_type' ? (want === 'ebook' ? 'ebook' : '単話') : '部なしへ出す（直下へ）') : (p.partName || `第${i + 1}部`);
+                        dests.push({ i, label });
+                    });
+                    dests.push({ i: -1, label: '＋ 新しい部を作って入れる' });
+                    document.getElementById('btn-sheet-move-label').textContent = type === 'volume' ? '部へ動かす…（この巻）' : '部へ動かす…（この話）';
                     moveBtn.classList.remove('hidden');
-                    state.sheetTarget = { type, partIdx, volId, chapId, title: targetTitle, formatType, dest: -1 };
-                } else if ((type === 'chapter' || type === 'volume') && hid >= 0 && vis >= 0) {
-                    const fromHidden = partIdx === hid;
-                    const dest = fromHidden ? vis : hid;
-                    const destName = fromHidden ? (book.parts[vis].partName || `第${vis + 1}部`) : '';
-                    document.getElementById('btn-sheet-move-label').textContent = fromHidden ? `「${destName}」へ入れる` : '部なしへ出す（直下へ）';
-                    moveBtn.classList.remove('hidden');
-                    state.sheetTarget = { type, partIdx, volId, chapId, title: targetTitle, formatType, dest };
+                    state.sheetTarget = { type, partIdx, volId, chapId, title: targetTitle, formatType, dests };
                 }
                 if (type === 'part' && hiddenHasItems && hid !== partIdx && !book.parts[partIdx].hidden) bulkBtn.classList.remove('hidden');
             }
@@ -4337,11 +4338,25 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         };
 
         // 話・巻を、部へ入れる／部なしへ出す（話は簡単な形式の部、巻はebookの部の間で動かす）
-        window.moveSheetItem = function() {
+        window.openMoveChooser = function() {
+            const t = state.sheetTarget; if (!t || !t.dests) return;
+            const old = document.getElementById('modal-move-chooser'); if (old) old.remove();
+            const m = document.createElement('div'); m.id = 'modal-move-chooser';
+            m.className = 'fixed inset-0 z-[60] bg-black/40 flex items-end sm:items-center justify-center';
+            m.innerHTML = '<div class="bg-kinari rounded-t-3xl sm:rounded-3xl w-full max-w-sm border border-woodBorder shadow-2xl p-4 space-y-2 font-sans max-h-[85vh] overflow-y-auto"><div class="flex items-center justify-between"><h3 class="text-xs font-bold text-softText">動かす先</h3><button type="button" data-close="1" class="text-softMuted p-1"><i class="fa-solid fa-xmark"></i></button></div>'
+                + t.dests.map(d => '<button type="button" data-dest="' + d.i + '" class="w-full text-left px-4 py-3 bg-white border border-woodBorder rounded-xl text-xs font-bold text-softText active:scale-[0.99]">' + escapeHtml(d.label) + '</button>').join('') + '</div>';
+            document.body.appendChild(m);
+            m.addEventListener('click', e => {
+                if (e.target === m || e.target.closest('[data-close]')) { m.remove(); return; }
+                const b = e.target.closest('[data-dest]'); if (b) { const dest = Number(b.dataset.dest); m.remove(); moveSheetItem(dest); }
+            });
+        };
+        // 話・巻を、動かす先の部（-1 なら、新しい部を作る）へ動かす。話は単話の部の間、巻は ebook の部の間
+        window.moveSheetItem = function(dest) {
             const book = state.books.find(b => b.id === state.currentBookId), t = state.sheetTarget;
-            if (!book || !t || t.dest === undefined) return;
-            const src = book.parts[t.partIdx], newPart = t.dest === -1;
-            let dst = newPart ? null : book.parts[t.dest];
+            if (!book || !t || dest === undefined) return;
+            const src = book.parts[t.partIdx], newPart = dest === -1;
+            let dst = newPart ? null : book.parts[dest];
             if (!src || (!newPart && !dst)) return;
             const srcFmt = src.formatType || 'simple', dstFmt = newPart ? srcFmt : (dst.formatType || 'simple');
             if (t.type === 'chapter' && !t.volId) { if (srcFmt !== 'simple' || dstFmt !== 'simple') { toast('ebookの話は、ここでは動かせません'); return; } }
@@ -4350,13 +4365,14 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             const idx = t.type === 'volume' ? (src.volumes || []).findIndex(v => v.id === t.volId) : (src.chapters || []).findIndex(c => c.id === t.chapId);
             if (idx < 0) return;
             if (newPart) {
-                const name = prompt('追加する部の名前を入力してください', '第1部'); if (!name) return;
+                const visible = book.parts.filter(p => !p.hidden).length;
+                const name = prompt('追加する部の名前を入力してください', `第${visible + 1}部`); if (!name) return;
                 dst = { partName: name.trim(), formatType: srcFmt, chapters: [], volumes: [] }; book.parts.push(dst);
             }
             if (t.type === 'volume') { const [v] = src.volumes.splice(idx, 1); (dst.volumes = dst.volumes || []).push(v); }
             else { const [c] = src.chapters.splice(idx, 1); (dst.chapters = dst.chapters || []).push(c); }
             save(); closeBottomSheet(); renderDetailAccordion(); updateDetailStats();
-            toast(!newPart && t.dest === book.parts.findIndex(p => p.hidden) ? '部なしへ出しました' : '部へ入れました');
+            toast(dst.hidden ? '部なしへ出しました' : '部へ動かしました');
         };
         // 部なしの話を、この部へ範囲で入れる（最初から何件か）
         window.bulkInSheet = function() {
@@ -8420,7 +8436,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         }
         // 話の終わり・戻る・本の終わりで、読み終えた話から言葉を拾い、件数を小さく知らせる。読書は止めない
         // ===== 更新の確認：新しい版があれば、魚に青い点とメニュー（版の番号は version.json。公開のたびに、番号が変わる。番号が入っていない開発中は、確かめない） =====
-        const APP_BUILD = '20261106025703';
+        const APP_BUILD = '20261106030525';
         let updateCheckAt = 0;
         function paintBuild() {
             const el = document.getElementById('app-build-info'); if (!el) return;
