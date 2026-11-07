@@ -508,6 +508,21 @@
 #view-reader.editing #reader-progress-wrap { display:none; }
 #reader-menu-access { position:absolute; left:50%; top:8px; transform:translateX(-50%); width:1px; height:1px; padding:0; overflow:hidden; clip-path:inset(50%); z-index:40; }
 #view-reader:not(.reader-controls-open):not(.editing) #reader-menu-access:focus-visible { width:auto; height:44px; padding:8px; clip-path:none; background:#faf6ee; }
+
+/* Reader-only supplied board density; maker/editor unchanged. */
+.az-board-provided.az-board-reader.az-board-reader{font-size:.9em;line-height:1.55;margin:8px 0;padding:6px 8px;max-width:100%;width:auto}
+.az-board-provided.az-board-reader.az-board-reader.small{font-size:.78em;margin:7px 0 9px 3px;padding:2px 8px 3px}
+.az-board-provided.az-board-reader.az-board-reader .bbs-res-text{font-size:1em;line-height:1.55;margin-top:.15em}
+.az-board-provided.az-board-reader.az-board-reader .bbs-title{font-size:1.08em;margin:0 0 .35em;padding:0 0 .3em}
+.az-board-provided.az-board-reader.az-board-reader .bbs-res-meta{font-size:.85em;margin-bottom:.15em;gap:.35em}
+.az-board-provided.az-board-reader.az-board-reader .bbs-res-meta::before{width:1.4em;height:1.4em}
+.az-board-provided.az-board-reader.az-board-reader .bbs-res{margin-bottom:.35em;padding:4px 8px}
+.az-board-provided.az-board-reader.az-board-reader.small .bbs-res{padding:2px 8px 3px}
+.az-board-provided.az-board-reader.az-board-reader .bbs-res:last-child{margin-bottom:0}
+.az-board-provided.az-board-reader.az-board-reader[data-layout="chat"] .bbs-body{gap:.35em}
+.az-board-provided.az-board-reader.az-board-reader .bbs-tree-level-1{margin-left:1.2em;padding-left:.6em}
+.az-board-provided.az-board-reader.az-board-reader .bbs-tree-level-2{margin-left:2.4em;padding-left:.6em}
+.az-board-provided.az-board-reader.az-board-reader .bbs-tree-level-3{margin-left:3.6em;padding-left:.6em}
 </style>
 
 <style>
@@ -1865,6 +1880,7 @@
                     <div class="pt-3 border-t border-woodBorder">
                         <span class="font-bold text-softMuted block mb-1">更新履歴</span>
                         <div id="changelog" class="text-[11px] text-softMuted leading-relaxed">
+<div class="mb-1.5"><b class="text-softText">Version 10.12（2026-11-07）</b><br>1ページに収まる掲示板は途中で切らずに表示します。読む画面の文字・余白と共通の演出再生を整え、特殊演出の説明書を更新しました。</div>
 <div class="mb-1.5"><b class="text-softText">Version 10.11（2026-11-07）</b><br>掲示板メーカーを新しい画面に更新しました。8種類のテーマで作成でき、本文では左寄せで表示します。閉じるボタンも使えます。</div>
 <div class="mb-1.5"><b class="text-softText">Version 10.10（2026-11-07）</b><br>複数行の書式設定と解除を修正。掲示板を見た目のまま編集でき、番号あり／なし・返信・投稿内の改行・色・ルビ・（写真）の文字に対応しました。</div>
 <div class="mb-1.5"><b class="text-softText">Version 10.9（2026-11-07）</b><br>Wikiの項目の、先の追記を、「進行度別情報」の中に、編集の画面と同じ鍵の枠で出すようにした（タップで開く）。</div>
@@ -4584,12 +4600,13 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         function fxBbsScan() {
             const stg = (() => { try { return fxSettingsFor(state.books.find(b => b.id === state.currentBookId)); } catch (e) { return { enabled: true, typeBbs: true }; } })();
             if (stg.enabled === false) return;
-            const boards = document.querySelectorAll('#view-reader [data-fxe]:not([data-fxt])' + (stg.typeBbs !== false ? ', #view-reader .fxbbs:not([data-fxt]):not(.notype), #view-reader .fxkk:not([data-fxt]):not(.notype), #view-reader .fxnote:not([data-fxt])' : '')); if (!boards.length) return;
+            const boards = document.querySelectorAll('#view-reader [data-fxe]:not([data-fxt])' + (stg.typeBbs !== false ? ', #view-reader .fxbbs:not([data-fxt]):not(.notype), #view-reader .fxkk:not([data-fxt]):not(.notype), #view-reader .fxnote:not([data-fxt]), #view-reader .az-board-reader:not([data-fxt]):not(.notype):not([data-effect="none"])' : '')); if (!boards.length) return;
             if (!fxBbsIO) fxBbsIO = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting && e.target.isConnected && e.target.dataset.fxt === 'wait') { fxBbsIO.unobserve(e.target); (e.target.dataset.fxe ? fxEffectRun : e.target.classList.contains('fxkk') ? fxKkType : e.target.classList.contains('fxnote') ? fxNoteShow : fxBbsType)(e.target); } }), { threshold: 0.3 });
             boards.forEach(b => {
+                if(b.classList.contains('az-board-reader')&&window.matchMedia?.('(prefers-reduced-motion: reduce)').matches){b.dataset.fxt='done';return;}
                 if (fxBbsSeen.has(fxBbsKey(b))) { b.dataset.fxt = 'done'; return; }
                 b.dataset.fxt = 'wait';
-                b.querySelectorAll('.bpost, .kkm, .pnote').forEach(p => { p.style.visibility = 'hidden'; });
+                b.querySelectorAll('.bpost, .kkm, .pnote, .bbs-res').forEach(p => { p.style.visibility = 'hidden'; });
                 if (b.classList.contains('fxnote')) b.style.opacity = '0';
                 if (b.dataset.fxe && fxBbsSeen.has(fxBbsKey(b))) { b.dataset.fxt = 'done'; return; }
                 fxBbsIO.observe(b);
@@ -4709,28 +4726,30 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             }
         }
         async function fxBbsType(board) {
-            board.dataset.fxt = 'run'; fxBbsSeen.add(fxBbsKey(board));
-            const snd = (() => { try { return !!fxSettingsFor(state.books.find(b => b.id === state.currentBookId)).sound; } catch (e) { return false; } })();
-            let skip = false; const stop = () => { skip = true; }; board.addEventListener('click', stop);
-            const posts = [...board.querySelectorAll('.bpost')];
-            try {
-                for (const p of posts) {
-                    if (!board.isConnected) return;
-                    p.style.visibility = 'visible';
-                    const body = p.querySelector('.bpb'); if (!body || skip) continue;
-                    const saved = body.innerHTML, chars = [];
-                    const w = document.createTreeWalker(body, NodeFilter.SHOW_TEXT), nodes = []; let n; while ((n = w.nextNode())) nodes.push(n);
-                    for (const t of nodes) { if (!t.data) continue; const frag = document.createDocumentFragment(); for (const ch of t.data) { const sp = document.createElement('span'); sp.textContent = ch; sp.style.opacity = '0'; frag.appendChild(sp); chars.push(sp); } t.replaceWith(frag); }
-                    const step = Math.max(8, Math.min(34, Math.floor(2400 / Math.max(1, chars.length))));
-                    for (const sp of chars) { if (skip || !board.isConnected) break; sp.style.opacity = '1'; if (snd) { if (sp.textContent.trim()) fxKey(); else fxKey(true); } await fxBbsWait(step); }
-                    if (board.isConnected) body.innerHTML = saved;
-                    if (snd && !skip) fxBell();
-                    if (!skip) await fxBbsWait(380);
+            const provided=board.classList.contains('az-board-reader'),posts=[...board.querySelectorAll(provided?'article':'.bpost')],bodySelector=provided?'.az-board-post-body':'.bpb';
+            const settings=(()=>{try{return fxSettingsFor(state.books.find(b=>b.id===state.currentBookId))}catch(e){return {}}})();
+            const saved=posts.map(post=>({post,bodies:[...post.querySelectorAll(bodySelector)].map(body=>({body,html:body.innerHTML}))})),animations=[];
+            const restore=()=>saved.forEach(({post,bodies})=>{post.style.visibility='visible';bodies.forEach(({body,html})=>body.innerHTML=html)});
+            if(provided&&(settings.enabled===false||settings.typeBbs===false||board.dataset.effect==='none'||window.matchMedia?.('(prefers-reduced-motion: reduce)').matches)){restore();board.dataset.fxt='done';return;}
+            const generation=(board._fxBbsGeneration||0)+1;board._fxBbsGeneration=generation;board.dataset.fxt='run';fxBbsSeen.add(fxBbsKey(board));let skip=false;
+            const stop=()=>{skip=true;animations.forEach(a=>a.cancel());restore()};board._fxBbsStop=stop;board.addEventListener('click',stop);
+            try{
+                for(const {post,bodies}of saved){
+                    if(!board.isConnected)break;post.style.visibility='visible';if(skip)continue;
+                    if(provided&&board.dataset.effect==='pop'){
+                        try{animations.push(post.animate([{opacity:0,transform:'translateY(10px)'},{opacity:1,transform:'none'}],{duration:260,easing:'ease-out'}))}catch(e){}
+                        if(settings.sound)fxKey(true);await fxBbsWait(300);continue;
+                    }
+                    for(const {body,html}of bodies){
+                        const chars=[],walker=document.createTreeWalker(body,NodeFilter.SHOW_TEXT),nodes=[];let node;while((node=walker.nextNode()))nodes.push(node);
+                        for(const text of nodes){const fragment=document.createDocumentFragment();for(const ch of text.data){const span=document.createElement('span');span.textContent=ch;span.style.opacity='0';fragment.append(span);chars.push(span)}text.replaceWith(fragment)}
+                        const step=Math.max(8,Math.min(34,Math.floor(2400/Math.max(1,chars.length))));
+                        for(const span of chars){if(skip||!board.isConnected)break;span.style.opacity='1';if(settings.sound)fxKey(!span.textContent.trim());await fxBbsWait(step)}
+                        if(board._fxBbsGeneration===generation)body.innerHTML=html;
+                    }
+                    if(settings.sound&&!skip)fxBell();if(!skip)await fxBbsWait(380);
                 }
-            } finally {
-                board.removeEventListener('click', stop);
-                if (board.isConnected) { board.querySelectorAll('.bpost').forEach(p => { p.style.visibility = 'visible'; const b2 = p.querySelector('.bpb'); if (b2 && b2.querySelector('span[style*="opacity"]') && !b2.querySelector('.tts-sentence')) { /* 打ち途中で止めたとき：元にもどす */ } }); board.dataset.fxt = 'done'; }
-            }
+            }finally{board.removeEventListener('click',stop);animations.forEach(a=>a.cancel());if(board._fxBbsGeneration===generation){restore();board.dataset.fxt='done';delete board._fxBbsStop;}}
         }
         function initFxBbsTyping() {
             const root = document.getElementById('view-reader'); if (!root || root.dataset.fxbbsMo) return; root.dataset.fxbbsMo = '1';
@@ -6128,14 +6147,6 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             if (b) { ev.preventDefault(); ev.stopPropagation(); if (b.dataset.wkc === 'open') { const id = b.dataset.id; wikiCardClose(); wikiOpen('list'); wikiAct('page', { dataset: { id } }); } else if (b.dataset.wkc === 'entry') { wikiCardOpen(b.dataset.id); } else wikiCardClose(); return; }
             const c = document.getElementById('wk-card'); if (c && !c.hidden && !ev.target.closest('#wk-card')) wikiCardClose();
         }, true);
-        document.addEventListener('click',async event=>{
-            const button=event.target.closest?.('[data-provided-play]');if(!button)return;
-            const wrapper=button.closest('[data-provided-reader]'),view=wrapper?.querySelector('.az-board-view');
-            if(!view||typeof AzBoardEditor==='undefined'||typeof AzBoardEditor.playProvidedView!=='function')return;
-            event.preventDefault();event.stopPropagation();const buttons=[...wrapper.querySelectorAll('[data-provided-play]')],status=wrapper.querySelector('[data-provided-playback-status]');
-            buttons.forEach(b=>b.disabled=true);if(status)status.textContent='';
-            try{const playback=AzBoardEditor.playProvidedView(view,{sound:button.dataset.providedPlay==='sound'});const result=await (playback?.finished||playback);if(result?.error)throw Error(result.error)}catch(e){if(status&&status.isConnected)status.textContent='再生できませんでした。もう一度お試しください。'}finally{buttons.forEach(b=>b.disabled=false)}
-        });
         function buildInteractiveSentencesHtml(rawText, frames) {
             if (!rawText.trim()) return '<span class="text-softMuted">本文がありません</span>';
             const paragraphs = rawText.split('\n');
@@ -6167,6 +6178,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
 
             const providedReaderHtml=(frame,startIndex)=>{
                 const template=document.createElement('template');template.innerHTML=AzBoardEditor.html(frame.boardModel);
+                const view=template.content.querySelector('.az-board-provided');view?.classList.add('az-board-reader');if(view&&(smallAll||frame.small))view.classList.add('small');
                 let index=startIndex;
                 const list=AzBoardEditor.ordered(frame.boardModel);
                 for(let row=frame.from;row<=frame.to;row++){
@@ -6187,12 +6199,6 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                         const firstIndex=index-(raw.trim()?splitSentencesSafe(raw).length:0);
                         bodies.forEach(body=>{const span=document.createElement('span');span.className='tts-sentence';span.dataset.sentIdx=String(firstIndex);span.setAttribute('onclick','jumpTtsToSentence('+firstIndex+')');span.innerHTML=body.innerHTML;body.replaceChildren(span)});
                     }
-                }
-                if(frame.boardModel.presentation.effect!=='none'){
-                    const controls=document.createElement('div');controls.dataset.providedPlaybackControls='1';controls.style.cssText='display:flex;gap:8px;flex-wrap:wrap;margin:8px 0';
-                    for(const [sound,label]of [['silent','演出を再生'],['sound','音付きで再生']]){const button=document.createElement('button');button.type='button';button.dataset.providedPlay=sound;button.textContent=label;button.style.cssText='padding:8px 12px;border:1px solid #b9aa94;border-radius:8px;background:#fff;color:#332e27';controls.append(button)}
-                    const status=document.createElement('span');status.dataset.providedPlaybackStatus='1';status.setAttribute('role','status');controls.append(status);template.content.append(controls);
-                    return '<div data-provided-reader="1">'+template.innerHTML+'</div>';
                 }
                 return template.innerHTML;
             };
@@ -6847,7 +6853,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         }
         function fxOpenViewer(bookId, chapId) {
             const ref = commentFindChap(bookId, chapId); if (!ref) return;
-            if(fxHasProvidedBoard(ref.chap)){toast('この話には新しい掲示板があります。別画面の演出ビューは未対応です。掲示板の「演出を再生」か「この画面で、もう一度動かす」を使ってください。');return;}
+            if(fxHasProvidedBoard(ref.chap)){toast('この話には新しい掲示板があります。別画面の演出ビューは未対応です。上部の演出メニューで「この画面で、もう一度動かす」を選んでください。');return;}
             if (fxViewer) fxViewer.close();
             const cfg = fxSettingsFor(ref.book);
             stopSpeech(); hideTtsFloatingBar();
@@ -6868,26 +6874,18 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             window.addEventListener('message', onMsg); fxViewer = { close };
         }
         // 読む画面の中の掲示板・カカオの招待を、もう一度、最初から動かす
-        let providedReplaySequence=0;
-        async function fxReplayProvidedInReader(views) {
-            const sequence=++providedReplaySequence;
-            for(const view of views){
-                if(sequence!==providedReplaySequence||!view.isConnected)break;
-                try{const playback=AzBoardEditor.playProvidedView(view,{sound:false});const result=await(playback?.finished||playback);if(result?.error){toast('掲示板の演出を再生できませんでした。もう一度お試しください。');break}if(result?.cancelled)break;}catch(e){toast('掲示板の演出を再生できませんでした。もう一度お試しください。');break}
-            }
-        }
         function fxReplayInReader() {
-            const boxes = [...document.querySelectorAll('#view-reader .fxbbs, #view-reader .fxkk, #view-reader .fxnote, #view-reader [data-fxe]')];
-            const provided=[...document.querySelectorAll('#view-reader .az-board-provided')].filter(view=>view.dataset.effect&&view.dataset.effect!=='none');
-            if (!boxes.length&&!provided.length) { toast('いまのページには、動く演出がありません。ページをめくって、探してください'); return false; }
+            const boxes = [...document.querySelectorAll('#view-reader .fxbbs, #view-reader .fxkk, #view-reader .fxnote, #view-reader [data-fxe], #view-reader .az-board-reader:not([data-effect="none"])')];
+            if (!boxes.length) { toast('いまのページには、動く演出がありません。ページをめくって、探してください'); return false; }
             boxes.forEach(b => {
+                b._fxBbsStop?.();
                 fxBbsSeen.delete(fxBbsKey(b)); delete b.dataset.fxt;
                 const q = b.querySelector('.kkq'); if (q && q.dataset.orig) { q.textContent = q.dataset.orig; delete q.dataset.orig; }
                 delete b.dataset.no; b.querySelectorAll('.kkbtn button').forEach(x => { x.disabled = false; x.style.opacity = ''; x.style.transform = ''; });
                 const kn = b.querySelector('.kkbtn .n'); if (!kn && b.querySelector('.kkbtn')) { const nb = document.createElement('button'); nb.type = 'button'; nb.className = 'n'; nb.textContent = 'いいえ'; b.querySelector('.kkbtn').appendChild(nb); }
             });
             if(boxes.length){boxes[0].scrollIntoView({ block: 'center', behavior: 'smooth' });fxBbsScan();}
-            if(provided.length)void fxReplayProvidedInReader(provided);return true;
+            return true;
         }
         function fxHeaderAction() {
             const r = commentFindChap(state.currentBookId, state.currentChapterId); if (!r) return;
@@ -9323,8 +9321,8 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         // 話の終わり・戻る・本の終わりで、読み終えた話から言葉を拾い、件数を小さく知らせる。読書は止めない
         // ===== 更新の確認：新しい版があれば、魚に青い点とメニュー（版の番号は version.json。公開のたびに、番号が変わる。番号が入っていない開発中は、確かめない） =====
         // 表示用の版。更新の検出は引き続き APP_BUILD の日時番号を使う。
-        const APP_VERSION = '10.11';
-        const APP_BUILD = '20261107192000';
+        const APP_VERSION = '10.12';
+        const APP_BUILD = '20261107201500';
         let updateCheckAt = 0;
         function paintBuild() {
             const el = document.getElementById('app-build-info'); if (!el) return;
@@ -10686,7 +10684,7 @@ class ReaderPaginator {
    [...node.childNodes].forEach(visit);
   };visit(this.root);this.length=offset;
   // 枠（fx〜のdiv）の中の文字には、一番外の枠の目印をつける。ページの切れ目が枠の途中にならないように使う
-  for(const u of this.units){let e=u.node.nodeType===3?u.node.parentElement:u.node,fr=null;while(e&&e!==this.root){if((e.tagName==='DIV'&&/(^|\s)fx/.test(e.className||''))||(e.classList&&e.classList.contains('tx')))fr=e;e=e.parentElement;}u.frame=fr;}
+  for(const u of this.units){let e=u.node.nodeType===3?u.node.parentElement:u.node,fr=null;while(e&&e!==this.root){if((e.tagName==='DIV'&&/(^|\s)fx/.test(e.className||''))||(e.classList&&(e.classList.contains('tx')||e.classList.contains('az-board-view'))))fr=e;e=e.parentElement;}u.frame=fr;}
  }
  fragment(start,end){
   const fragment=document.createDocumentFragment();if(start>=end)return fragment;
