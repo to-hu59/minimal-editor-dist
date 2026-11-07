@@ -67,8 +67,22 @@ function play(target,options={}){
   const stamp=target.querySelector('.secret-stamp');
   const restoreStamp=()=>{if(style.sheet&&style.sheet.cssRules.length>2)style.sheet.deleteRule(2)};
   if(stamp)style.sheet.insertRule('[data-ym-writing="'+id+'"] .secret-stamp{visibility:hidden}',2);
-  let index=0,current=null,started=0,delayUntil=0;
-  const speed=Number(options.speed)||1;
+  let index=0,current=null,playStarted=null;
+  // Keep the handwriting visible without making reading wait on long documents.
+  // Timings are absolute so a delayed frame can finish several glyphs at once.
+  const requestedSpeed=Number(options.speed),requestedLimit=Number(options.maxDuration);
+  const baseSpeed=Number.isFinite(requestedSpeed)&&requestedSpeed>0?requestedSpeed:4;
+  const maxDuration=Number.isFinite(requestedLimit)&&requestedLimit>0?requestedLimit:4000;
+  let total=0;
+  for(const m of marks){
+    m.startTime=total;
+    if(!m.text.trim()){m.endTime=total;continue}
+    const punctuation=/^[、。，．,.!?！？]$/.test(m.text);
+    total+=punctuation?65:75+Math.random()*40;m.endTime=total;
+    total+=punctuation?140:12;
+  }
+  const speed=Math.max(baseSpeed,total/maxDuration);
+  for(const m of marks){m.startTime/=speed;m.endTime/=speed}
   const advance=()=>{
     if(current){current.range.setStart(current.node,current.end);ink.clear();current=null}
     if(index>=marks.length){
@@ -83,27 +97,31 @@ function play(target,options={}){
   const step=now=>{
     if(stopped)return;
     if(!target.isConnected){handle.cancel();return}
-    if(now<delayUntil){raf=requestAnimationFrame(step);return}
-    while(!current&&index<marks.length){
-      const m=marks[index++];if(!m.text.trim()){m.range.setStart(m.node,m.end);continue}
-      current=m;started=now;
-      const r=document.createRange();r.setStart(m.node,m.start);r.setEnd(m.node,m.end);m.inkRange=r;ink.add(r);
-      currentColor=getComputedStyle(m.node.parentElement).color;pen.style.background=currentColor;
-      m.duration=(/^[、。，．,.!?！？]$/.test(m.text)?65:75+Math.random()*40)/speed;
-    }
-    if(!current){advance();return}
-    const p=Math.min(1,(now-started)/current.duration),rect=current.inkRange.getBoundingClientRect();
-    // Ink appears softly while a small nib crosses the existing, fully laid-out glyph.
-    style.sheet.cssRules[1].style.color='color-mix(in srgb, '+currentColor+' '+Math.round(p*100)+'%, transparent)';
-    if(rect.width>0&&rect.height>0){
-      const x=rect.left+rect.width*(.08+.82*p),y=rect.top+rect.height*.72+Math.sin(p*Math.PI*3)*1.2;
-      pen.style.opacity='0.65';pen.style.transform='translate('+x+'px,'+(y-5)+'px) rotate(35deg)';
-    }else pen.style.opacity='0';
-    if(audio)audio.gain.gain.setTargetAtTime((.018+Math.sin(p*Math.PI)*.012),audio.ctx.currentTime,.018);
-    if(p>=1){
-      const text=current.text;mute();pen.style.opacity='0';
-      if(!advance())return;
-      delayUntil=now+(/^[、。，．,.!?！？]$/.test(text)?140:12)/speed;
+    if(playStarted===null)playStarted=now;
+    const elapsed=now-playStarted;
+    while(true){
+      if(!current){
+        while(index<marks.length){
+          const m=marks[index++];
+          if(!m.text.trim()){m.range.setStart(m.node,m.end);continue}
+          current=m;
+          const r=document.createRange();r.setStart(m.node,m.start);r.setEnd(m.node,m.end);m.inkRange=r;ink.add(r);
+          currentColor=getComputedStyle(m.node.parentElement).color;pen.style.background=currentColor;break;
+        }
+      }
+      if(!current){advance();return}
+      if(elapsed<current.startTime){mute();pen.style.opacity='0';style.sheet.cssRules[1].style.color='transparent';break}
+      const p=Math.min(1,(elapsed-current.startTime)/Math.max(1,current.endTime-current.startTime));
+      if(p>=1){mute();pen.style.opacity='0';if(!advance())return;continue}
+      const rect=current.inkRange.getBoundingClientRect();
+      // Ink and the small nib move over already laid-out glyphs; text never reflows.
+      style.sheet.cssRules[1].style.color='color-mix(in srgb, '+currentColor+' '+Math.round(p*100)+'%, transparent)';
+      if(rect.width>0&&rect.height>0){
+        const x=rect.left+rect.width*(.08+.82*p),y=rect.top+rect.height*.72+Math.sin(p*Math.PI*3)*1.2;
+        pen.style.opacity='0.65';pen.style.transform='translate('+x+'px,'+(y-5)+'px) rotate(35deg)';
+      }else pen.style.opacity='0';
+      if(audio)audio.gain.gain.setTargetAtTime((.018+Math.sin(p*Math.PI)*.012),audio.ctx.currentTime,.018);
+      break;
     }
     raf=requestAnimationFrame(step);
   };

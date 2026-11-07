@@ -77,7 +77,7 @@
   BR['トーク']=(a,lines)=>{
     if(!a[KEY])return originalTalk(a,lines);
     try{unpack(a[KEY]);}catch(_){return originalTalk(a,lines);}
-    return '<div class="blk line-preserved" data-line-state="'+esc(a[KEY])+'" style="max-width:440px;width:100%;margin:18px 0"><iframe title="保存したトーク画面" src="linemaker.html?embed=1&inline=1&reader=1" style="display:block;border:0;border-radius:12px;width:100%;height:280px;max-height:none" loading="eager"></iframe></div>';
+    return '<div class="blk line-preserved" data-line-state="'+esc(a[KEY])+'" style="max-width:440px;width:100%;margin:18px 0"><iframe title="保存したトーク画面" src="linemaker.html?embed=1&inline=1&reader=1" style="display:block;border:0;border-radius:12px;width:100%;height:280px;max-height:none;visibility:hidden" loading="eager"></iframe></div>';
   };
   window.addEventListener('message',e=>{
     if(e.origin!==origin || !['ready','initialized'].includes(e.data?.type))return;

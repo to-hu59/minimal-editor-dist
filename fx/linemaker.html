@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
+  <script>if(new URLSearchParams(location.search).has("reader"))document.documentElement.classList.add("reader","line-awaiting-data");</script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Chat Maker（カタログ組み込み）</title>
@@ -78,7 +79,9 @@
     .view #roomInputBar,.view #roomEditorToolbar{display:none!important}
   .reader .edit-ui,.reader #roomEditorToolbar,.reader #roomInputBar,.reader #msgQuickMenu,.reader #dataBtn{display:none!important}
   .embed:not(.inline) #phoneFrame{height:calc(100dvh - var(--line-toolbar-height,44px) - var(--kbpad,0px))!important}
-  </style>
+  .line-awaiting-data body{visibility:hidden!important}
+  .reader body{font-family:-apple-system,BlinkMacSystemFont,sans-serif!important}
+</style>
 </head>
 <body class="bg-slate-900 min-h-screen flex flex-col items-center justify-center p-0 sm:p-4 select-none">
 
@@ -2859,6 +2862,7 @@
               state.cleanMode = LINE_READER;
               if (!state.rooms.some(r => r.id === state.activeRoomId)) state.activeRoomId = state.rooms[0]?.id || null;
               if (!state.rooms.some(r => r.id === state.boundRoomId)) state.boundRoomId = state.activeRoomId;
+              if(LINE_READER){state.activeRoomId=state.boundRoomId||state.activeRoomId;state.currentTab='room';}
               switchMainTab(state.currentTab || 'room');
             } else { loadFromRows(m.attrs || {}, m.rows || []); switchMainTab('room'); }
             state.cleanMode = LINE_READER;
@@ -2866,6 +2870,7 @@
             document.documentElement.classList.toggle('view', LINE_READER);
             applyCleanModeVisibility();
             window.__lineInitialized = true;
+            document.documentElement.classList.remove('line-awaiting-data');
             parent.postMessage({type:'initialized'}, location.origin);
           }
         });

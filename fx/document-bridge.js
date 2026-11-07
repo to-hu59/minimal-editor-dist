@@ -1,7 +1,7 @@
 /* Adds only the provided document design; old letters and files keep their original renderer. */
 (function(){
 'use strict';
-for(const kind of ['手紙','書類']){
+for(const kind of ['手紙','書類','メール']){
   const previous=BR[kind];
   BR[kind]=(attrs,lines)=>{
     if(attrs['見た目']!=='提供版')return previous(attrs,lines);
@@ -12,9 +12,9 @@ for(const kind of ['手紙','書類']){
   };
 }
 D.providedDocument={
-  prep(el){DocumentWriting.cancel(el.querySelector('.letter-container,.report-container'))},
-  still(el){DocumentWriting.cancel(el.querySelector('.letter-container,.report-container'))},
-  async run(el,a,c){const target=el.querySelector('.letter-container,.report-container');if(!target)return;const run=DocumentWriting.play(target,{sound:!S.pvMute});c.on(()=>run.cancel());await run.promise;}
+  prep(el){(el.querySelector('.email-container')?ProvidedEmailMotion:DocumentWriting).cancel(el.querySelector('.letter-container,.report-container,.email-container'))},
+  still(el){(el.querySelector('.email-container')?ProvidedEmailMotion:DocumentWriting).cancel(el.querySelector('.letter-container,.report-container,.email-container'))},
+  async run(el,a,c){const target=el.querySelector('.letter-container,.report-container,.email-container');if(!target)return;const run=(target.matches('.email-container')?ProvidedEmailMotion:DocumentWriting).play(target,{sound:!S.pvMute});c.on(()=>run.cancel());await run.promise;}
 };
 window.ProvidedDocumentBridge=true;
 })();

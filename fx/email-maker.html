@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="ja"><head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>メール専用 エディタ</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* =========================================
+           基本エディタスタイル
+        ========================================= */
+        body { background-color: #f3f4f6; color: #1f2937; }
+        #editor {
+            min-height: 70vh;
+            outline: none;
+            padding-bottom: 5rem;
+        }
+        #editor:empty:before {
+            content: attr(placeholder);
+            color: #9ca3af;
+            pointer-events: none;
+            display: block;
+        }
+        
+        /* アニメーション用 */
+        .anim-hidden { opacity: 0; transform: translateY(10px); }
+        .anim-show { opacity: 1; transform: translateY(0); transition: all 0.2s ease-out; }
+        .writing-cursor::after { content: '|'; animation: blink 0.8s step-end infinite; }
+        @keyframes blink { 50% { opacity: 0; } }
+
+        /* =========================================
+           メール UI のスタイル
+        ========================================= */
+        .email-container {
+            margin: 1.5rem 0; /* 上下余白、左右は自動的に左寄せベース */
+            background-color: #fff;
+            color: #333;
+            font-family: "Segoe UI", "Meiryo", sans-serif;
+            position: relative;
+            word-break: break-word;
+            
+            /* リサイズ機能（右下を引っ張って幅を変えられる） */
+            resize: horizontal;
+            overflow: hidden; /* はみ出し防止（※これがあるためボタンを内側に入れる必要あり） */
+            min-width: 260px; /* 縮みすぎ防止 */
+            max-width: 100%;
+        }
+
+        /* ホバー時に現れる操作ボタン（確実に見切れない位置に配置） */
+        .doc-delete-btn,
+        .email-actions {
+            display: none;
+            position: absolute;
+            z-index: 20;
+            user-select: none;
+        }
+        #editor .email-container:hover .doc-delete-btn,
+        #editor .email-container:hover .email-actions {
+            display: flex;
+        }
+
+        /* 削除ボタン（一番右） */
+        .doc-delete-btn {
+            top: 8px !important;
+            right: 8px !important;
+            background: #ef4444;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 26px;
+            height: 26px;
+            font-size: 14px;
+            font-weight: bold;
+            line-height: 26px;
+            text-align: center;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* モード切り替えボタン群（削除ボタンの左に配置） */
+        .email-actions {
+            top: 8px !important;
+            right: 42px !important; 
+            gap: 8px;
+        }
+        .email-actions button {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 26px;
+            height: 26px;
+            font-size: 12px;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            line-height: 26px;
+            text-align: center;
+            transition: background 0.2s;
+        }
+        .email-actions button:hover { background: #2563eb; }
+
+        /* ----- PCスタイル ----- */
+        .email-theme-pc {
+            width: 85%; /* 初期幅 */
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+        .email-theme-pc .email-header { padding: 1rem 1.5rem; background-color: #f9fafb; border-bottom: 1px solid #e5e7eb; border-radius: 6px 6px 0 0; }
+        .email-theme-pc .email-body { padding: 1.5rem; }
+
+        /* ----- スマホスタイル ----- */
+        .email-theme-mobile {
+            width: 320px; /* 初期幅 */
+            border: 8px solid #1e293b;
+            border-radius: 20px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+            /* 確実に左寄せにする指定 */
+            margin-left: 0 !important;
+            margin-right: auto !important;
+        }
+        .email-theme-mobile .email-header { padding: 1.25rem 1rem 0.75rem; background-color: #f8fafc; border-bottom: 1px solid #e5e7eb; }
+        .email-theme-mobile .email-body { padding: 1rem; min-height: 150px; }
+
+        /* ----- 共通部品 ----- */
+        .email-row { display: flex; margin-bottom: 0.25rem; font-size: 0.9rem; }
+        .email-row:last-child { margin-bottom: 0; }
+        .email-label { color: #6b7280; width: 65px; flex-shrink: 0; user-select: none; }
+        .email-val { flex-grow: 1; }
+        
+        /* ----- 簡易（省略）モード ----- */
+        .email-simple .email-row-subject,
+        .email-simple .email-row-to,
+        .email-simple .email-row-date { display: none !important; }
+        .email-theme-pc.email-simple .email-header { padding: 0.5rem 1.5rem; }
+        .email-theme-mobile.email-simple .email-header { padding: 1rem 1rem 0.5rem; }
+    
+        #editor .email-container:focus-within .doc-delete-btn,#editor .email-container:focus-within .email-actions{display:flex}
+        .email-val{min-width:0;overflow-wrap:anywhere}
+        @media(hover:none){#editor .doc-delete-btn,#editor .email-actions{display:flex}}
+        @media(max-width:640px){header{flex-wrap:wrap;gap:8px}header>div:last-child{flex-wrap:wrap}main{padding:12px!important}main>div{padding:20px!important}.email-container{min-width:min(260px,100%)}.email-theme-pc{width:100%}.email-header{padding-left:1rem!important;padding-right:1rem!important}}
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800 h-screen flex flex-col">
+
+    <!-- ツールバー -->
+    <header class="bg-white shadow-sm px-4 py-3 flex justify-between items-center z-10">
+        <div>
+            <h1 class="text-lg font-bold text-gray-700">メール専用エディタ</h1>
+        </div>
+        <div class="flex gap-2">
+            <button id="btn-test-anim" class="bg-purple-600 hover:bg-purple-700 text-white px-3 py-2 rounded shadow font-medium transition text-sm flex items-center gap-1">
+                ▶ 演出をテスト
+            </button>
+            <div class="w-px bg-gray-300 mx-1"></div>
+            <button id="btn-insert-email" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded shadow font-medium transition text-sm">
+                📧 メールを挿入
+            </button>
+        </div>
+    </header>
+
+    <!-- エディタ領域 -->
+    <main class="flex-1 overflow-y-auto p-4 md:p-8 flex justify-center">
+        <div class="bg-white w-full max-w-4xl shadow-md rounded-lg p-8 md:p-12 text-lg leading-relaxed border border-gray-200">
+            <div id="editor" contenteditable="true" placeholder="ここに本文を入力。右上のボタンからメールを直接挿入できます。">
+                <p>主人公はパソコンの画面を見つめた。</p>
+                <p>一通の新しいメッセージが届いている。</p>
+                <p><br></p>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const editor = document.getElementById('editor');
+
+        // エディタへHTMLを挿入する関数
+        function insertHtmlToEditor(html) {
+            editor.focus();
+            const selection = window.getSelection();
+            if (selection.getRangeAt && selection.rangeCount) {
+                let range = selection.getRangeAt(0); const email = (range.commonAncestorContainer.nodeType === 1 ? range.commonAncestorContainer : range.commonAncestorContainer.parentElement).closest(".email-container"); if (email && editor.contains(email)) { range = document.createRange(); range.setStartAfter(email); range.collapse(true); }
+                if (!editor.contains(range.commonAncestorContainer)) {
+                    editor.innerHTML += html + "<p><br></p>";
+                } else {
+                    const tempDiv = document.createElement('div');
+                    tempDiv.innerHTML = html + "<p><br></p>"; 
+                    const frag = document.createDocumentFragment();
+                    let node, lastNode;
+                    while ((node = tempDiv.firstChild)) {
+                        lastNode = frag.appendChild(node);
+                    }
+                    range.insertNode(frag);
+                    if (lastNode) {
+                        range = range.cloneRange();
+                        range.setStartAfter(lastNode);
+                        range.collapse(true);
+                        selection.removeAllRanges();
+                        selection.addRange(range);
+                    }
+                }
+            } else {
+                editor.innerHTML += html + "<p><br></p>";
+            }
+        }
+
+        // メール挿入ボタンの処理
+        document.getElementById('btn-insert-email').addEventListener('click', () => {
+            const html = `
+            <div class="email-container email-theme-pc" contenteditable="false">
+                <button class="doc-delete-btn" contenteditable="false" title="削除">×</button>
+                <div class="email-actions" contenteditable="false">
+                    <button class="email-simple-btn" contenteditable="false" title="簡易/詳細表示の切り替え">➖</button>
+                    <button class="email-toggle-btn" contenteditable="false" title="スマホ表示に切り替え">📱</button>
+                </div>
+                <div class="email-header">
+                    <div class="email-row email-row-subject anim-target"><span class="email-label" contenteditable="false">件名:</span> <span class="email-val" contenteditable="true">【重要】プロジェクトに関するご報告</span></div>
+                    <div class="email-row email-row-to anim-target"><span class="email-label" contenteditable="false">宛先:</span> <span class="email-val" contenteditable="true">あなた</span></div>
+                    <div class="email-row email-row-date anim-target"><span class="email-label" contenteditable="false">日時:</span> <span class="email-val" contenteditable="true">2026/11/08 07:00</span></div>
+                    <div class="email-row email-row-from anim-target"><span class="email-label" contenteditable="false">差出人:</span> <span class="email-val font-bold" contenteditable="true">謎のハッカー</span></div>
+                </div>
+                <div class="email-body anim-target" contenteditable="true">
+                    例のデータは無事に抽出完了した。<br>
+                    添付ファイルを確認してくれ。<br>
+                    <br>
+                    これ以上の深追いは危険だ。健闘を祈る。
+                </div>
+            </div>`;
+            insertHtmlToEditor(html);
+        });
+
+        // 挿入されたメールに対する操作（イベント委譲）
+        editor.addEventListener('click', (e) => {
+            // 削除 (×)
+            if (e.target.classList.contains('doc-delete-btn')) {
+                const container = e.target.closest('.email-container');
+                if (container) container.remove();
+            }
+            // 簡易モード切り替え (➖)
+            if (e.target.classList.contains('email-simple-btn')) {
+                const container = e.target.closest('.email-container');
+                if (container) {
+                    container.classList.toggle('email-simple');
+                }
+            }
+            // PC/スマホ 切り替え (📱/💻)
+            if (e.target.classList.contains('email-toggle-btn')) {
+                const container = e.target.closest('.email-container');
+                if (container) {
+                    if (container.classList.contains('email-theme-pc')) {
+                        // PC -> スマホ
+                        container.classList.remove('email-theme-pc');
+                        container.classList.add('email-theme-mobile');
+                        e.target.textContent = '💻';
+                        e.target.title = "PC表示に切り替え";
+                    } else {
+                        // スマホ -> PC
+                        container.classList.remove('email-theme-mobile');
+                        container.classList.add('email-theme-pc');
+                        e.target.textContent = '📱';
+                        e.target.title = "スマホ表示に切り替え";
+                    }
+                }
+            }
+        });
+
+    </script>
+<footer id="email-integration" hidden style="flex-shrink:0;background:#fff;padding:10px;box-shadow:0 -1px 5px #0002;"><div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap"><button id="email-back" type="button" style="padding:10px 16px;border:1px solid #ccc;border-radius:6px">もどる</button><button id="email-save" type="button" style="padding:10px 16px;border:1px solid #ccc;border-radius:6px">この作品に保存</button><button id="email-insert" type="button" style="padding:10px 16px;background:#2563eb;color:white;border-radius:6px">本文に入れる</button></div></footer><script src="email-core.js"></script><script src="email-motion.js"></script><script src="email-maker.js"></script></body></html>

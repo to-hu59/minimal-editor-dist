@@ -29,7 +29,7 @@
   };
   const html=source=>{
     const {attrs}=parse(source);if(!attrs[KEY])throw Error('保存したトークがありません。');
-    return '<span class="ym-line-view" data-line-state="'+esc(attrs[KEY])+'" style="display:block;width:100%;max-width:440px;margin:8px 0;writing-mode:horizontal-tb;white-space:normal"><iframe title="保存したトーク" src="fx/linemaker.html?embed=1&inline=1&reader=1" style="display:block;border:0;border-radius:12px;width:100%;height:280px;max-height:none" loading="eager"></iframe></span>';
+    return '<span class="ym-line-view" data-line-state="'+esc(attrs[KEY])+'" style="display:block;width:100%;max-width:440px;margin:8px 0;writing-mode:horizontal-tb;white-space:normal"><iframe title="保存したトーク" src="fx/linemaker.html?embed=1&inline=1&reader=1" style="display:block;border:0;border-radius:12px;width:100%;height:280px;max-height:none;visibility:hidden" loading="eager"></iframe></span>';
   };
   const inlineBindings=new WeakMap();
   const mountInlineEditable=(atom,source,onChange,onHistory)=>{
