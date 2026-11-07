@@ -1892,6 +1892,7 @@
                     <div class="pt-3 border-t border-woodBorder">
                         <span class="font-bold text-softMuted block mb-1">更新履歴</span>
                         <div id="changelog" class="text-[11px] text-softMuted leading-relaxed">
+<div class="mb-1.5"><b class="text-softText">Version 10.17（2026-11-08）</b><br>LINE／カカオ風メーカーのトーク設定の保存ボタンを固定しました。送信者の表示名をトーク名に合わせ、既読欄と「既読なし」、吹き出し内の改行を直しました。初期アイコンを人型のシルエットに変更しました。</div>
 <div class="mb-1.5"><b class="text-softText">Version 10.16（2026-11-07）</b><br>LINE／カカオ風メーカーを直接開き、本文へ挿入・再編集できるようにしました。読む画面にも完成したトークを表示します。メーカーの見た目と入力方式はそのままです。</div>
 <div class="mb-1.5"><b class="text-softText">Version 10.15（2026-11-07）</b><br>Wikiの追記欄を広げ、長文に合わせた自動拡大と大きく開くボタンを追加しました。特殊演出から手紙・調査票・LINE／カカオ風メーカーを開けます。手紙は文字の位置を保った書き込み演出にし、LINEは写真・プロフィール・返信・複数のトークも保存します。</div>
 <div class="mb-1.5"><b class="text-softText">Version 10.14（2026-11-07）</b><br>見開き表示で右ページの右端が切れる不具合を修正しました。ページごとの余白と幅の計算をそろえ、画面幅に合わせて本文・掲示板が収まるようにしました。</div>
@@ -9400,8 +9401,8 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         // 話の終わり・戻る・本の終わりで、読み終えた話から言葉を拾い、件数を小さく知らせる。読書は止めない
         // ===== 更新の確認：新しい版があれば、魚に青い点とメニュー（版の番号は version.json。公開のたびに、番号が変わる。番号が入っていない開発中は、確かめない） =====
         // 表示用の版。更新の検出は引き続き APP_BUILD の日時番号を使う。
-        const APP_VERSION = '10.16';
-        const APP_BUILD = '20261107234435';
+        const APP_VERSION = '10.17';
+        const APP_BUILD = '20261108002008';
         let updateCheckAt = 0;
         function paintBuild() {
             const el = document.getElementById('app-build-info'); if (!el) return;

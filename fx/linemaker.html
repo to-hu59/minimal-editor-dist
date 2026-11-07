@@ -57,6 +57,12 @@
     }
     /* 長押ししたときに、スマホの「コピー」などのメニューが出ないように */
     #roomMessageArea, #roomMessageArea * { -webkit-touch-callout: none; }
+    #roomEditorToolbar{flex-wrap:wrap}
+    #senderSwitchList{flex:1 1 100%;min-width:0}
+    #roomToolbarActions{width:100%;max-width:100%;flex-wrap:wrap}
+    #sendReadSelect{min-width:148px;max-width:100%;flex-shrink:0}
+    #chatTextInput{resize:none;min-height:32px;max-height:120px;line-height:20px;overflow-y:auto;white-space:pre-wrap;overflow-wrap:anywhere}
+    .chat-message-text{white-space:pre-wrap;overflow-wrap:anywhere}
       .embed body{padding:0!important;min-height:0!important}
     .reader #dataBtn{display:none}
     .embed #phoneFrame{height:calc(100vh - 44px - var(--kbpad,0px))!important;max-width:100%!important;border-radius:0!important}
@@ -257,9 +263,9 @@
             <!-- JSで生成 -->
           </div>
           <!-- 特殊イベント挿入ボタン群 -->
-          <div class="flex items-center gap-1 shrink-0">
+          <div id="roomToolbarActions" class="flex items-center gap-1 flex-wrap min-w-0">
             <button id="sendReadToggleBtn" onclick="toggleSendRead()" class="bg-slate-700 hover:bg-slate-600 px-2 py-1 rounded text-[10px]" title="自分の発言に既読を付けるかどうか"><i class="fa-solid fa-eye"></i> 既読あり</button>
-            <select id="sendReadSelect" onchange="setSendReadText(this.value)" class="bg-slate-700 text-white rounded px-1 py-1 text-[10px] max-w-[84px]" title="送るときの既読の表記（数）"></select>
+            <select id="sendReadSelect" onchange="setSendReadText(this.value)" class="bg-slate-700 text-white rounded px-2 py-1 text-xs" title="送るときの既読の表記（数）" aria-label="既読の表示"></select>
             <button onclick="openQuickInsertModal('date')" class="bg-slate-700 hover:bg-slate-600 px-2 py-1 rounded text-[10px]" title="日付変更線を追加">
               <i class="fa-regular fa-calendar"></i> 日付
             </button>
@@ -277,8 +283,8 @@
           <button onclick="openQuickInsertModal('photo')" class="w-8 h-8 rounded-full hover:bg-slate-100 text-slate-500 flex items-center justify-center shrink-0 transition" title="写真を送信">
             <i class="fa-regular fa-image text-base"></i>
           </button>
-          <div class="flex-1 relative flex items-center">
-            <input id="chatTextInput" type="text" placeholder="メッセージを入力" onkeydown="if(event.key==='Enter') sendTextMessage()" class="w-full bg-slate-100 text-slate-800 text-sm rounded-full pl-3.5 pr-8 py-1.5 focus:outline-none focus:ring-1 focus:ring-slate-300">
+          <div class="flex-1 min-w-0 relative flex items-center">
+            <textarea id="chatTextInput" rows="1" enterkeyhint="enter" placeholder="メッセージを入力" aria-label="メッセージ（改行できます）" oninput="resizeChatComposer()" onkeydown="handleChatComposerKey(event)" class="w-full bg-slate-100 text-slate-800 text-sm rounded-2xl pl-3.5 pr-8 py-1.5 focus:outline-none focus:ring-1 focus:ring-slate-300"></textarea>
             <button onclick="openQuickInsertModal('stamp')" class="absolute right-2.5 text-slate-400 hover:text-slate-600" title="スタンプを送信">
               <i class="fa-regular fa-face-smile text-base"></i>
             </button>
@@ -636,12 +642,13 @@
 
     <!-- 7. トークルーム背景・名前・メンバー不在設定モーダル -->
     <div id="roomSettingsModal" class="hidden absolute inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
-      <div class="bg-white w-full rounded-2xl p-5 shadow-xl space-y-4 max-h-[90%] overflow-y-auto">
-        <div class="flex items-center justify-between border-b border-slate-100 pb-2">
+      <div class="bg-white w-full rounded-2xl shadow-xl max-h-[90%] overflow-hidden flex flex-col">
+        <div class="flex items-center justify-between border-b border-slate-100 p-4 shrink-0">
           <h3 class="font-bold text-sm text-slate-800">トークルーム設定・背景変更</h3>
           <button onclick="closeRoomSettingsModal()" class="text-slate-400 hover:text-slate-700"><i class="fa-solid fa-xmark"></i></button>
         </div>
 
+        <div id="roomSettingsFields" class="p-4 space-y-4 overflow-y-auto min-h-0">
         <div>
           <label class="block text-xs text-slate-500 mb-1">ルーム表示名</label>
           <input id="roomSettingTitleInput" type="text" class="w-full border border-slate-300 rounded-lg px-3 py-1.5 text-sm font-bold">
@@ -675,7 +682,8 @@
           </button>
         </div>
 
-        <div class="flex justify-end gap-2 pt-2">
+        </div>
+        <div id="roomSettingsActions" class="flex justify-end gap-2 p-3 border-t border-slate-100 bg-white shrink-0">
           <button onclick="closeRoomSettingsModal()" class="px-4 py-2 rounded-lg text-xs font-bold text-slate-600 bg-slate-100">キャンセル</button>
           <button onclick="saveRoomSettingsModal()" class="px-4 py-2 rounded-lg text-xs font-bold text-white bg-emerald-600">保存</button>
         </div>
@@ -739,6 +747,8 @@
     // ============================================================================
     // SVG / グラデーション アバター生成ヘルパー
     // ============================================================================
+    // Same solid person silhouette used by the existing Friends tab.
+    const DEFAULT_AVATAR_SHAPE = "<!-- Font Awesome Free 6.5.1 user icon, CC BY 4.0: https://fontawesome.com/license/free Copyright 2023 Fonticons, Inc. --><g transform=\"translate(19.68 14) scale(0.18)\" fill=\"rgba(255,255,255,0.85)\"><path d=\"M224 256A128 128 0 1 0 224 0a128 128 0 1 0 0 256zm-45.7 48C79.8 304 0 383.8 0 482.3C0 498.7 13.3 512 29.7 512H418.3c16.4 0 29.7-13.3 29.7-29.7C448 383.8 368.2 304 269.7 304H178.3z\"/></g>";
     function createGradientAvatarSvg(type, label = '') {
       const presets = {
         pastelBlue: ['#93c5fd', '#fbcfe8'],
@@ -757,10 +767,23 @@
         </defs>
         <rect width="120" height="120" fill="url(#g)"/>
         ${label ? `<text x="50%" y="54%" dominant-baseline="middle" text-anchor="middle" fill="#ffffff" font-family="sans-serif" font-weight="bold" font-size="42">${label}</text>` : `
-        <circle cx="60" cy="46" r="20" fill="rgba(255,255,255,0.85)"/>
-        <path d="M24 108 C24 82 96 82 96 108" fill="rgba(255,255,255,0.85)"/>`}
+        ${DEFAULT_AVATAR_SHAPE}`}
       </svg>`;
       return 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
+    }
+
+    function migrateDefaultAvatars() {
+      // Exact old generated defaults only. Uploaded photos/SVGs and letter/group avatars stay intact.
+      if (!migrateDefaultAvatars.map) {
+        migrateDefaultAvatars.map = new Map(['pastelBlue','pastelGreen','pastelAmber','defaultGray','groupPurple'].map(type => {
+          const next = createGradientAvatarSvg(type);
+          const previous = 'data:image/svg+xml;utf8,' + encodeURIComponent(decodeURIComponent(next.slice('data:image/svg+xml;utf8,'.length)).replace(DEFAULT_AVATAR_SHAPE, "<circle cx=\"60\" cy=\"46\" r=\"20\" fill=\"rgba(255,255,255,0.85)\"/>\n        <path d=\"M24 108 C24 82 96 82 96 108\" fill=\"rgba(255,255,255,0.85)\"/>"));
+          return [previous, next];
+        }));
+      }
+      for (const person of [state.me, ...(state.users || []), ...(state.groups || [])]) {
+        if (person && migrateDefaultAvatars.map.has(person.avatar)) person.avatar = migrateDefaultAvatars.map.get(person.avatar);
+      }
     }
 
     function createDefaultBgSvg(c1 = '#334155', c2 = '#1e293b') {
@@ -967,6 +990,8 @@
     // 全体レンダリング
     // ============================================================================
     function renderAll() {
+      migrateDefaultAvatars();
+      initChatComposer();
       renderThemeStyles();
       renderStatusBar();
       renderFriendsView();
@@ -1342,14 +1367,14 @@
             contentHtml = `
               <div onclick="openMessageEditModal('${msg.id}')" oncontextmenu="handleMsgRightClick(event, '${msg.id}')" class="relative cursor-pointer ${myBubbleClass} px-3.5 py-2 rounded-[18px] shadow-sm max-w-[235px] break-words text-[14px] leading-snug hover:brightness-95 transition">
                 ${replyHtml}
-                <span>${escapeHtml(msg.text)}</span>
+                <span class="chat-message-text">${escapeHtml(msg.text)}</span>
               </div>
             `;
           } else {
             contentHtml = `
               <div onclick="openMessageEditModal('${msg.id}')" oncontextmenu="handleMsgRightClick(event, '${msg.id}')" class="relative cursor-pointer bg-white text-slate-900 bubble-left-line px-3.5 py-2 rounded-[18px] shadow-sm max-w-[235px] break-words text-[14px] leading-snug hover:bg-slate-50 transition">
                 ${replyHtml}
-                <span>${escapeHtml(msg.text)}</span>
+                <span class="chat-message-text">${escapeHtml(msg.text)}</span>
               </div>
             `;
           }
@@ -1422,7 +1447,7 @@
         };
         btn.innerHTML = `
           <img src="${p.avatar}" class="w-4 h-4 rounded-full object-cover" alt="">
-          <span>${escapeHtml(p.id === 'me' ? '自分' : p.name)}</span>
+          <span>${escapeHtml(p.id === 'me' ? '自分' : (room.type === 'direct' && p.id === room.targetId ? room.title || p.name : p.name))}</span>
         `;
         listEl.appendChild(btn);
       });
@@ -1431,11 +1456,34 @@
     // ============================================================================
     // メッセージ送信処理（テキスト・リプライ反映）
     // ============================================================================
+    function initChatComposer() {
+      const input = document.getElementById('chatTextInput');
+      if (!input || input.dataset.compositionBound) return;
+      input.dataset.compositionBound = '1';
+      input.addEventListener('compositionstart', () => { input.dataset.composing = '1'; });
+      input.addEventListener('compositionend', () => { delete input.dataset.composing; resizeChatComposer(); });
+    }
+
+    function resizeChatComposer() {
+      const input = document.getElementById('chatTextInput');
+      if (!input) return;
+      input.style.height = 'auto';
+      input.style.height = Math.max(32, Math.min(input.scrollHeight, 120)) + 'px';
+    }
+
+    function handleChatComposerKey(event) {
+      if (event.isComposing || event.keyCode === 229 || event.target.dataset.composing) return;
+      if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
+        event.preventDefault(); sendTextMessage();
+      }
+    }
+
     function sendTextMessage() {
       if (typeof LINE_READER !== "undefined" && LINE_READER) return;
       const input = document.getElementById('chatTextInput');
-      const text = input.value.trim();
-      if (!text) return;
+      if (input.dataset.composing) return;
+      const text = input.value.replace(/\r\n?/g, '\n');
+      if (!text.trim()) return;
 
       const room = getActiveRoom();
       const isMe = state.activeSenderId === 'me';
@@ -1470,6 +1518,7 @@
       room.lastMessageTime = state.clock;
 
       input.value = '';
+      resizeChatComposer();
       clearReplyTarget();
       renderRoomView();
       scrollToBottom();
@@ -1534,7 +1583,11 @@
     // 既読の表記の選択肢（空は「自動」＝LINEは人数に合わせる・カカオは1）
     const READ_OPTIONS = ['', '既読', '既読 1', '既読 2', '既読 3', '既読 4', '既読 5', '既読 10', '1', '2', '3'];
     function readOptionLabel(v) { return v === '' ? '既読の数：自動' : v; }
-    function setSendReadText(v) { state.sendReadText = v; }
+    function setSendReadText(v) {
+      state.sendRead = v !== 'none';
+      if (v !== 'none') state.sendReadText = v;
+      renderSendReadButton();
+    }
     function defaultReadText(room) {
       if (state.sendReadText) return state.sendReadText;
       if (state.theme === 'kakao') return '1';
@@ -1652,8 +1705,8 @@
     function renderSendReadButton() {
       const sel = document.getElementById('sendReadSelect');
       if (sel) {
-        if (!sel.options.length) sel.innerHTML = READ_OPTIONS.map(v => '<option value="' + v + '">' + readOptionLabel(v) + '</option>').join('');
-        sel.value = state.sendReadText || '';
+        if (!sel.options.length) sel.innerHTML = '<option value="none">既読なし</option>' + READ_OPTIONS.map(v => '<option value="' + v + '">' + readOptionLabel(v) + '</option>').join('');
+        sel.value = state.sendRead === false ? 'none' : state.sendReadText || '';
       }
       const btn = document.getElementById('sendReadToggleBtn');
       if (!btn) return;
