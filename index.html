@@ -1854,8 +1854,8 @@
                     <div class="pt-3 border-t border-woodBorder">
                         <span class="font-bold text-softMuted block mb-1">更新履歴</span>
                         <div id="changelog" class="text-[11px] text-softMuted leading-relaxed">
-<div class="mb-1.5"><b class="text-softText">2026-11-07（2）</b><br>初期化：押す前に「いまの作品はすべて消えます」と確認し、バックアップを書き出せるようにした。「Driveの中身も消す」に☑を入れると、Driveのこのアプリのフォルダをゴミ箱に移す。初期化のあとは、Driveとのつながりを切る（☁からつなぎ直す）。</div>
-<div class="mb-1.5"><b class="text-softText">2026-11-07</b><br>全体設定・バックアップでスクロールしても、上の見出しと閉じるボタンが動かないようにしました。</div>
+<div class="mb-1.5"><b class="text-softText">Version 10.5（2026-11-07）</b><br>初期化：押す前に「いまの作品はすべて消えます」と確認し、バックアップを書き出せるようにした。「Driveの中身も消す」に☑を入れると、Driveのこのアプリのフォルダをゴミ箱に移す。初期化のあとは、Driveとのつながりを切る（☁からつなぎ直す）。</div>
+<div class="mb-1.5"><b class="text-softText">Version 10.5（2026-11-07）</b><br>全体設定・バックアップでスクロールしても、上の見出しと閉じるボタンが動かないようにしました。</div>
 <div class="mb-1.5"><b class="text-softText">2026-11-06（37）</b><br>部を追加するとき、部なしの話・巻を範囲（「1〜10話、15〜20話」「1〜5巻」）で入れられるようにした（空白なら入れない）。部から出した話は、元の位置に戻る。動かす先の書き方を分かりやすくした。並べ替えのとき、部なしのまとまりも、部と一緒に並べ替えられる。</div>
 <div class="mb-1.5"><b class="text-softText">2026-11-06（36）</b><br>話・巻の⋮に「部へ動かす…」を足した。動かす先の一覧（形式が合う部・部なし・新しい部）から選ぶ。巻は、中の章も一緒に動く。</div>
 <div class="mb-1.5"><b class="text-softText">2026-11-06（35）</b><br>登録画面：C（単話＋ebook）も「部をつくる」を外せるようにした（A・Bと同じ。外すと、見出しなしで「単話」「ebook」のタブだけ）。開いた直後は、最初のタイプD（部が必要）に合わせて、☑を入れたまま固定にした。</div>
@@ -8537,8 +8537,8 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         // 話の終わり・戻る・本の終わりで、読み終えた話から言葉を拾い、件数を小さく知らせる。読書は止めない
         // ===== 更新の確認：新しい版があれば、魚に青い点とメニュー（版の番号は version.json。公開のたびに、番号が変わる。番号が入っていない開発中は、確かめない） =====
         // 表示用の版。更新の検出は引き続き APP_BUILD の日時番号を使う。
-        const APP_VERSION = '10.4';
-        const APP_BUILD = '20261107122121';
+        const APP_VERSION = '10.5';
+        const APP_BUILD = '20261107122639';
         let updateCheckAt = 0;
         function paintBuild() {
             const el = document.getElementById('app-build-info'); if (!el) return;
