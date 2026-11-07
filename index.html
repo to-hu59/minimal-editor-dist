@@ -1854,6 +1854,7 @@
                     <div class="pt-3 border-t border-woodBorder">
                         <span class="font-bold text-softMuted block mb-1">更新履歴</span>
                         <div id="changelog" class="text-[11px] text-softMuted leading-relaxed">
+<div class="mb-1.5"><b class="text-softText">Version 10.9（2026-11-07）</b><br>Wikiの項目の、先の追記を、「進行度別情報」の中に、編集の画面と同じ鍵の枠で出すようにした（タップで開く）。</div>
 <div class="mb-1.5"><b class="text-softText">Version 10.8（2026-11-07）</b><br>Wikiの項目の、「先の話に出てくる分」の枠を消した（押しても、中身が出ないため）。</div>
 <div class="mb-1.5"><b class="text-softText">Version 10.7（2026-11-07）</b><br>Wikiのネタバレを、「タップでネタバレを表示」で、いつでも1つずつ開けるようにした。「ネタバレを全部見る」で、まとめて開き、「全部閉じる」で閉じられる。</div>
 <div class="mb-1.5"><b class="text-softText">Version 10.6（2026-11-07）</b><br>初期化のバックアップの窓を、「はい（バックアップしてから初期化）」「いいえ（バックアップせずに初期化）」「初期化をやめる」の3つにした。「初期化をやめる」を押すと、何もしない。</div>
@@ -7736,7 +7737,11 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         // 話数あり：現在より先ならロック。旧試作のネタバレ追記（話数なし）は常にロック
         // ネタバレの鍵：項目ごと・種類ごとに、開いているかを覚える。「all」は、その項目の鍵を全部開く
         function wikiShowKey(id, k) { const R = wikiState.revealed; return !!(R['P:' + id + ':' + k] || R['P:' + id + ':all']); }
-        // 鍵の枠：編集の画面と同じ、縞模様の枠。押すと、開く（開いているときは、押すと閉じる）
+        // 鍵の枠：編集の画面と同じ見た目（大きな鍵・縞模様）。押すと、開く
+        function wikiLockBox(id, k, label) {
+            return '<button type="button" class="wk-lock" data-w="reveal-k" data-id="' + wEsc(id) + '" data-k="' + wEsc(k) + '">🔒 ' + wEsc(label) + '<br>タップでネタバレを表示</button>';
+        }
+        // 鍵の枠（閉じる用の小さい枠：全部見る・全部閉じる の中で使う）
         function wikiLockBtn(id, k, label, open) {
             return '<button type="button" data-w="reveal-k" data-id="' + wEsc(id) + '" data-k="' + wEsc(k) + '" class="wk-lock" style="margin-top:8px"><span style="display:block;font-size:22px;line-height:1.2"><i class="fa-solid fa-lock"></i></span>' + wEsc(label) + '<br>' + (open ? 'タップで閉じる' : 'タップでネタバレを表示') + '</button>';
         }
@@ -8000,9 +8005,13 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                     }
                 }
                 const notes = (e.notes || []).slice().sort((a, b) => (a.ep || 0) - (b.ep || 0)), nVis = notes.filter(n => !wikiNoteLocked(n, cur) || wikiShowKey(e.id, 'n:' + n.id)), nLocked = notes.filter(n => wikiNoteLocked(n, cur) && !wikiShowKey(e.id, 'n:' + n.id));
-                if (nVis.length) {
+                if (notes.length) {
                     h += '<div class="wk-label" style="margin-top:14px">進行度別情報</div>';
-                    for (const n of nVis) h += '<div class="wk-ep"><div class="wk-ep-label">' + (n.ep ? n.ep + '話 判明' : '話数なし') + '</div><div class="wk-note" style="white-space:normal">' + wikiRich(bookId, n.text, e.id, { toc: false }) + '</div></div>';
+                    for (const n of notes) {
+                        const future = wikiNoteLocked(n, cur), shown = !future || wikiShowKey(e.id, 'n:' + n.id);
+                        if (!shown) { h += '<div class="wk-ep wk-ep-future"><div class="wk-ep-label">' + (n.ep ? n.ep + '話 判明予定' : '話数なし') + '</div>' + wikiLockBox(e.id, 'n:' + n.id, '現在の進捗(' + cur + '話)より先の設定です。') + '</div>'; continue; }
+                        h += '<div class="wk-ep' + (future ? ' wk-ep-future' : '') + '"><div class="wk-ep-label">' + (n.ep ? n.ep + '話 判明' + (future ? '予定' : '') : '話数なし') + '</div><div class="wk-note" style="white-space:normal">' + wikiRich(bookId, n.text, e.id, { toc: false }) + '</div></div>';
+                    }
                 }
                 h += wikiBacklinksHtml(bookId, e, cur);
                 {
@@ -8012,8 +8021,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                     wikiState.lockKeys = wikiState.lockKeys || {}; wikiState.lockKeys[e.id] = keys;
                     const allOn = !!wikiState.revealed['P:' + e.id + ':all'];
                     let lk = '';
-                    if (lockedRows) lk += wikiLockBtn(e.id, 'rows', '先の項目の内容が' + lockedRows + '件あります', rowsOpen);
-                    nLocked.forEach(n => { lk += wikiLockBtn(e.id, 'n:' + n.id, (n.ep ? '現在の進捗(' + cur + '話)より先の設定です。' : 'ネタバレとして保存された追記です。'), false); });
+                    if (lockedRows && !rowsOpen) lk += wikiLockBox(e.id, 'rows', '現在の進捗(' + cur + '話)より先の項目があります。');
                     if (lk || keys.length > 1) lk += '<div style="display:flex;justify-content:flex-end;margin-top:8px"><button type="button" class="wk-chip" data-w="reveal-k" data-id="' + wEsc(e.id) + '" data-k="all">' + (allOn ? '全部閉じる' : '🔓 ネタバレを全部見る') + '</button></div>';
                     if (lk) h += '<div class="wk-sec" style="margin-top:12px">' + lk + '</div>';
                 }
@@ -8568,8 +8576,8 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         // 話の終わり・戻る・本の終わりで、読み終えた話から言葉を拾い、件数を小さく知らせる。読書は止めない
         // ===== 更新の確認：新しい版があれば、魚に青い点とメニュー（版の番号は version.json。公開のたびに、番号が変わる。番号が入っていない開発中は、確かめない） =====
         // 表示用の版。更新の検出は引き続き APP_BUILD の日時番号を使う。
-        const APP_VERSION = '10.8';
-        const APP_BUILD = '20261107143957';
+        const APP_VERSION = '10.9';
+        const APP_BUILD = '20261107150353';
         let updateCheckAt = 0;
         function paintBuild() {
             const el = document.getElementById('app-build-info'); if (!el) return;
