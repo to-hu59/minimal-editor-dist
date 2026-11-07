@@ -669,6 +669,17 @@
 .fxbbs .bd1 { margin-left:10px; border-left:2px solid var(--bd); }
 .fxbbs .bd2 { margin-left:20px; border-left:2px solid var(--bd); }
 .fxbbs .bd3 { margin-left:30px; border-left:2px solid var(--bd); }
+
+/* MK2 board geometry; existing theme and explicit palette variables remain authoritative. */
+.fxbbs{display:block;width:auto;max-width:100%;padding:.7em .85em;line-height:1.55;border-radius:8px;white-space:normal}
+.fxbbs .bbh{padding:0;background:transparent;border-bottom:0}
+.fxbbs .bbt{font-size:1.04em;padding:.15em .2em .65em;border-bottom:2px solid var(--bd);margin-bottom:.15em}
+.fxbbs .bpost,.fxbbs .bpc{padding:.62em .2em;border-bottom:1px solid var(--bd)}
+.fxbbs .bpm{font-size:.78em;font-weight:700;margin-bottom:.28em}
+.fxbbs .bpno{color:#8a5d35;margin-right:.45em}
+.fxbbs .bpid{color:#6d7b70;margin-left:.55em;font-weight:600}
+.fxbbs .bpr{font-size:.78em;color:#4f6d96;font-weight:800;margin-bottom:.18em}
+.fxbbs .bpb{line-height:1.55;overflow-wrap:anywhere}
 /* 読む画面の、画面の枠：中の文字の大きさに合わせた箱（右いっぱいには広げない） */
 .fxbox { width:fit-content; max-width:calc(100% - 10px); box-sizing:border-box; margin:14px 0 16px 3px; padding:10px 16px; border:2px solid var(--fxc); border-radius:12px; background:var(--fxb); font-size:.94em; }
 .fxbox > p { margin-bottom:.5rem !important; }
@@ -1854,6 +1865,8 @@
                     <div class="pt-3 border-t border-woodBorder">
                         <span class="font-bold text-softMuted block mb-1">更新履歴</span>
                         <div id="changelog" class="text-[11px] text-softMuted leading-relaxed">
+<div class="mb-1.5"><b class="text-softText">Version 10.11（2026-11-07）</b><br>掲示板メーカーを新しい画面に更新しました。8種類のテーマで作成でき、本文では左寄せで表示します。閉じるボタンも使えます。</div>
+<div class="mb-1.5"><b class="text-softText">Version 10.10（2026-11-07）</b><br>複数行の書式設定と解除を修正。掲示板を見た目のまま編集でき、番号あり／なし・返信・投稿内の改行・色・ルビ・（写真）の文字に対応しました。</div>
 <div class="mb-1.5"><b class="text-softText">Version 10.9（2026-11-07）</b><br>Wikiの項目の、先の追記を、「進行度別情報」の中に、編集の画面と同じ鍵の枠で出すようにした（タップで開く）。</div>
 <div class="mb-1.5"><b class="text-softText">Version 10.8（2026-11-07）</b><br>Wikiの項目の、「先の話に出てくる分」の枠を消した（押しても、中身が出ないため）。</div>
 <div class="mb-1.5"><b class="text-softText">Version 10.7（2026-11-07）</b><br>Wikiのネタバレを、「タップでネタバレを表示」で、いつでも1つずつ開けるようにした。「ネタバレを全部見る」で、まとめて開き、「全部閉じる」で閉じられる。</div>
@@ -2185,6 +2198,628 @@
     })();
     </script>
     <script type="text/x-app" id="app-src">
+/* BEGIN EMBEDDED BOARD EDITOR */
+/* Azunovel board editor. Isolated integration candidate; no network or app storage writes. */
+(function (global) {
+'use strict';
+const START = '［掲示板', END = '［／掲示板］', DATA = '［掲示板データv1:';
+const LOOKS = ['定番','ふつう','明るい','裏'];
+const PRESENTATION = {theme:['classic','dark','modern','pink','fantasy','terminal','neon','underground'],layout:['flat','tree','chat'],effect:['none','pop','typing']};
+const THEMES = {
+ '定番':{bg:'#efefef',fg:'#222222',name:'#2f7a3a',border:'#9a9a9a'},
+ 'ふつう':{bg:'#ffffff',fg:'#222222',name:'#555555',border:'#d5d5d5'},
+ '明るい':{bg:'#fff7fb',fg:'#222222',name:'#c2427f',border:'#f3bfd9'},
+ '裏':{bg:'#0d0d14',fg:'#d9fff0',name:'#35e0a1',border:'#35e0a1'}
+};
+const clone = x => JSON.parse(JSON.stringify(x));
+const color = x => typeof x==='string' && /^#[0-9a-f]{6}$/i.test(x);
+const imageOK = x => typeof x==='string' && /^data:image\/(?:png|jpeg|webp|gif);base64,[A-Za-z0-9+/]+=*$/.test(x);
+function empty() { return {version:1,title:'',board:'',mode:'tree',numbered:false,look:'ふつう',colors:{},posts:[{key:'p1',number:1,name:'名無しさん',authorId:'',parent:null,parts:[{type:'text',text:''}]}]}; }
+function validate(b) {
+ if(!b||b.version!==1||!['tree','flat'].includes(b.mode)||typeof b.numbered!=='boolean'||!LOOKS.includes(b.look)||typeof b.title!=='string'||typeof b.board!=='string'||!Array.isArray(b.posts)||b.posts.length>300)throw Error('掲示板データの形式を確認してください');
+ if(b.title.length>65536||b.board.length>65536||(b.legacyHeader!==undefined&&(typeof b.legacyHeader!=='string'||b.legacyHeader.length>65536))||JSON.stringify(b).length>12*1024*1024||new TextEncoder().encode(JSON.stringify(b)).length>12*1024*1024)throw Error('掲示板のデータが大きすぎます');
+ if(!b.colors||Object.keys(b.colors).some(k=>!['bg','fg','name','border'].includes(k)||!color(b.colors[k])))throw Error('色の指定が正しくありません');
+ if(b.presentation!==undefined&&(!b.presentation||typeof b.presentation!=='object'||Array.isArray(b.presentation)||Object.keys(b.presentation).some(k=>!Object.hasOwn(PRESENTATION,k))||Object.entries(PRESENTATION).some(([k,values])=>!values.includes(b.presentation[k]))))throw Error('掲示板の表示設定が正しくありません');
+ const keys=new Set(b.posts.map(p=>p&&p.key)),seen=new Set(),numbers=new Set();let bytes=0;
+ for(const p of b.posts){
+  if(!p||typeof p.key!=='string'||!/^p[\w-]+$/.test(p.key)||seen.has(p.key)||!Number.isSafeInteger(p.number)||p.number<1||numbers.has(p.number)||typeof p.name!=='string'||typeof p.authorId!=='string'||(p.parent!==null&&(!keys.has(p.parent)||p.parent===p.key))||(p.replyNumber!==undefined&&(!Number.isSafeInteger(p.replyNumber)||p.replyNumber<1))||(['numberLabel','replyLabel','metaLabel','replyLineLabel'].some(k=>p[k]!==undefined&&(typeof p[k]!=='string'||p[k].length>65536)))||!Array.isArray(p.parts)||!p.parts.length||p.parts.length>100)throw Error('投稿または返信先が正しくありません');
+  if(p.name.length>4096||p.authorId.length>4096)throw Error('名前またはIDが長すぎます');
+  if(p.date!==undefined&&(typeof p.date!=='string'||p.date.length>4096))throw Error('投稿日時が正しくありません');
+  seen.add(p.key);numbers.add(p.number);
+  for(const part of p.parts){if(part.type==='text'){if(typeof part.text!=='string')throw Error('本文が正しくありません');bytes+=part.text.length*2}else if(part.type==='image'){if(!imageOK(part.src)||typeof part.alt!=='string')throw Error('対応していない画像です');bytes+=part.src.length}else throw Error('対応していない投稿内容です')}
+ }
+ if(bytes>12*1024*1024)throw Error('掲示板が大きすぎます。画像を減らしてください');return b;
+}
+function replyNumberOf(b,p){const parent=p.parent&&b.posts.find(q=>q.key===p.parent);return parent?parent.number:p.replyNumber||null;}
+function setReplyNumber(b,p,number){const n=Number(number);if(!number){p.parent=null;delete p.replyNumber;return}if(!Number.isSafeInteger(n)||n<1||n===p.number)throw Error('返信先を確認してください');const parent=b.posts.find(q=>q.number===n);p.parent=parent?parent.key:null;if(parent)delete p.replyNumber;else p.replyNumber=n;}
+function headerSet(header,key,value){const re=new RegExp('([\\s　])'+key+'=[^\\s　］]*');if(re.test(header))return header.replace(re,(_,ws)=>value?ws+key+'='+value:'');return value?header.slice(0,-1)+' '+key+'='+value+'］':header;}
+function modelJSON(b){const c=clone(b);delete c.sourceInfo;return JSON.stringify(c)}
+function legacyHeader(b) {
+ let header=b.legacyHeader||'［掲示板］',prior=null;try{prior=b.sourceInfo?JSON.parse(b.sourceInfo.baseline):null}catch(e){}
+ const set=(key,value)=>{header=headerSet(header,key,value)};
+ for(const [key,field,value]of [['形式','mode',b.mode==='tree'?'ツリー':'2ch'],['見た目','look',b.look]])if(!prior||prior[field]!==b[field])set(key,value);
+ for(const [key,field]of [['板','board'],['題','title']])if(!prior||prior[field]!==b[field]){const value=b[field],unsafe=/[\s　］]/.test(value);set(key,unsafe?'':value);set(key+'URI',unsafe?encodeURIComponent(value):'')}
+ for(const [key,field]of [['背景','bg'],['本文色','fg'],['名前色','name'],['枠色','border']])if(!prior||prior.colors[field]!==b.colors[field])set(key,b.colors[field]||'');
+ for(const [key,field]of [['bbsTheme','theme'],['bbsLayout','layout'],['bbsEffect','effect']])if(b.presentation||prior&&prior.presentation)set(key,b.presentation?b.presentation[field]:'');
+ return header;
+}
+function serializeLegacy(b) {
+ validate(b);
+ if(b.sourceInfo&&modelJSON(b)===b.sourceInfo.baseline)return b.sourceInfo.raw;
+ for(const p of b.posts)if(p.parts.length!==1||p.parts[0].type!=='text')throw Error('写真ファイルは保存できません。文字の（写真）を使ってください');
+ let header=legacyHeader(b);
+ const compact=!b.numbered&&b.mode==='tree'&&b.posts.every(p=>p.name==='名無しさん'&&!p.authorId&&!p.replyNumber&&p.numberLabel===undefined&&p.replyLabel===undefined&&p.metaLabel===undefined&&p.replyLineLabel===undefined&&p.date===undefined&&p.parts[0].text.trim()===p.parts[0].text)&&ordered(b).every(({post:p,depth},i)=>p.number===i+1&&(!p.parent||depth>0));
+ const rowsNumbered=b.numbered||!compact;
+ const fieldEncoded=rowsNumbered&&b.posts.some(p=>!p.name||/[\r\n：]/.test(p.name)||p.name.trim()!==p.name||/\sID:/.test(p.name)||/[\s：]/.test(p.authorId));
+ const needsBreaks=b.posts.some(p=>/[\r\n]/.test(p.parts[0].text));
+ const priorBreaks=/(?:[\s　])投稿書式=([12])(?:[\s　］])/.exec(b.legacyHeader||'');
+ const reserved=b.posts.some(p=>/［投稿(?:改行|記号)］/.test(p.parts[0].text));
+ const breakMode=(reserved&&(needsBreaks||priorBreaks))?'2':needsBreaks||priorBreaks?'1':'';
+ const encBody=text=>{text=text.replace(/\r\n?/g,'\n');if(breakMode==='2')text=text.replace(/［投稿記号］/g,'［投稿記号］E').replace(/［投稿改行］/g,'［投稿記号］N');return breakMode?text.replace(/\n/g,'［投稿改行］'):text};
+ const ambiguous=b.posts.some(p=>/^>>\d+(?:\s|$)/.test(p.parts[0].text));
+ const sourceRows=b.posts.map(p=>{
+  const name=fieldEncoded?'u'+encodeURIComponent(p.name):p.name,id=fieldEncoded?'u'+encodeURIComponent(p.authorId):p.authorId,rp=replyNumberOf(b,p);
+  return p.number+' '+name+(id?' ID:'+id:'')+'：'+(rp?'>>'+rp+' ':'')+(ambiguous?'［投稿本文］':'')+encBody(p.parts[0].text);
+ });
+ const rows=rowsNumbered?sourceRows:ordered(b).map(({post:p,depth})=>(depth?' '.repeat((depth-1)*4)+'└ ':'- ')+encBody(p.parts[0].text));
+ header=headerSet(header,'番号表示',!b.posts.length?(b.numbered?'あり':'なし'):!b.numbered&&rowsNumbered?'なし':'');
+ header=headerSet(header,'投稿属性',fieldEncoded?'2':'');
+ header=headerSet(header,'投稿数',b.posts.length?'':'0');
+ header=headerSet(header,'投稿書式',breakMode);
+ header=headerSet(header,'本文境界',ambiguous&&rowsNumbered?'1':'');
+ header=header.replace(/[\s　](?:番号文字|返信文字|投稿見出文字|返信行文字|投稿日時)\d+=[^\s　］]*/g,'');
+ for(const p of b.posts)for(const [label,key]of [['numberLabel','番号文字'],['replyLabel','返信文字'],['metaLabel','投稿見出文字'],['replyLineLabel','返信行文字'],['date','投稿日時']])if(p[label]!==undefined)header=headerSet(header,key+p.number,'u'+encodeURIComponent(p[label]));
+ const source=header+'\n'+(rows.length?rows.join('\n')+'\n':'')+END;
+ if(semantic(parse(source))!==semantic(b))throw Error('掲示板の保存内容を保持できませんでした');return source;
+}
+function semantic(b) {
+ const list=ordered(b);
+ return JSON.stringify({title:b.title,board:b.board,mode:b.mode,numbered:b.numbered,look:b.look,colors:b.colors,presentation:b.presentation&&{theme:b.presentation.theme,layout:b.presentation.layout,effect:b.presentation.effect},posts:list.map(({post:p})=>({number:p.number,name:p.name,id:p.authorId,reply:replyNumberOf(b,p),numberLabel:p.numberLabel,replyLabel:p.replyLabel,metaLabel:p.metaLabel,replyLineLabel:p.replyLineLabel,date:p.date,parts:p.parts.map(x=>x.type==='text'?{type:'text',text:x.text.replace(/\r\n?/g,'\n')}:x)}))});
+}
+function insertPlaceholder(b,key,index,offset) {
+ const p=b.posts.find(p=>p.key===key),part=p&&p.parts[index];
+ if(!part||part.type!=='text'||!Number.isInteger(offset)||offset<0||offset>part.text.length)throw Error('本文の位置を選んでください');
+ part.text=part.text.slice(0,offset)+'（写真）'+part.text.slice(offset);
+}
+function serialize(board) { return serializeLegacy(board); }
+function serializeV1(board) {
+ validate(board);
+ return START+' 形式='+(board.mode==='tree'?'ツリー':'2ch')+' 見た目='+board.look+'］\n'+DATA+encodeURIComponent(modelJSON(board))+'］\n'+END;
+}
+function parse(source) {
+ const lines=String(source).replace(/\r\n?/g,'\n').split('\n');
+ if(!/^［掲示板(?:[\s　][^］]*)?］$/.test(lines[0]||'')||lines[lines.length-1]!==END)throw Error('閉じた掲示板の範囲を選んでください');
+ if(lines[1]&&lines[1].startsWith(DATA)){if(lines.length!==3||!lines[1].endsWith('］')||lines[1].length>40*1024*1024)throw Error('掲示板データが壊れています');return validate(JSON.parse(decodeURIComponent(lines[1].slice(DATA.length,-1))))}
+ const attr=k=>(lines[0].match(new RegExp('(?:[\\s　])'+k+'=([^\\s　］]*)'))||[])[1]||'';
+ const b=empty();b.title=attr('題URI')?decodeURIComponent(attr('題URI')):attr('題');b.board=attr('板URI')?decodeURIComponent(attr('板URI')):attr('板');b.mode=/^(ツリー|tree)$/i.test(attr('形式'))?'tree':'flat';b.look=LOOKS.includes(attr('見た目'))?attr('見た目'):'定番';b.legacyHeader=lines[0];b.posts=[];
+ for(const [key,field]of [['背景','bg'],['本文色','fg'],['名前色','name'],['枠色','border']])if(color(attr(key)))b.colors[field]=attr(key);
+ if(['bbsTheme','bbsLayout','bbsEffect'].some(k=>new RegExp('(?:[\\s　])'+k+'=').test(lines[0])))b.presentation={theme:attr('bbsTheme'),layout:attr('bbsLayout'),effect:attr('bbsEffect')};
+ const raw=lines.slice(1,-1).filter(x=>x.trim()),numberedRows=raw.some(x=>/^\s*\d+\s+.+?：/.test(x));b.numbered=attr('番号表示')==='あり'||numberedRows&&attr('番号表示')!=='なし';
+ const nums=new Map(),depths=[],replies=[];
+ raw.forEach((line,index)=>{
+  const m=line.match(/^\s*(\d+)\s+(.+?)(?:\s+ID:(\S+))?：(.*)$/),compact=line.match(/^([ 　]*)└+[ 　─]*(.*)$/),depth=compact?1+Math.floor(compact[1].replace(/　/g,'  ').length/4):0;
+  let body=m?m[4]:compact?compact[2]:line.trim().replace(/^[-－ー・][ 　]*/,''),reply=null;
+  if(m){const r=body.match(/^>>(\d+)\s*/);if(r){reply=+r[1];body=body.slice(r[0].length)}if(attr('本文境界')==='1'&&body.startsWith('［投稿本文］'))body=body.slice('［投稿本文］'.length)}
+  if(['1','2'].includes(attr('投稿書式')))body=body.split('［投稿改行］').join('\n');
+  if(attr('投稿書式')==='2')body=body.replace(/［投稿記号］([EN])/g,(_,x)=>x==='E'?'［投稿記号］':'［投稿改行］');
+  const decodeField=s=>{if(!s.startsWith('u'))throw Error('投稿属性が壊れています');return decodeURIComponent(s.slice(1))};
+  const p={key:'p'+(index+1),number:m?+m[1]:index+1,name:m?m[2]:'名無しさん',authorId:m?m[3]||'':'',parent:depth?depths[Math.min(depth-1,depths.length-1)]||null:null,parts:[{type:'text',text:body}]};
+  if(m&&attr('投稿属性')==='2'){p.name=decodeField(p.name);p.authorId=decodeField(p.authorId)}
+  for(const [label,key]of [['numberLabel','番号文字'],['replyLabel','返信文字'],['metaLabel','投稿見出文字'],['replyLineLabel','返信行文字'],['date','投稿日時']]){const v=attr(key+p.number);if(v){if(!v.startsWith('u'))throw Error('投稿表示が壊れています');p[label]=decodeURIComponent(v.slice(1))}}
+  b.posts.push(p);nums.set(p.number,p.key);depths[depth]=p.key;depths.length=depth+1;replies.push(reply);
+ });
+ b.posts.forEach((p,i)=>{const n=replies[i];if(n){if(n===p.number){p.parent=null;p.replyNumber=n}else if(nums.has(n))p.parent=nums.get(n);else{p.parent=null;p.replyNumber=n}}});
+ if(!b.posts.length&&attr('投稿数')!=='0')b.posts=empty().posts;
+ b.sourceInfo={raw:String(source),baseline:modelJSON(b)};return validate(b);
+}
+function ordered(b) {
+ validate(b);const posts=b.posts.map((post,index)=>({post,index,depth:0})).sort((a,z)=>a.post.number-z.post.number||a.index-z.index);
+ if(b.mode==='flat')return posts;
+ const by=new Map(posts.map(e=>[e.post.key,e])),kids=new Map(),roots=[],result=[],seen=new Set();
+ for(const e of posts){const parent=by.get(e.post.parent);if(!parent||parent===e)roots.push(e);else{if(!kids.has(parent))kids.set(parent,[]);kids.get(parent).push(e)}}
+ function visit(root){const stack=[{entry:root,depth:0}];while(stack.length){const {entry,depth}=stack.pop();if(seen.has(entry))continue;seen.add(entry);result.push({post:entry.post,depth});const children=kids.get(entry)||[];for(let i=children.length-1;i>=0;i--)stack.push({entry:children[i],depth:depth+1})}}
+ roots.forEach(visit);posts.forEach(visit);return result;
+}
+function addReply(b,parent=null) {
+ validate(b); if(parent!==null&&!b.posts.some(p=>p.key===parent))throw Error('返信先が見つかりません');
+ let i=Math.max(...b.posts.map(p=>p.number),0)+1,key='p'+i;while(b.posts.some(p=>p.key===key))key+='x';
+ const p={key,number:i,name:'名無しさん',authorId:'',parent,parts:[{type:'text',text:''}]};b.posts.push(p);return p;
+}
+function removePost(b,key) {
+ const p=b.posts.find(x=>x.key===key);if(!p)return;
+ b.posts=b.posts.filter(x=>x!==p);b.posts.forEach(x=>{if(x.parent===key){x.parent=null;x.replyNumber=p.number}});
+}
+function insertImage(b,key,partIndex,offset,src,alt='') {
+ if(!imageOK(src))throw Error('対応していない画像です');
+ const p=b.posts.find(x=>x.key===key),part=p&&p.parts[partIndex];
+ if(!part||part.type!=='text'||!Number.isInteger(offset)||offset<0||offset>part.text.length)throw Error('写真を入れる本文の位置を選んでください');
+ const next=clone(b),q=next.posts.find(x=>x.key===key);
+ q.parts.splice(partIndex,1,{type:'text',text:part.text.slice(0,offset)},{type:'image',src,alt},{type:'text',text:part.text.slice(offset)});
+ validate(next);p.parts=q.parts;
+}
+function escape(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function legacyOptions(b) {
+ const get=k=>((b.legacyHeader||'').match(new RegExp('(?:[\\s　])'+k+'=([^\\s　］]+)'))||[])[1]||'';
+ return {color:get('色'),notype:get('演出')==='なし',small:/^(小|小さめ)$/.test(get('大きさ')),header:b.legacyHeader||''};
+}
+function theme(b){const c=Object.assign({},THEMES[b.look]),opts=legacyOptions(b),palette={'紫':'#8b6be0','茶':'#a8742c','黄土':'#a8742c','青':'#4aa3e0','赤':'#e05a5a','黒':'#6b6b6b','金':'#c9a227','緑':'#3aa874','白':'#9aa5b8'};if(palette[opts.color])c.border=palette[opts.color];return Object.assign(c,b.colors)}
+function inlineHTML(text) {
+ const styles={'太字':'font-weight:bold','斜体':'font-style:italic','下線':'text-decoration:underline','取消線':'text-decoration:line-through','マーカー':'background:#fff3a0;color:inherit','大きく':'font-size:1.35em','小さく':'font-size:.8em','中央':'display:block;text-align:center','右':'display:block;text-align:right'};
+ const colors={'赤':'#d32f2f','青':'#1976d2','緑':'#388e3c','橙':'#f57c00'};
+ function plain(s){let out='',at=0;const re=/｜([^｜\r\n《》]+)《([^《》\r\n]+)》|([一-龯々]+)《([^《》\r\n]+)》/g;for(const m of s.matchAll(re)){out+=escape(s.slice(at,m.index))+'<ruby>'+escape(m[1]||m[3])+'<rt>'+escape(m[2]||m[4])+'</rt></ruby>';at=m.index+m[0].length}return out+escape(s.slice(at))}
+ function draw(s,depth){if(depth>16)return plain(s);const token=/［(太字|斜体|下線|取消線|マーカー|大きく|小さく|中央|右|色)(?::([^］\r\n]+))?］/g;let result='',at=0,m;
+ while((m=token.exec(s))){const ending='［／'+m[1]+'］',end=s.indexOf(ending,token.lastIndex);if(end<0)continue;
+ const val=m[1]==='色'?(colors[m[2]]||(color(m[2])?m[2]:null)):null;if(m[1]==='色'&&!val)continue;
+ result+=plain(s.slice(at,m.index))+'<span style="'+(val?'color:'+val:styles[m[1]])+'">'+draw(s.slice(token.lastIndex,end),depth+1)+'</span>';
+ at=end+ending.length;token.lastIndex=at;
+ }return result+plain(s.slice(at))}
+ return draw(String(text),0);
+}
+
+const RICH_STYLE={'太字':'font-weight:bold','斜体':'font-style:italic','下線':'text-decoration:underline','取消線':'text-decoration:line-through','マーカー':'background:#fff3a0;color:inherit','大きく':'font-size:1.35em','小さく':'font-size:.8em','中央':'display:block;text-align:center','右':'display:block;text-align:right','リンク':'color:#1976d2;text-decoration:underline'};
+const RICH_COLORS={'赤':'#d32f2f','青':'#1976d2','緑':'#388e3c','橙':'#f57c00'};
+function richTokens(source,depth=0) {
+ if(depth>32)return [{type:'text',text:source}];
+ const nodes=[];let at=0,plainStart=0;
+ const pushText=end=>{if(end>plainStart)nodes.push({type:'text',text:source.slice(plainStart,end)})};
+ while(at<source.length){
+  const rest=source.slice(at),ruby=rest.match(/^｜([^｜\r\n《》]+)《([^《》\r\n]+)》|^([一-龯々]+)《([^《》\r\n]+)》/);
+  if(ruby){pushText(at);nodes.push({type:'ruby',source:ruby[0],base:ruby[1]||ruby[3],reading:ruby[2]||ruby[4]});at+=ruby[0].length;plainStart=at;continue}
+  const m=rest.match(/^［(太字|斜体|下線|取消線|マーカー|大きく|小さく|中央|右|色|リンク)(?::([^］\r\n]+))?］/);
+  if(m){
+   const name=m[1],val=m[2],valid=name==='色'?(color(val)||RICH_COLORS[val]):name==='リンク'?typeof val==='string':val===undefined;
+   if(valid){const close='［／'+name+'］',openRe=new RegExp('［(?:／)?'+name+'(?::[^］\\r\\n]+)?］','g');openRe.lastIndex=at+m[0].length;let level=1,t,end=-1;
+    while((t=openRe.exec(source))){if(t[0]===close)level--;else level++;if(level===0){end=t.index;break}}
+    if(end>=0){pushText(at);nodes.push({type:'mark',name,value:val||'',open:m[0],close,children:richTokens(source.slice(at+m[0].length,end),depth+1)});at=end+close.length;plainStart=at;continue}
+   }
+  }
+  at++;
+ }
+ pushText(source.length);return nodes;
+}
+function richSource(nodes){return nodes.map(n=>n.type==='text'?n.text:n.type==='ruby'?n.source:n.open+richSource(n.children)+n.close).join('')}
+function richHTML(nodes){return nodes.map(n=>n.type==='text'?escape(n.text).replace(/\r/g,'&#13;'):n.type==='ruby'?'<ruby contenteditable="false" data-az-source="'+escape(n.source)+'">'+escape(n.base)+'<rt>'+escape(n.reading)+'</rt></ruby>':'<span data-az-open="'+escape(n.open)+'" data-az-close="'+escape(n.close)+'" style="'+(n.name==='色'?'color:'+(RICH_COLORS[n.value]||n.value):RICH_STYLE[n.name])+'">'+richHTML(n.children)+'</span>').join('')}
+function richSerialize(node) {
+ if(node.nodeType===3)return node.data;
+ if(node.nodeType!==1&&node.nodeType!==11)return '';
+ const data=node.dataset||{};
+ if(data.azSource!==undefined)return data.azSource;
+ if(data.azTail!==undefined)return '';
+ if(node.nodeName==='BR')return '\n';
+ let text='';
+ for(const child of Array.from(node.childNodes||[])){
+  if(child.nodeType===1&&/^(DIV|P)$/.test(child.nodeName)&&text&&!text.endsWith('\n'))text+='\n';
+  text+=richSerialize(child);
+ }
+ return (data.azOpen||'')+text+(data.azClose||'');
+}
+function richEditor(initial,onChange,onError) {
+ const root=element('div',undefined,'az-rich');root.contentEditable='true';root.spellcheck=false;root.setAttribute('role','textbox');root.setAttribute('aria-label','投稿本文');root.setAttribute('aria-multiline','true');
+ let saved=null,composing=false,history=[initial],cursor=0;
+ function render(source){root.innerHTML=richHTML(richTokens(source));if(richSerialize(root)!==source)throw Error('本文の表示と元データが一致しません');tail()}
+ function tail(){root.querySelectorAll('[data-az-tail]').forEach(n=>n.remove());if(!root.textContent||/[\r\n]$/.test(richSerialize(root))){const br=element('br');br.dataset.azTail='1';root.append(br)}}
+ function sync(record=true){const source=richSerialize(root);onChange(source);if(record&&history[cursor]!==source){history.splice(cursor+1);history.push(source);if(history.length>50)history.shift();cursor=history.length-1}return source}
+ function capture(){const sel=getSelection();if(sel&&sel.rangeCount){const r=sel.getRangeAt(0);if(root.contains(r.startContainer)&&root.contains(r.endContainer))saved=r.cloneRange()}}
+ function selection(requireText=false){if(composing)throw Error('文字の変換を確定してから操作してください');capture();if(!saved||!root.contains(saved.startContainer)||!root.contains(saved.endContainer)){if(requireText)throw Error('先に本文を選択してください');saved=document.createRange();saved.selectNodeContents(root);saved.collapse(false)}if(requireText&&saved.collapsed)throw Error('先に本文を選択してください');for(const node of [saved.startContainer,saved.endContainer]){const el=node.nodeType===1?node:node.parentElement;if(el?.closest('[data-az-source]'))throw Error('ルビは文字全体を選択してください')}const sel=getSelection();sel.removeAllRanges();sel.addRange(saved.cloneRange());return sel.getRangeAt(0)}
+ function commitCaret(node){const range=document.createRange();range.setStartAfter(node);range.collapse(true);const sel=getSelection();sel.removeAllRanges();sel.addRange(range);saved=range.cloneRange();root.focus();sync();tail()}
+ function insert(text){try{const r=selection();r.deleteContents();const n=document.createTextNode(text);r.insertNode(n);commitCaret(n)}catch(e){onError(e.message)}}
+ function format(name,value=''){
+  try{const r=selection(true);if(name==='色'&&!color(value))throw Error('文字色を確認してください');
+   const same=el=>el?.dataset?.azOpen&&new RegExp('^［'+name+'(?::[^］]+)?］$').test(el.dataset.azOpen);
+   let ancestor=r.commonAncestorContainer.nodeType===1?r.commonAncestorContainer:r.commonAncestorContainer.parentElement;
+   while(ancestor&&ancestor!==root&&!same(ancestor))ancestor=ancestor.parentElement;
+   if(ancestor&&ancestor!==root&&same(ancestor)){
+    const before=document.createRange(),after=document.createRange();before.selectNodeContents(ancestor);before.setEnd(r.startContainer,r.startOffset);after.selectNodeContents(ancestor);after.setStart(r.endContainer,r.endOffset);
+    if(before.toString()||after.toString())throw Error('同じ装飾の一部だけは変更できません。装飾された文字全体を選んでください');
+    if(name==='色'&&ancestor.dataset.azOpen!=='［色:'+value+'］'){ancestor.dataset.azOpen='［色:'+value+'］';ancestor.style.color=value}
+    else{const first=ancestor.firstChild,last=ancestor.lastChild,parent=ancestor.parentNode;while(ancestor.firstChild)parent.insertBefore(ancestor.firstChild,ancestor);ancestor.remove();if(first&&last){const nr=document.createRange();nr.setStartBefore(first);nr.setEndAfter(last);const sel=getSelection();sel.removeAllRanges();sel.addRange(nr);saved=nr.cloneRange()}}
+    root.focus();sync();return;
+   }
+   if(Array.from(r.cloneContents().querySelectorAll('[data-az-open]')).some(same))throw Error('同じ装飾を含む範囲は重ねず、装飾された文字ごとに操作してください');
+   const span=element('span');
+   span.dataset.azOpen='［'+name+(name==='色'?':'+value:'')+'］';span.dataset.azClose='［／'+name+'］';span.style.cssText=name==='色'?'color:'+value:RICH_STYLE[name]||'';
+   span.append(r.extractContents());r.insertNode(span);const nr=document.createRange();nr.selectNodeContents(span);const sel=getSelection();sel.removeAllRanges();sel.addRange(nr);saved=nr.cloneRange();root.focus();sync();
+  }catch(e){onError(e.message)}
+ }
+
+ function ruby(reading){try{if(!reading||/[\r\n《》]/.test(reading))throw Error('ルビの読みを確認してください');const r=selection(true),frag=r.cloneContents();if(frag.querySelector('ruby,[data-az-open]'))throw Error('ルビは装飾を含まない本文を選択してください');const base=r.toString();if(!base||/[｜\r\n《》]/.test(base))throw Error('ルビは1行の本文を選択してください');const wrap=element('ruby');wrap.contentEditable='false';wrap.dataset.azSource='｜'+base+'《'+reading+'》';wrap.append(document.createTextNode(base),element('rt',reading));r.deleteContents();r.insertNode(wrap);commitCaret(wrap)}catch(e){onError(e.message)}}
+ function undo(delta){if(composing)return;const i=cursor+delta;if(i<0||i>=history.length)return;cursor=i;render(history[cursor]);saved=null;onChange(history[cursor]);root.focus()}
+ root.addEventListener('pointerup',capture);root.addEventListener('keyup',capture);root.addEventListener('focus',capture);
+ root.addEventListener('compositionstart',()=>{composing=true});root.addEventListener('compositionend',()=>{composing=false;sync();capture()});
+ root.addEventListener('input',()=>{if(!composing){sync();capture()}});
+ root.addEventListener('beforeinput',e=>{if(composing||e.isComposing)return;if(e.inputType==='insertParagraph'||e.inputType==='insertLineBreak'){e.preventDefault();insert('\n')}});
+ root.addEventListener('paste',e=>{if(composing)return;e.preventDefault();insert(e.clipboardData.getData('text/plain'))});
+ root.addEventListener('drop',e=>e.preventDefault());
+ root.addEventListener('keydown',e=>{if(composing)return;if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z'){e.preventDefault();undo(e.shiftKey?1:-1)}});
+ root.addEventListener('copy',e=>{const sel=getSelection();if(!sel?.rangeCount)return;const range=sel.getRangeAt(0);if(!root.contains(range.startContainer)||!root.contains(range.endContainer))return;e.preventDefault();e.clipboardData.setData('text/plain',richSerialize(range.cloneContents()))});
+ document.addEventListener('selectionchange',capture);
+ render(initial);
+ return {root,pending:()=>composing||richSerialize(root)!==history[cursor],dispose:()=>document.removeEventListener('selectionchange',capture),capture,insert,format,ruby,undo,flush:()=>{if(composing)throw Error('文字の変換を確定してから保存してください');return sync(false)}};
+}
+function example(){
+ const b=empty();b.title='新人ハンターについて語るスレ';b.mode='flat';b.numbered=true;b.colors={bg:'#f7f7f4',fg:'#292724',name:'#55705b',border:'#cfc9bd'};
+ b.posts=[
+ {key:'p1',number:1,name:'名無しの冒険者',authorId:'aB3x9K',parent:null,parts:[{type:'text',text:'おい、今の配信見たやついる？'}]},
+ {key:'p2',number:2,name:'名無しの冒険者',authorId:'k8M2Qa',parent:null,parts:[{type:'text',text:'見た\nあれどうなってんだよ'}]},
+ {key:'p3',number:3,name:'名無しの冒険者',authorId:'X2p91A',parent:'p1',parts:[{type:'text',text:'見たけど意味わからんかった'}]},
+ {key:'p4',number:4,name:'名無しの冒険者',authorId:'r7T4zC',parent:null,parts:[{type:'text',text:'ボス一撃だったよな？？？'}]},
+ {key:'p5',number:5,name:'名無しの冒険者',authorId:'xxxxx',parent:'p3',parts:[{type:'text',text:'それな'}]}];return b;
+}
+function fromText(raw){
+ const text=String(raw).replace(/\r/g,'').trim(),lines=text.split('\n'),posts=[];let cur=null;
+ const head=/^\s*(?:\[?(\d{1,5})\]?[\s.．:：)\-]*\s*)?(?:名前\s*[:：]\s*)?([^:\n：]{1,40})?\s*[:：]\s*(.*)$/,numbered=/^\s*\[?(\d{1,5})\]?\s*[.．:：)\-]\s*(.*)$/;
+ lines.forEach(line=>{let m=line.match(numbered);if(m){if(cur)posts.push(cur);cur={no:m[1],name:'名無し',id:'',replyTo:'',body:m[2]||''};return}
+ m=line.match(head);if(m&&(m[1]||(/名前\s*[:：]/.test(line)))){if(cur)posts.push(cur);cur={no:m[1]||String(posts.length+1),name:(m[2]||'名無し').trim(),id:'',replyTo:'',body:m[3]||''};return}
+ if(!cur)cur={no:String(posts.length+1),name:'名無し',id:'',replyTo:'',body:line};else cur.body+=(cur.body?'\n':'')+line});
+ if(cur)posts.push(cur);
+ const clean=posts.filter(p=>p.body.trim()||p.name!=='名無し').map(p=>{const lines=p.body.split('\n'),meta=lines[0].match(/^(.+?)\s+ID[:：]\s*(\S+)\s*$/i);if(meta){p.name=meta[1].trim();p.id=meta[2];lines.shift()}const reply=lines.findIndex(line=>/^\s*>>\d+\s*$/.test(line));if(reply!==-1){p.replyTo=lines[reply].trim().slice(2);lines.splice(reply,1)}p.body=lines.join('\n');return p});
+ const b=empty();b.posts=[];b.numbered=true;b.mode='flat';const used=new Set(),byNo=new Map();
+ clean.forEach((p,i)=>{let n=Number(p.no);if(!Number.isSafeInteger(n)||n<1)n=1;while(used.has(n))n++;used.add(n);const post={key:'p'+(i+1),number:n,name:p.name,authorId:p.id,parent:null,parts:[{type:'text',text:p.body}]};if(String(n)!==p.no)post.numberLabel=p.no;b.posts.push(post);if(!byNo.has(p.no))byNo.set(p.no,post.key)});
+ clean.forEach((p,i)=>{if(!p.replyTo)return;b.posts[i].parent=byNo.get(p.replyTo)||null;if(!b.posts[i].parent)b.posts[i].replyNumber=Number(p.replyTo)});
+ return validate(b);
+}
+/* BEGIN PROVIDED MAKER */
+/* Supplied maker integration fragment. Kept separate from the original reference HTML. */
+const PROVIDED_THEMES = [
+ ['classic','クラシック (昔の2ch風)'], ['dark','ダーク (5chダーク風)'],
+ ['modern','モダン (スマホチャット風)'], ['pink','かわいいピンク'],
+ ['fantasy','ファンタジー (羊皮紙風)'], ['terminal','ターミナル (ハッカー風)'],
+ ['neon','サイバーパンク (ネオン風)'], ['underground','アングラ (毒々しい裏掲示板風)']
+];
+const PROVIDED_PALETTES = {
+ classic:{bg:'#efefef',fg:'#333333',name:'#006600',border:'#cccccc'},
+ dark:{bg:'#1a202c',fg:'#e2e8f0',name:'#63b3ed',border:'#2d3748'},
+ modern:{bg:'#f7fafc',fg:'#2d3748',name:'#718096',border:'#e2e8f0'},
+ pink:{bg:'#fff0f5',fg:'#5c3a21',name:'#d87093',border:'#ffb6c1'},
+ fantasy:{bg:'#f4e8d1',fg:'#4a3b32',name:'#8c6a45',border:'#a88d5e'},
+ terminal:{bg:'#0c0c0c',fg:'#00ff00',name:'#00aa00',border:'#00ff00'},
+ neon:{bg:'#0b0f19',fg:'#e0f2fe',name:'#38bdf8',border:'#0284c7'},
+ underground:{bg:'#050000',fg:'#d32f2f',name:'#800080',border:'#500000'}
+};
+function providedPresentation(b) {
+ return b.presentation || {theme:({'定番':'classic','ふつう':'modern','明るい':'pink','裏':'terminal'})[b.look]||'classic',layout:b.mode,effect:'none'};
+}
+function providedExample() {
+ const b=empty();b.title='【速報】新しいWebツールつくったwwww';b.mode='flat';b.look='定番';b.numbered=true;
+ b.presentation={theme:'classic',layout:'flat',effect:'none'};
+ const rows=[
+  ['aB3x9K','2026/11/07(土) 17:35:12.45','ツールの機能として2ch風の掲示板が作れるメーカーを開発中。\n返信ツリー形式にも一発で切り替えられるようにする予定！',null],
+  ['x2p91A','2026/11/07(土) 17:36:05.11','>>1\nそれめっちゃええやん\nはよ完成させてくれ','p1'],
+  ['zzZzZz','2026/11/07(土) 17:38:22.90','>>2\nほんとそれな','p2'],
+  ['k8M2Qa','2026/11/07(土) 17:40:10.00','スマホからも見やすいようにレスポンシブ対応頼むわ',null]
+ ];
+ b.posts=rows.map((r,i)=>({key:'p'+(i+1),number:i+1,name:'名無しのクリエイター',authorId:'ID:'+r[0],date:r[1],parent:r[3],parts:[{type:'text',text:r[2]}]}));
+ return b;
+}
+function providedEnsureStyles() {
+ if(typeof document==='undefined'||document.getElementById('az-provided-board-styles'))return;
+ const s=document.createElement('style');s.id='az-provided-board-styles';
+ s.textContent=PROVIDED_BOARD_CSS+`
+ .az-board-provided{display:block;line-height:1.5;white-space:normal;overflow-wrap:anywhere;text-align:left;writing-mode:horizontal-tb;letter-spacing:normal;font-family:ui-sans-serif,system-ui,sans-serif}
+ .az-board-provided,.az-board-provided *{box-sizing:border-box}
+ /* Original paper content width: 56rem minus desktop padding and borders; align with host text. */
+ .az-board-provided.bbs-container{width:100%;max-width:calc(56rem - 6rem - 2px);margin-left:0;margin-right:0}
+ .az-board-provided .bbs-body{margin-top:1rem}
+ .az-board-provided .bbs-res-text{margin-top:.25rem;line-height:1.625;white-space:pre-wrap;font-size:1rem}
+ .az-board-provided .az-board-name,.az-board-provided .az-board-number{font-weight:700}
+ .az-board-provided .az-board-number{color:#15803d}
+ .az-board-provided .az-board-label{font-size:.85em;margin-bottom:.35rem}
+ .az-board-provided .az-board-reply{margin-bottom:.2rem}
+ .az-board-provided .bbs-res img{display:block;max-width:100%;height:auto}
+ .az-board-provided .bbs-title,.az-board-provided .bbs-res-meta,.az-board-provided .az-board-reply{white-space:pre-wrap}
+ @media(max-width:767px){.az-board-provided .bbs-res-text{font-size:.875rem}}
+ @media(prefers-color-scheme:dark){.az-board-provided .az-board-number{color:#4ade80}}
+ @media(prefers-reduced-motion:reduce){.az-board-provided,.az-board-provided .anim-show{transition:none}.az-board-provided .typing-cursor::after{animation:none}}
+ `;
+ (document.head||document.documentElement).appendChild(s);
+}
+function providedHtml(b) {
+ validate(b);providedEnsureStyles();const pset=providedPresentation(b),opts=legacyOptions(b),c=b.colors||{};
+ if(!PROVIDED_PALETTES[pset.theme]||!['flat','tree','chat'].includes(pset.layout)||!['none','pop','typing'].includes(pset.effect))throw Error('掲示板の表示設定を確認してください');
+ const ownStyle=[c.bg?'background-color:'+c.bg:'',c.fg?'color:'+c.fg:'',c.border?'border-color:'+c.border:'',opts.small?'font-size:.78em':''].filter(Boolean).join(';');
+ const titleStyle=c.border?' style="border-color:'+c.border+'"':'',metaStyle=c.name?' style="color:'+c.name+'"':'';
+ const depthOf=p=>{if(pset.layout==='flat')return 0;let depth=0,current=p;const seen=new Set();while(current&&!seen.has(current.key)){seen.add(current.key);const rp=replyNumberOf(b,current);if(!rp)break;depth++;if(depth>=5)break;current=b.posts.find(q=>q.number===rp)}return depth};
+ return '<section class="az-board-view az-board-provided bbs-container bbs-theme-'+pset.theme+(opts.notype?' notype':'')+'" data-layout="'+pset.layout+'" data-effect="'+pset.effect+'" data-board-mode="'+b.mode+'" data-legacy-header="'+escape(opts.header)+'"'+(ownStyle?' style="'+ownStyle+'"':'')+'>'
+ +(b.board?'<div class="az-board-label">'+inlineHTML(b.board)+'</div>':'')
+ +'<div class="bbs-title az-board-title"'+titleStyle+'>'+inlineHTML(b.title)+'</div><div class="bbs-body">'
+ +b.posts.map(p=>{
+  const depth=depthOf(p),rp=replyNumberOf(b,p),number=p.numberLabel!==undefined?p.numberLabel:String(p.number);
+  const rowStyle=c.border?' style="border-color:'+c.border+'"':'';
+  const meta=p.metaLabel!==undefined?'<div class="bbs-res-meta az-board-meta"'+metaStyle+'><span class="az-board-meta-label">'+inlineHTML(p.metaLabel)+'</span></div>':b.numbered?'<div class="bbs-res-meta az-board-meta"'+metaStyle+'><span class="az-board-number">'+inlineHTML(number)+'</span>: <span class="az-board-name">'+inlineHTML(p.name)+'</span>'+(p.date!==undefined?' <span class="az-board-date">'+inlineHTML(p.date)+'</span>':'')+(p.authorId?' <span class="uid"><span class="az-board-id">'+inlineHTML(p.authorId)+'</span></span>':'')+'</div>':'';
+  // The supplied maker stores >> text in the body. Relations only control indentation.
+  // Explicit old freeform reply lines/labels remain visible and editable.
+  const reply=p.replyLineLabel!==undefined?'<div class="az-board-reply"><span class="az-board-reply-line-label">'+inlineHTML(p.replyLineLabel)+'</span></div>':p.replyLabel!==undefined?'<div class="az-board-reply">&gt;&gt;<span class="az-board-reply-number">'+inlineHTML(p.replyLabel)+'</span></div>':'';
+  return '<article class="bbs-res'+(depth?' bbs-tree-level-'+Math.min(depth,3):'')+'" data-res-id="'+p.number+'" data-post-key="'+escape(p.key)+'" data-board-number="'+p.number+'" data-board-depth="'+depth+'"'+rowStyle+'>'+meta+reply+p.parts.map((part,i)=>part.type==='image'?'<img src="'+escape(part.src)+'" alt="'+escape(part.alt)+'">':'<div class="bbs-res-text az-board-post-body" data-part-index="'+i+'">'+inlineHTML(part.text)+'</div>').join('')+'</article>';
+ }).join('')+'</div></section>';
+}
+
+// Animate only a caller-owned clone. The source board and serialized model are never read back.
+function providedAnimateClone(target,options={}) {
+ const view=target.ownerDocument.defaultView||global,kind=target.dataset.effect;
+ let stopped=false,settled=false,audio=null,finish;const sleepers=new Set(),originalText=[];
+ const rows=Array.from(target.querySelectorAll('article')),finished=new Promise(resolve=>finish=resolve);
+ const bodies=Array.from(target.querySelectorAll('.az-board-post-body'));
+ function restore(){for(const item of originalText)item.node.data=item.text;rows.forEach(row=>row.classList.remove('anim-hidden','anim-show'));bodies.forEach(body=>body.classList.remove('typing-cursor'))}
+ function closeAudio(){if(audio){try{const result=audio.close();result?.catch?.(()=>{})}catch(e){}audio=null}}
+ function done(cancelled,error){if(settled)return;settled=true;for(const timer of sleepers){view.clearTimeout(timer.id);timer.resolve(false)}sleepers.clear();restore();closeAudio();finish({cancelled:!!cancelled,error:error||null})}
+ function cancel(){stopped=true;done(true)}cancel.finished=finished;
+ function delay(ms){if(stopped)return Promise.resolve(false);return new Promise(resolve=>{const item={resolve,id:null};item.id=view.setTimeout(()=>{sleepers.delete(item);resolve(!stopped)},ms);sleepers.add(item)})}
+ async function initAudio(){if(options.sound!==true)return;try{const Audio=view.AudioContext||view.webkitAudioContext;if(!Audio)return;audio=new Audio();if(audio.state==='suspended')await audio.resume()}catch(e){closeAudio()}}
+ function tone(type){if(!audio||audio.state!=='running'||stopped)return;try{const time=audio.currentTime,gain=audio.createGain();gain.connect(audio.destination);gain.gain.setValueAtTime(type==='pop'?.06:.025,time);gain.gain.exponentialRampToValueAtTime(.001,time+.055);if(type==='pop'){const osc=audio.createOscillator();osc.frequency.setValueAtTime(261.63,time);osc.frequency.exponentialRampToValueAtTime(70,time+.07);osc.connect(gain);osc.onended=()=>{osc.disconnect();gain.disconnect()};osc.start(time);osc.stop(time+.08)}else{const source=audio.createBufferSource(),buffer=audio.createBuffer(1,Math.ceil(audio.sampleRate*.025),audio.sampleRate),data=buffer.getChannelData(0);for(let i=0;i<data.length;i++)data[i]=(Math.random()*2-1)*.6;source.buffer=buffer;source.connect(gain);source.onended=()=>{source.disconnect();gain.disconnect()};source.start(time)}}catch(e){/* Playback remains available without an audio device. */}}
+ if(kind!=='pop'&&kind!=='typing'){done(false);return cancel}
+ const plans=new Map();
+ if(kind==='typing')for(const body of bodies){const plan=[],walk=target.ownerDocument.createTreeWalker(body,4);let node;while((node=walk.nextNode())){const item={node,text:node.data};plan.push(item);originalText.push(item)}plans.set(body,plan)}
+ rows.forEach(row=>row.classList.add('anim-hidden'));originalText.forEach(item=>item.node.data='');
+ (async()=>{try{
+  await initAudio();if(stopped)return;
+  const reduce=!!view.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+  if(reduce){done(false);return}
+  for(const row of rows){if(!await delay(kind==='typing'?500:800))return;row.classList.remove('anim-hidden');row.classList.add('anim-show');if(kind==='pop'){tone('pop');continue}
+   for(const body of row.querySelectorAll('.az-board-post-body')){body.classList.add('typing-cursor');for(const item of plans.get(body)||[])for(const char of item.text){if(stopped)return;item.node.data+=char;if(char!=='\n')tone('typing');if(!await delay(20+Math.random()*50))return}body.classList.remove('typing-cursor')}
+  }
+  if(options.holdMs&&!await delay(options.holdMs))return;done(false);
+ }catch(e){done(false,e.message||String(e))}})();
+ return cancel;
+}
+let providedViewCancel=null;
+function playProvidedView(boardElement,options={}) {
+ if(!boardElement||boardElement.nodeType!==1||!boardElement.classList.contains('az-board-provided'))throw Error('再生する掲示板が見つかりません');
+ providedViewCancel?.();
+ if(!['pop','typing'].includes(boardElement.dataset.effect)){const noop=()=>{};noop.finished=Promise.resolve({cancelled:false,error:null});return noop}
+ const doc=boardElement.ownerDocument,view=doc.defaultView||global,previous=doc.activeElement;
+ const overlay=doc.createElement('dialog');overlay.className='az-provided-playback';overlay.setAttribute('aria-label','掲示板の演出プレビュー');overlay.style.cssText='width:min(92vw,760px);max-width:calc(100vw - 20px);max-height:90dvh;border:0;border-radius:12px;padding:16px;background:#d1d5db;color:#1f2937;box-shadow:0 20px 50px #0005;overflow:auto';
+ const backdrop=doc.createElement('style');backdrop.textContent='.az-provided-playback::backdrop{background:#0008}';overlay.append(backdrop);
+ const controls=doc.createElement('div');controls.style.cssText='display:flex;align-items:center;justify-content:space-between;gap:12px;font:14px/1.5 system-ui,sans-serif';const label=doc.createElement('strong');label.textContent=options.sound===true?'演出プレビュー（音あり）':'演出プレビュー（音なし）';controls.append(label);
+ const close=doc.createElement('button');close.type='button';close.textContent='閉じる';close.setAttribute('aria-label','演出プレビューを閉じる');close.style.cssText='padding:7px 12px;border:1px solid #9ca3af;border-radius:6px;background:#fff;color:#1f2937;font:inherit;cursor:pointer';controls.append(close);overlay.append(controls);
+ const clone=boardElement.cloneNode(true);clone.removeAttribute('id');clone.setAttribute('contenteditable','false');clone.dataset.animationPreview='true';clone.querySelectorAll('[contenteditable]').forEach(el=>el.setAttribute('contenteditable','false'));overlay.append(clone);doc.body.append(overlay);
+ let disposed=false,observer=null,playback=null;
+ function dispose(){if(disposed)return;disposed=true;observer?.disconnect();if(overlay.open&&typeof overlay.close==='function')overlay.close();overlay.remove();if(providedViewCancel===cancel)providedViewCancel=null;if(previous?.isConnected)previous.focus?.()}
+ function cancel(){playback?.();dispose()}
+ close.addEventListener('click',cancel);overlay.addEventListener('cancel',e=>{e.preventDefault();cancel()});overlay.addEventListener('close',cancel);
+ if(typeof overlay.showModal==='function')overlay.showModal();else overlay.setAttribute('open','');close.focus();
+ playback=providedAnimateClone(clone,{sound:options.sound===true,holdMs:1000});cancel.finished=playback.finished.then(result=>{dispose();return result});providedViewCancel=cancel;
+ if(view.MutationObserver){observer=new view.MutationObserver(()=>{if(!boardElement.isConnected)cancel()});observer.observe(doc.documentElement,{childList:true,subtree:true})}
+ if(!boardElement.isConnected)cancel();
+ return cancel;
+}
+
+function openProvided(options={}) {
+ if(document.getElementById('az-board-editor'))throw Error('掲示板は既に編集中です');
+ const draft=clone(options.board||providedExample());validate(draft);
+ if(!draft.presentation)draft.posts.forEach(p=>{if(p.authorId)p.authorId='ID:'+p.authorId});
+ draft.presentation=clone(providedPresentation(draft));
+ const previous=document.activeElement,dialog=element('dialog');dialog.id='az-board-editor';dialog.className='az-provided-maker';dialog.setAttribute('aria-labelledby','az-provided-maker-title');
+ let saving=false,closed=false,animation=0,previewPlayback=null;const postControls=new Map();
+ const style=element('style');style.textContent=`
+ #az-board-editor.az-provided-maker{width:min(91.666vw,1152px);height:min(90dvh,960px);max-width:calc(100vw - 16px);max-height:90dvh;margin:auto;padding:0;border:0;border-radius:12px;background:#fff;color:#1f2937;box-shadow:0 25px 50px -12px #0004;overflow:hidden;font:14px/1.5 ui-sans-serif,system-ui,sans-serif;text-align:left}
+ #az-board-editor.az-provided-maker[open]{display:flex;flex-direction:column}
+ #az-board-editor.az-provided-maker::backdrop{background:#0008}
+ #az-board-editor.az-provided-maker *{box-sizing:border-box}
+ #az-board-editor.az-provided-maker h2,#az-board-editor.az-provided-maker h3,#az-board-editor.az-provided-maker p{margin:0}
+ #az-board-editor.az-provided-maker .az-provided-head,#az-board-editor.az-provided-maker .az-provided-foot{flex:none;padding:16px 24px;display:flex;align-items:center;justify-content:space-between;gap:12px;background:#f9fafb}
+ #az-board-editor.az-provided-maker .az-provided-head{border-bottom:1px solid #e5e7eb}
+ #az-board-editor.az-provided-maker h2{font-size:20px;font-weight:700}
+ #az-board-editor.az-provided-maker .az-provided-main{min-height:0;display:grid;grid-template-columns:minmax(290px,1fr) minmax(0,2fr);flex:1}
+ #az-board-editor.az-provided-maker .az-provided-settings{min-height:0;overflow:auto;padding:24px;background:#f9fafb;border-right:1px solid #e5e7eb}
+ #az-board-editor.az-provided-maker .az-provided-settings h3{font-size:14px;color:#4b5563;border-bottom:1px solid #e5e7eb;padding-bottom:4px;margin:0 0 12px;font-weight:700}
+ #az-board-editor.az-provided-maker .az-provided-settings section{margin-bottom:24px}
+ #az-board-editor.az-provided-maker label{display:block;font-size:12px;font-weight:700;margin:0 0 12px}
+ #az-board-editor.az-provided-maker input[type=text],#az-board-editor.az-provided-maker select,#az-board-editor.az-provided-maker textarea{display:block;width:100%;min-width:0;font:inherit;font-size:14px;font-weight:400;padding:8px;border:1px solid #e5e7eb;border-radius:4px;background:#fff;color:#1f2937;margin-top:4px}
+ #az-board-editor.az-provided-maker input:focus,#az-board-editor.az-provided-maker textarea:focus,#az-board-editor.az-provided-maker select:focus{outline:2px solid #93c5fd;outline-offset:1px}
+ #az-board-editor.az-provided-maker textarea{min-height:80px;resize:vertical;line-height:1.5}
+ #az-board-editor.az-provided-maker button{font:inherit;cursor:pointer;border:1px solid transparent;border-radius:4px;padding:8px 12px;color:#4b5563;background:transparent}
+ #az-board-editor.az-provided-maker button:hover{background:#e5e7eb}
+ #az-board-editor.az-provided-maker button:disabled{opacity:.6;cursor:wait}
+ #az-board-editor.az-provided-maker .az-provided-close{font-size:26px;line-height:1;padding:2px 8px}
+ #az-board-editor.az-provided-maker .az-provided-post{background:#fff;padding:12px;border:1px solid #e5e7eb;border-radius:8px;box-shadow:0 1px 2px #0001;margin-bottom:12px}
+ #az-board-editor.az-provided-maker .az-provided-post:hover{border-color:#93c5fd}
+ #az-board-editor.az-provided-maker .az-provided-post-head{display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #f3f4f6;padding-bottom:4px;margin-bottom:8px}
+ #az-board-editor.az-provided-maker .az-provided-badge{font-weight:700;font-size:12px;background:#dbeafe;color:#1e40af;border-radius:999px;padding:4px 8px}
+ #az-board-editor.az-provided-maker .az-provided-delete{padding:4px;font-size:12px;color:#9ca3af}
+ #az-board-editor.az-provided-maker .az-provided-delete:hover{color:#ef4444;background:#fff1f2}
+ #az-board-editor.az-provided-maker .az-provided-pair{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+ #az-board-editor.az-provided-maker .az-provided-post label{font-weight:400;margin-bottom:8px;font-size:11px}
+ #az-board-editor.az-provided-maker .az-provided-post input,#az-board-editor.az-provided-maker .az-provided-post select{font-size:12px;background:#f9fafb}
+ #az-board-editor.az-provided-maker .az-provided-add{display:block;width:100%;padding:12px;background:#eff6ff;border-color:#bfdbfe;color:#1d4ed8;font-weight:700;border-radius:8px}
+ #az-board-editor.az-provided-maker .az-provided-add:hover{background:#dbeafe}
+ #az-board-editor.az-provided-maker .az-provided-preview-pane{min-height:0;min-width:0;overflow:auto;padding:24px;background:#d1d5db}
+ #az-board-editor.az-provided-maker .az-provided-preview-tools{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin:0 auto 12px;max-width:672px}
+ #az-board-editor.az-provided-maker .az-provided-preview-tools button{background:#9333ea;color:#fff}
+ #az-board-editor.az-provided-maker .az-provided-preview-tools label{margin:0;font-weight:400}
+ #az-board-editor.az-provided-maker .az-preview{min-height:100%;max-width:672px;margin:0 auto;background:#fff;box-shadow:0 1px 2px #0001;padding:1px 0}
+ #az-board-editor.az-provided-maker .az-provided-foot{border-top:1px solid #e5e7eb;justify-content:flex-end}
+ #az-board-editor.az-provided-maker .az-provided-save{background:#2563eb;color:#fff;font-weight:700;box-shadow:0 1px 3px #0002}
+ #az-board-editor.az-provided-maker .az-provided-save:hover{background:#1d4ed8}
+ #az-board-editor.az-provided-maker .az-error{flex:none;color:#b91c1c;padding:0 24px;background:#fff7f7;white-space:pre-wrap}
+ #az-board-editor.az-provided-maker .az-error:not(:empty){padding:8px 24px}
+ #az-board-editor.az-provided-maker .az-provided-help{font-size:12px;color:#6b7280;margin:6px 0}
+ #az-board-editor.az-provided-maker .az-provided-extra{font-size:12px;margin-top:20px}
+ #az-board-editor.az-provided-maker .az-provided-extra summary{cursor:pointer;font-weight:700;margin:8px 0}
+ #az-board-editor.az-provided-maker .az-provided-palette{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+ #az-board-editor.az-provided-maker input[type=color]{display:block;width:100%;height:32px;border:1px solid #e5e7eb;border-radius:4px;padding:2px;margin:4px 0;background:#fff}
+ @media(max-width:767px){#az-board-editor.az-provided-maker{width:calc(100vw - 16px);height:94dvh;max-height:94dvh}#az-board-editor.az-provided-maker .az-provided-head,#az-board-editor.az-provided-maker .az-provided-foot{padding:12px 16px}#az-board-editor.az-provided-maker h2{font-size:18px}#az-board-editor.az-provided-maker .az-provided-main{display:flex;flex-direction:column}#az-board-editor.az-provided-maker .az-provided-preview-pane{order:0;flex:0 0 36%;padding:12px;border-bottom:1px solid #9ca3af}#az-board-editor.az-provided-maker .az-provided-settings{order:1;flex:1;padding:16px;border-right:0}#az-board-editor.az-provided-maker .az-preview{min-height:0}}
+ `;
+ function button(label,fn,parent,cls){const el=element('button',label,cls);el.type='button';el.addEventListener('click',fn);parent.append(el);return el}
+ function field(label,tag,parent,aria=label){const lab=element('label',label),input=element(tag);if(tag==='input')input.type='text';input.setAttribute('aria-label',aria);lab.append(input);parent.append(lab);return input}
+ function option(select,value,label){const el=element('option',label);el.value=value;select.append(el)}
+ const head=element('header',undefined,'az-provided-head'),heading=element('h2','掲示板メーカー');heading.id='az-provided-maker-title';head.append(heading);button('×',close,head,'az-provided-close').setAttribute('aria-label','閉じる');
+ const main=element('div',undefined,'az-provided-main'),settings=element('div',undefined,'az-provided-settings'),pane=element('div',undefined,'az-provided-preview-pane');main.append(settings,pane);
+ const basic=element('section');basic.append(element('h3','基本設定'));settings.append(basic);
+ const title=field('スレッドタイトル','input',basic);title.value=draft.title;title.id='maker-title';
+ const themes=field('表示スタイル (テーマ)','select',basic);themes.id='maker-theme';PROVIDED_THEMES.forEach(([v,t])=>option(themes,v,t));themes.value=draft.presentation.theme;
+ const layout=field('表示形式','select',basic);layout.id='maker-layout';[['flat','通常表示 (フラット)'],['tree','返信ツリー方式 (階層)'],['chat','チャット方式 (左右吹き出し)']].forEach(([v,t])=>option(layout,v,t));layout.value=draft.presentation.layout;
+ const effect=field('劇中演出 (読者が見る時のアニメ)','select',basic);effect.id='maker-effect';[['none','なし (すぐに表示)'],['pop','ポンポン表示 (フェードイン)'],['typing','カタカタ入力 (タイピング音付き)']].forEach(([v,t])=>option(effect,v,t));effect.value=draft.presentation.effect;
+ const posts=element('section');posts.append(element('h3','レス一覧 (編集・追加)'));settings.append(posts);const list=element('div');list.id='maker-res-list';posts.append(list);
+ const add=button('＋ 新しいレスを追加',()=>{
+  try{
+  if(draft.posts.length>=300){error.textContent='レスは300件までです';return}
+  const p=addReply(draft);p.name='名無しのクリエイター';const chars='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';p.authorId='ID:'+Array.from({length:6},()=>chars[Math.floor(Math.random()*chars.length)]).join('');
+  const now=new Date(),pad=n=>String(n).padStart(2,'0');p.date=now.getFullYear()+'/'+pad(now.getMonth()+1)+'/'+pad(now.getDate())+'('+['日','月','火','水','木','金','土'][now.getDay()]+') '+pad(now.getHours())+':'+pad(now.getMinutes())+':'+pad(now.getSeconds())+'.00';p.parts[0].text='新規書き込み';
+  renderPosts();render();postControls.get(p.key)?.name.focus();
+  }catch(e){error.textContent=e.message||String(e)}
+ },posts,'az-provided-add');add.id='btn-add-res';
+ const extra=element('details',undefined,'az-provided-extra');extra.append(element('summary','追加設定：色・番号・板の名前'));settings.append(extra);
+ const numbering=field('番号・名前の表示','select',extra);option(numbering,'true','番号・名前あり');option(numbering,'false','番号なし');numbering.value=String(draft.numbered);
+ const board=field('板の名前（省略可）','input',extra);board.value=draft.board;
+ const palette=element('div',undefined,'az-provided-palette');extra.append(palette);
+ for(const [key,label]of [['bg','背景色'],['fg','本文色'],['name','名前色'],['border','枠色']]){const input=field(label,'input',palette);input.type='color';input.dataset.boardColor=key;input.addEventListener('input',()=>{draft.colors[key]=input.value;render()})}
+ function syncPalette(){const colors=Object.assign({},PROVIDED_PALETTES[draft.presentation.theme],draft.colors);palette.querySelectorAll('[data-board-color]').forEach(el=>el.value=colors[el.dataset.boardColor])}
+ button('色をテーマの標準に戻す',()=>{draft.colors={};syncPalette();render()},extra);
+ const toolsRow=element('div',undefined,'az-provided-preview-tools');pane.append(toolsRow);
+ const play=button('▶ 演出をテスト再生',playAnimation,toolsRow);play.id='btn-test-anim';
+ const soundLabel=element('label'),sound=element('input');sound.type='checkbox';sound.checked=true;sound.setAttribute('aria-label','音を鳴らす');soundLabel.append(sound,document.createTextNode(' 音を鳴らす'));toolsRow.append(soundLabel);
+ const preview=element('div',undefined,'az-preview');preview.id='preview-container';preview.setAttribute('aria-label','掲示板プレビュー');pane.append(preview);
+ const error=element('p','','az-error');error.setAttribute('role','alert');const foot=element('footer',undefined,'az-provided-foot');
+ button('キャンセル',close,foot);const save=button(options.isEditing===true?'変更を反映':'エディタに挿入',saveDraft,foot,'az-provided-save');save.id='btn-insert-editor';
+ dialog.append(style,head,main,error,foot);
+ function refreshReplies(){
+  postControls.forEach((ui,key)=>{const p=draft.posts.find(p=>p.key===key);if(!p)return;const keep=replyNumberOf(draft,p);ui.reply.replaceChildren();option(ui.reply,'','(誰にも返信しない / 通常レス)');draft.posts.filter(q=>q.key!==p.key&&q.number<p.number).forEach(q=>option(ui.reply,String(q.number),'>>'+q.number+' ('+q.name+') に返信'));
+   if(keep&&!Array.from(ui.reply.options).some(o=>o.value===String(keep)))option(ui.reply,String(keep),'>>'+keep+(draft.posts.some(q=>q.number===keep)?'（既存の返信先）':'（投稿なし）'));ui.reply.value=keep?String(keep):'';
+  });
+ }
+ function renderPosts(){
+  const scroll=settings.scrollTop;list.replaceChildren();postControls.clear();
+  draft.posts.forEach(p=>{
+   const card=element('div',undefined,'az-provided-post');card.dataset.editPostKey=p.key;const row=element('div',undefined,'az-provided-post-head');row.append(element('span','レス '+p.number,'az-provided-badge'));button('削除',()=>{removePost(draft,p.key);renderPosts();render()},row,'az-provided-delete').setAttribute('aria-label','レス '+p.number+' を削除');card.append(row);
+   const pair=element('div',undefined,'az-provided-pair');card.append(pair);const name=field('名前','input',pair,'レス '+p.number+' 名前'),id=field('ID','input',pair,'レス '+p.number+' ID');name.value=p.name;id.value=p.authorId;name.placeholder='名前 (例: 名無し)';id.placeholder='ID';
+   name.addEventListener('input',()=>{p.name=name.value;delete p.metaLabel;refreshReplies();render()});id.addEventListener('input',()=>{p.authorId=id.value;delete p.metaLabel;render()});
+   p.parts.forEach((part,index)=>{if(part.type==='text'){const body=field('本文','textarea',card,'レス '+p.number+' 本文'+(p.parts.length>1?' '+(index+1):''));body.value=part.text;body.placeholder='レスの本文を入力...';body.dataset.partIndex=index;body.addEventListener('input',()=>{part.text=body.value;render()})}else card.append(element('p','旧データの画像はそのまま保持されます。','az-provided-help'))});
+   const reply=field('↪ 返信先','select',card,'レス '+p.number+' 返信先');reply.addEventListener('change',()=>{try{setReplyNumber(draft,p,reply.value);delete p.replyLabel;delete p.replyLineLabel;render()}catch(e){error.textContent=e.message;refreshReplies()}});
+   const details=element('details');details.append(element('summary','日時'));const date=field('日時','input',details,'レス '+p.number+' 日時');date.value=p.date||'';date.addEventListener('input',()=>{p.date=date.value;delete p.metaLabel;render()});card.append(details);
+   postControls.set(p.key,{name,id,reply,date,card});list.append(card);
+  });refreshReplies();settings.scrollTop=scroll;
+ }
+ function stopAnimation(){animation++;previewPlayback?.();previewPlayback=null;play.disabled=false;play.textContent='▶ 演出をテスト再生'}
+ function render(){stopAnimation();try{const scroll=pane.scrollTop;preview.innerHTML=providedHtml(draft);preview.querySelectorAll('[contenteditable]').forEach(el=>el.setAttribute('contenteditable','false'));pane.scrollTop=scroll;error.textContent=''}catch(e){error.textContent=e.message}}
+ async function playAnimation(){
+  render();if(error.textContent)return;const kind=draft.presentation.effect;if(kind==='none'){error.textContent='「劇中演出」でポンポン表示かカタカタ入力を選んでください。';return}
+  const token=animation,original=preview.firstElementChild,target=original.cloneNode(true);preview.replaceChildren(target);target.dataset.animationPreview='true';
+  play.disabled=true;play.textContent='演出を再生中…';previewPlayback=providedAnimateClone(target,{sound:sound.checked});
+  const result=await previewPlayback.finished;if(token===animation&&!closed){previewPlayback=null;play.disabled=false;play.textContent='▶ 演出をテスト再生';if(result.error)error.textContent=result.error}
+ }
+ title.addEventListener('input',()=>{draft.title=title.value;render()});board.addEventListener('input',()=>{draft.board=board.value;render()});
+ themes.addEventListener('change',()=>{draft.presentation.theme=themes.value;syncPalette();render()});layout.addEventListener('change',()=>{draft.presentation.layout=layout.value;draft.mode=layout.value==='flat'?'flat':'tree';render()});effect.addEventListener('change',()=>{draft.presentation.effect=effect.value;render()});numbering.addEventListener('change',()=>{draft.numbered=numbering.value==='true';render()});
+ async function saveDraft(){if(saving||closed)return;try{const value=clone(draft),source=serialize(value);saving=true;save.disabled=true;const result=await options.onSave?.(value,source);if(result!==false)close();else{saving=false;save.disabled=false}}catch(e){if(!closed){error.textContent=e.message||String(e);saving=false;save.disabled=false}}}
+ function close(){if(closed)return;closed=true;stopAnimation();if(dialog.open&&typeof dialog.close==='function')dialog.close();dialog.remove();previous?.focus?.();options.onClose?.()}
+ dialog.addEventListener('cancel',e=>{e.preventDefault();close()});
+ document.body.append(dialog);renderPosts();syncPalette();render();dialog.showModal();title.focus();
+ return {dialog,getDraft:()=>clone(draft),close};
+}
+const PROVIDED_BOARD_CSS = ".az-board-provided.bbs-container{\n            margin: 1.5rem 0;\n            padding: 1rem;\n            border-radius: 0.5rem;\n            font-family: 'sans-serif';\n            transition: all 0.3s ease;\n        }.az-board-provided.bbs-theme-classic{\n            background-color: #efefef;\n            color: #333;\n            border: 1px solid #ccc;\n        }.az-board-provided.bbs-theme-classic .bbs-title{ border-bottom: 2px solid #ccc; padding-bottom: 0.5rem; font-weight: bold; font-size: 1.1rem;}.az-board-provided.bbs-theme-classic .bbs-res-meta{ color: #006600; font-size: 0.85rem; margin-bottom: 0.2rem; }.az-board-provided.bbs-theme-classic .bbs-res-meta .uid{ color: #666; }.az-board-provided.bbs-theme-dark{\n            background-color: #1a202c;\n            color: #e2e8f0;\n            border: 1px solid #2d3748;\n        }.az-board-provided.bbs-theme-dark .bbs-title{ border-bottom: 2px solid #4a5568; padding-bottom: 0.5rem; font-weight: bold; color: #fff;}.az-board-provided.bbs-theme-dark .bbs-res-meta{ color: #63b3ed; font-size: 0.85rem; margin-bottom: 0.2rem; }.az-board-provided.bbs-theme-dark .bbs-res-meta .uid{ color: #a0aec0; }.az-board-provided.bbs-theme-modern{\n            background-color: #f7fafc;\n            color: #2d3748;\n            border: none;\n            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);\n        }.az-board-provided.bbs-theme-modern .bbs-title{ text-align: center; font-weight: 900; font-size: 1.2rem; margin-bottom: 1rem; color: #2b6cb0;}.az-board-provided.bbs-theme-modern .bbs-res{ background: white; padding: 0.75rem; border-radius: 0.5rem; box-shadow: 0 1px 2px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; }.az-board-provided.bbs-theme-modern .bbs-res-meta{ font-size: 0.8rem; color: #718096; margin-bottom: 0.4rem; display: flex; align-items: center; gap: 0.5rem;}.az-board-provided.bbs-theme-modern .bbs-res-meta::before{ content: ''; display: inline-block; width: 24px; height: 24px; border-radius: 50%; background-color: #cbd5e0; }.az-board-provided.bbs-theme-pink{\n            background-color: #fff0f5;\n            color: #5c3a21;\n            border: 2px dashed #ffb6c1;\n            border-radius: 1rem;\n        }.az-board-provided.bbs-theme-pink .bbs-title{ text-align: center; font-weight: bold; font-size: 1.2rem; margin-bottom: 1rem; color: #ff69b4; border-bottom: 2px dotted #ffb6c1; padding-bottom: 0.5rem;}.az-board-provided.bbs-theme-pink .bbs-res{ background: white; padding: 0.75rem; border-radius: 1rem; border: 2px solid #ffe4e1; margin-bottom: 1rem; box-shadow: 0 2px 4px rgba(255,182,193,0.3);}.az-board-provided.bbs-theme-pink .bbs-res-meta{ font-size: 0.85rem; color: #d87093; margin-bottom: 0.4rem; font-weight: bold;}.az-board-provided.bbs-theme-pink .bbs-res-meta .uid{ color: #ffb6c1; font-weight: normal;}.az-board-provided.bbs-theme-pink .bbs-tree-level-1,.az-board-provided.bbs-theme-pink .bbs-tree-level-2,.az-board-provided.bbs-theme-pink .bbs-tree-level-3{ border-left-color: #ffb6c1; }.az-board-provided.bbs-theme-fantasy{\n            background-color: #f4e8d1;\n            color: #4a3b32;\n            border: 4px double #a88d5e;\n            border-radius: 4px;\n            font-family: \"Yu Mincho\", \"MS Mincho\", serif;\n            box-shadow: inset 0 0 40px rgba(168,141,94,0.15);\n        }.az-board-provided.bbs-theme-fantasy .bbs-title{ border-bottom: 1px solid #a88d5e; color: #5c2c16; font-weight: bold; text-align: center; padding-bottom: 0.75rem; margin-bottom: 1rem;}.az-board-provided.bbs-theme-fantasy .bbs-res{ background: rgba(255,255,255,0.4); padding: 0.75rem; border-radius: 2px; }.az-board-provided.bbs-theme-fantasy .bbs-res-meta{ color: #8c6a45; font-size: 0.85rem; margin-bottom: 0.4rem;}.az-board-provided.bbs-theme-fantasy .bbs-tree-level-1,.az-board-provided.bbs-theme-fantasy .bbs-tree-level-2,.az-board-provided.bbs-theme-fantasy .bbs-tree-level-3{ border-left-color: #a88d5e; border-left-style: double; border-left-width: 3px; }.az-board-provided.bbs-theme-terminal{\n            background-color: #0c0c0c;\n            color: #00ff00;\n            border: 2px solid #00ff00;\n            border-radius: 0;\n            font-family: \"Courier New\", Consolas, monospace;\n            box-shadow: 0 0 10px rgba(0, 255, 0, 0.2);\n        }.az-board-provided.bbs-theme-terminal .bbs-title{ border-bottom: 1px dashed #00ff00; padding-bottom: 0.5rem; font-weight: bold; }.az-board-provided.bbs-theme-terminal .bbs-res-meta{ color: #00aa00; font-size: 0.85rem; margin-bottom: 0.2rem; }.az-board-provided.bbs-theme-terminal .bbs-res-meta .uid{ color: #008800; }.az-board-provided.bbs-theme-terminal .bbs-tree-level-1,.az-board-provided.bbs-theme-terminal .bbs-tree-level-2,.az-board-provided.bbs-theme-terminal .bbs-tree-level-3{ border-left-color: #00aa00; border-left-style: dashed; }.az-board-provided.bbs-theme-neon{\n            background-color: #0b0f19;\n            color: #e0f2fe;\n            border: 1px solid #0284c7;\n            box-shadow: 0 0 15px rgba(2, 132, 199, 0.5);\n            border-radius: 8px;\n        }.az-board-provided.bbs-theme-neon .bbs-title{ color: #fdf4ff; text-shadow: 0 0 8px #c026d3; border-bottom: 1px solid #c026d3; padding-bottom: 0.5rem; margin-bottom: 1rem; font-weight: 900;}.az-board-provided.bbs-theme-neon .bbs-res{ background: rgba(2, 132, 199, 0.1); border: 1px solid rgba(2, 132, 199, 0.3); border-radius: 6px; padding: 0.75rem; margin-bottom: 1rem;}.az-board-provided.bbs-theme-neon .bbs-res-meta{ color: #38bdf8; font-size: 0.85rem; margin-bottom: 0.4rem;}.az-board-provided.bbs-theme-neon .bbs-res-meta .uid{ color: #f472b6; }.az-board-provided.bbs-theme-neon .bbs-tree-level-1,.az-board-provided.bbs-theme-neon .bbs-tree-level-2,.az-board-provided.bbs-theme-neon .bbs-tree-level-3{ border-left-color: #c026d3; box-shadow: -2px 0 5px rgba(192, 38, 211, 0.3); }.az-board-provided.bbs-theme-underground{\n            background-color: #050000;\n            color: #d32f2f;\n            border: 2px solid #500000;\n            border-radius: 0;\n            font-family: \"MS Mincho\", \"Yu Mincho\", serif;\n            box-shadow: 0 0 20px rgba(100, 0, 0, 0.3) inset;\n        }.az-board-provided.bbs-theme-underground .bbs-title{ color: #ff1a1a; text-align: center; border-bottom: 1px dashed #8b0000; padding-bottom: 0.5rem; margin-bottom: 1rem; font-weight: bold; text-shadow: 0 0 5px rgba(255,0,0,0.5);}.az-board-provided.bbs-theme-underground .bbs-res{ background: #120000; border: 1px solid #300000; border-left: 3px solid #8b0000; padding: 0.75rem; margin-bottom: 1rem; }.az-board-provided.bbs-theme-underground .bbs-res-meta{ color: #800080; font-size: 0.85rem; margin-bottom: 0.4rem;}.az-board-provided.bbs-theme-underground .bbs-res-meta .uid{ color: #556b2f; }.az-board-provided.bbs-theme-underground .bbs-tree-level-1,.az-board-provided.bbs-theme-underground .bbs-tree-level-2,.az-board-provided.bbs-theme-underground .bbs-tree-level-3{ border-left-color: #9c27b0; }.az-board-provided .bbs-res{ margin-bottom: 1rem; position: relative; }.az-board-provided .bbs-tree-level-1{ margin-left: 2rem; border-left: 2px solid #cbd5e0; padding-left: 1rem; }.az-board-provided .bbs-tree-level-2{ margin-left: 4rem; border-left: 2px solid #cbd5e0; padding-left: 1rem; }.az-board-provided .bbs-tree-level-3{ margin-left: 6rem; border-left: 2px solid #cbd5e0; padding-left: 1rem; }.az-board-provided .anim-hidden{ opacity: 0; transform: translateY(10px); }.az-board-provided .anim-show{ opacity: 1; transform: translateY(0); transition: all 0.3s ease-out; }.az-board-provided .typing-cursor::after{ content: '▌'; animation: az-provided-blink 1s step-end infinite; }.az-board-provided.bbs-container[data-layout=\"chat\"] .bbs-body{\n            display: flex;\n            flex-direction: column;\n            gap: 0.75rem;\n        }.az-board-provided.bbs-container[data-layout=\"chat\"] .bbs-res{\n            margin-bottom: 0;\n            border-radius: 12px;\n            width: fit-content;\n            max-width: 85%;\n        }.az-board-provided.bbs-container[data-layout=\"chat\"] .bbs-res:not([class*=\"bbs-tree-level\"]){\n            align-self: flex-start;\n            border-bottom-left-radius: 2px;\n        }.az-board-provided.bbs-container[data-layout=\"chat\"] [class*=\"bbs-tree-level\"]{\n            align-self: flex-end;\n            margin-left: 0; \n            border-bottom-right-radius: 2px;\n        }\n\n\n@keyframes az-provided-blink {50%{opacity:0}}\n";
+/* END PROVIDED MAKER */
+function html(b) {
+ if(b.presentation)return providedHtml(b);
+ const c=theme(validate(b)),opts=legacyOptions(b),items=ordered(b);
+ return '<section class="az-board-view'+(opts.notype?' notype':'')+'" data-legacy-header="'+escape(opts.header)+'" data-board-mode="'+b.mode+'" style="'+(opts.small?'font-size:.78em;':'')+'display:block;background:'+c.bg+';color:'+c.fg+';border:1px solid '+c.border+';border-radius:8px;padding:.7em .85em;font-family:-apple-system,BlinkMacSystemFont,\'Noto Sans JP\',sans-serif;line-height:1.55;white-space:normal;overflow-wrap:anywhere">'
+ +(b.board?'<div class="az-board-label" style="color:'+c.name+'">'+inlineHTML(b.board)+'</div>':'')
+ +(b.title?'<div class="az-board-title" style="font-weight:800;font-size:1.04em;padding:.15em .2em .65em;border-bottom:2px solid '+c.border+';margin-bottom:.15em">'+inlineHTML(b.title)+'</div>':'')
+ +items.map(({post:p,depth},index)=>{
+  const child=b.mode==='tree'&&depth>0,rp=replyNumberOf(b,p),label=Object.prototype.hasOwnProperty.call(p,'numberLabel')?p.numberLabel:String(p.number),rlabel=Object.prototype.hasOwnProperty.call(p,'replyLabel')?p.replyLabel:String(rp);
+  return '<article data-post-key="'+escape(p.key)+'" data-board-number="'+p.number+'" data-board-depth="'+depth+'" style="padding:.62em .2em;'+(index<items.length-1?'border-bottom:1px solid '+c.border+';':'')+(child?'margin-left:'+Math.min(depth,6)+'em;padding-left:.7em;border-left:3px solid '+c.border+';':'')+'">'
+  +(p.metaLabel!==undefined?'<div class="az-board-meta" style="font-size:.78em;color:'+c.name+';font-weight:700;margin-bottom:.28em"><span class="az-board-meta-label">'+inlineHTML(p.metaLabel)+'</span></div>':(b.numbered?'<div class="az-board-meta" style="font-size:.78em;color:'+c.name+';font-weight:700;margin-bottom:.28em"><span style="color:#8a5d35;margin-right:.45em"><span class="az-board-number">'+inlineHTML(label)+'</span>：</span><span class="az-board-name">'+inlineHTML(p.name)+'</span>'+(p.authorId?'<span style="color:#6d7b70;margin-left:.55em;font-weight:600">ID:<span class="az-board-id">'+inlineHTML(p.authorId)+'</span></span>':'')+'</div>':''))
+  +(p.replyLineLabel!==undefined?'<div class="az-board-reply" style="font-size:.78em;color:#4f6d96;font-weight:800;margin-bottom:.18em"><span class="az-board-reply-line-label">'+inlineHTML(p.replyLineLabel)+'</span></div>':(rp!==null&&rp!==undefined?'<div class="az-board-reply" style="font-size:.78em;color:#4f6d96;font-weight:800;margin-bottom:.18em">'+(child?'└ ':'')+'&gt;&gt;<span class="az-board-reply-number">'+inlineHTML(rlabel)+'</span></div>':''))
+  +p.parts.map((part,i)=>part.type==='image'?'<img src="'+part.src+'" alt="'+escape(part.alt)+'" style="display:block;max-width:100%;height:auto;margin:8px 0">':'<div class="az-board-post-body" data-part-index="'+i+'" style="white-space:pre-wrap;overflow-wrap:anywhere">'+inlineHTML(part.text)+'</div>').join('')+'</article>';
+ }).join('')+'</section>';
+}
+function plain(b){return [b.board,b.title,...ordered(b).map(({post:p})=>p.parts.map(x=>x.type==='text'?x.text:'［画像'+(x.alt?'：'+x.alt:'')+'］').join('\n'))].filter(Boolean).join('\n')}
+function element(tag,text,cls){const el=document.createElement(tag);if(text!==undefined)el.textContent=text;if(cls)el.className=cls;return el}
+function open(options={}) {
+ if(document.getElementById('az-board-editor'))throw Error('掲示板は既に編集中です');
+ let draft=clone(options.board||example());validate(draft);
+ let editing='',nextNo=Math.max(0,...draft.posts.map(p=>p.number))+1,saving=false;
+ const previous=document.activeElement,dialog=element('dialog');dialog.id='az-board-editor';
+ dialog.style.cssText='width:min(96vw,620px);max-height:calc(100dvh - 16px);padding:14px;border:1px solid #d5c9b8;border-radius:16px;background:#fffdf8;color:#332e27';
+ const style=element('style');style.textContent='#az-board-editor::backdrop{background:#0003}#az-board-editor *{box-sizing:border-box}#az-board-editor label{display:block;font-size:12px;font-weight:700;margin:8px 0}#az-board-editor input[type=text],#az-board-editor select,#az-board-editor textarea{width:100%;font:inherit;padding:9px;border:1px solid #d5c9b8;border-radius:10px;background:#fff;color:#332e27;margin-top:4px}#az-board-editor textarea{min-height:72px;resize:vertical;font-weight:400}#az-board-editor button{font:inherit;padding:9px 12px;border:1px solid #d5c9b8;border-radius:10px;background:#fff;color:#332e27}#az-board-editor .az-preview{max-height:34vh;overflow:auto;margin:8px 0 12px;padding:10px;border:1px solid #d5c9b8;border-radius:12px;background:#f7f7f4}#az-board-editor .az-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px}#az-board-editor .az-foot{position:sticky;bottom:-14px;padding:10px 0 2px;display:flex;justify-content:flex-end;gap:8px;background:#fffdf8}#az-board-editor .az-foot button:last-child{background:#6d5f52;color:#fff}#az-board-editor .az-error{color:#a12626}#az-board-editor .az-help,#az-board-editor .az-count{font-size:12px;color:#81786e}#az-board-editor .az-count{margin:5px 0}#az-board-editor .az-extra{margin:6px 0}#az-board-editor .az-extra input[type=color]{margin:4px 8px} @media(max-width:520px){#az-board-editor .az-grid{grid-template-columns:1fr}#az-board-editor .az-preview{max-height:31vh}}';
+ dialog.append(style,element('strong','掲示板を作る'),element('div','投稿を選ぶと編集できます。入力内容はプレビューと本文挿入に反映されます。','az-help'));
+ function field(label,tag,parent=dialog){const lab=element('label',label),el=element(tag);if(tag==='input')el.type='text';el.setAttribute('aria-label',label);lab.append(el);parent.append(lab);return el}
+ function option(sel,value,text){const o=element('option',text);o.value=value;sel.append(o)}
+ function button(label,fn,parent=dialog){const el=element('button',label);el.type='button';el.onclick=fn;parent.append(el);return el}
+ const mode=field('表示形式','select');option(mode,'flat','2ch/5ch型');option(mode,'tree','返信ツリー型');mode.value=draft.mode;
+ const title=field('スレッド名','input');title.value=draft.title;
+ const extras=element('details',undefined,'az-extra');extras.append(element('summary','見た目・色・番号'));dialog.append(extras);
+ const numbering=field('表示','select',extras);option(numbering,'true','番号・名前あり');option(numbering,'false','番号なし');numbering.value=String(draft.numbered);
+ const look=field('見た目','select',extras);LOOKS.forEach(v=>option(look,v,v));look.value=draft.look;
+ const boardName=field('板の名前（省略可）','input',extras);boardName.value=draft.board;
+ const palette=element('div');extras.append(palette);
+ for(const [key,label]of [['bg','背景'],['fg','本文'],['name','名前'],['border','枠']]){const lab=element('label',label),el=element('input');el.type='color';el.dataset.boardColor=key;el.value=theme(draft)[key];el.oninput=()=>{draft.colors[key]=el.value;render()};lab.append(el);palette.append(lab)}
+ function paletteSync(){palette.querySelectorAll('[data-board-color]').forEach(el=>el.value=theme(draft)[el.dataset.boardColor])}
+ button('色を標準に戻す',()=>{draft.colors={};paletteSync();render()},palette);
+ const preview=element('div',undefined,'az-preview');preview.setAttribute('aria-label','掲示板プレビュー');dialog.append(preview);
+ const count=element('div','','az-count');count.setAttribute('aria-live','polite');dialog.append(count);
+ const editSelect=field('編集する投稿','select');
+ const grid=element('div',undefined,'az-grid');dialog.append(grid);
+ const name=field('名前','input',grid),id=field('ID','input',grid),reply=field('返信先','select'),body=field('本文','textarea');
+ const add=button('＋ レスを追加',()=>{
+  if(editing){current();load();body.focus();return}
+  const no=commitNew();if(!no){error.textContent='本文を入力してください';return}
+  body.value='';reply.value='';render(no);body.focus();
+ });
+ const del=button('この投稿を削除',()=>{if(!editing)return;current();removePost(draft,editing);load()});del.hidden=true;
+ // The literal placeholder is an additional reader option, not a photo uploader.
+ const photo=button('（写真）を入れる',()=>{const start=body.selectionStart,end=body.selectionEnd;body.setRangeText('（写真）',start,end,'end');render(editing||String(nextNo));body.focus()},extras);
+ const error=element('p','','az-error');error.setAttribute('role','alert');dialog.append(error);
+ const foot=element('div',undefined,'az-foot');dialog.append(foot);
+ function inputPost(number,key){
+  const target=draft.posts.find(p=>String(p.number)===reply.value),old=key?draft.posts.find(p=>p.key===key):null;
+  const p=old?clone(old):{key:key||'p'+number,number:Number(number)};
+  if(old&&(name.value!==old.name||id.value!==old.authorId))delete p.metaLabel;
+  if(old&&reply.value!==String(replyNumberOf(draft,old)??'')){delete p.replyLineLabel;delete p.replyLabel;}
+  p.name=name.value.trim()||'名無し';p.authorId=id.value.trim();p.parent=target?target.key:null;
+  delete p.replyNumber;if(reply.value&&!target)p.replyNumber=Number(reply.value);
+  if(old&&old.parts.some(x=>x.type!=='text')){
+   const displayed=old.parts.map(x=>x.type==='text'?x.text:'（写真）').join('\n');
+   if(body.value!==displayed)throw Error('この旧データには画像が含まれています。内容を失わないよう本文の変更を止めました');
+  }else p.parts=[{type:'text',text:body.value.trim()}];
+  return p;
+ }
+ function current(){
+  draft.title=title.value;draft.board=boardName.value;draft.mode=mode.value==='tree'?'tree':'flat';draft.numbered=numbering.value==='true';draft.look=look.value;
+  if(editing){const i=draft.posts.findIndex(p=>p.key===editing);if(i>=0)draft.posts[i]=inputPost(draft.posts[i].number,editing)}
+  const value=clone(draft);
+  if(!editing&&body.value.trim()){let key='p'+nextNo;while(value.posts.some(p=>p.key===key))key+='x';value.posts.push(inputPost(nextNo,key))}
+  return value;
+ }
+ function focusPost(no){
+  const post=[...preview.querySelectorAll('article')].find(el=>el.dataset.boardNumber===String(no)||el.dataset.postKey===no);if(post)preview.scrollTop+=post.getBoundingClientRect().top-preview.getBoundingClientRect().top-8;
+ }
+ function render(focusNo=''){
+  try{
+   const value=current(),scroll=preview.scrollTop;preview.innerHTML=html(value);preview.scrollTop=scroll;
+   count.textContent='現在 '+value.posts.length+'レス'+(value.posts.length>draft.posts.length?'（入力中の投稿を含む）':'');
+   editSelect.replaceChildren();option(editSelect,'','＋ 新しい投稿');draft.posts.forEach(p=>option(editSelect,p.key,p.number+'：'+(p.name||'名無し')));editSelect.value=editing;
+   const keep=reply.value;reply.replaceChildren();option(reply,'','通常レス');draft.posts.filter(p=>p.key!==editing).forEach(p=>option(reply,String(p.number),'>>'+p.number+' '+(p.name||'名無し')));
+   if(keep&&![...reply.options].some(o=>o.value===keep))option(reply,keep,'>>'+keep+'（投稿なし）');reply.value=keep;
+   add.textContent=editing?'＋ 新しい投稿へ':'＋ レスを追加';del.hidden=!editing;
+   if(focusNo){const p=draft.posts.find(p=>p.key===focusNo);focusPost(p?p.number:focusNo)}
+   error.textContent='';
+  }catch(e){error.textContent=e.message}
+ }
+ function load(key=''){
+  editing=key;const p=draft.posts.find(p=>p.key===key);name.value=p?p.name:'名無しの冒険者';id.value=p?p.authorId:'';body.value=p?p.parts.map(x=>x.type==='text'?x.text:'（写真）').join('\n'):'';
+  const rp=p?replyNumberOf(draft,p):null;reply.replaceChildren();option(reply,'','通常レス');if(rp!==null&&rp!==undefined)option(reply,String(rp),'>>'+rp);reply.value=rp===null||rp===undefined?'':String(rp);render(key);
+ }
+ function commitNew(){
+  if(editing||!body.value.trim())return '';
+  let key='p'+nextNo;while(draft.posts.some(p=>p.key===key))key+='x';const p=inputPost(nextNo++,key);draft.posts.push(p);return String(p.number);
+ }
+ title.oninput=()=>render();boardName.oninput=()=>render();
+ mode.onchange=()=>render(editing||(!editing&&body.value.trim()?String(nextNo):''));
+ numbering.onchange=()=>render();look.onchange=()=>{draft.look=look.value;paletteSync();render()};
+ [name,id,body].forEach(el=>el.oninput=()=>render(editing||String(nextNo)));reply.onchange=()=>render(editing||String(nextNo));
+ editSelect.onchange=()=>{const key=editSelect.value;current();commitNew();load(key)};
+ function close(){dialog.close();dialog.remove();previous?.focus();options.onClose?.()}
+ dialog.addEventListener('cancel',e=>{e.preventDefault();close()});button('キャンセル',close,foot);
+ const save=button('本文に挿入',async()=>{if(saving)return;try{const value=current();value.title=value.title.trim();const source=serialize(value);saving=true;save.disabled=true;const result=await options.onSave?.(clone(value),source);if(result!==false)close();else{saving=false;save.disabled=false}}catch(e){error.textContent=e.message;saving=false;save.disabled=false}},foot);
+ document.body.append(dialog);load();preview.scrollTop=0;dialog.showModal();mode.focus();
+ return {dialog,getDraft:()=>clone(current()),close};
+}
+const api={playProvidedView,providedExample,providedHtml,openProvided,example,fromText,replyNumberOf,setReplyNumber,empty,validate,parse,serialize,serializeLegacy,serializeV1,legacyOptions,inlineHTML,richTokens,richSource,richHTML,richSerialize,richEditor,ordered,insertPlaceholder,addReply,removePost,insertImage,html,plain,open};
+if(typeof module!=='undefined'&&module.exports)module.exports=api;
+global.AzBoardEditor=api;
+})(typeof window!=='undefined'?window:globalThis);
+
+/* END EMBEDDED BOARD EDITOR */
+
         // デモ用初期データ（スクショ完全準拠のタイプD混合構成）
         const DEMO_BOOKS = [
             {
@@ -5493,6 +6128,14 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             if (b) { ev.preventDefault(); ev.stopPropagation(); if (b.dataset.wkc === 'open') { const id = b.dataset.id; wikiCardClose(); wikiOpen('list'); wikiAct('page', { dataset: { id } }); } else if (b.dataset.wkc === 'entry') { wikiCardOpen(b.dataset.id); } else wikiCardClose(); return; }
             const c = document.getElementById('wk-card'); if (c && !c.hidden && !ev.target.closest('#wk-card')) wikiCardClose();
         }, true);
+        document.addEventListener('click',async event=>{
+            const button=event.target.closest?.('[data-provided-play]');if(!button)return;
+            const wrapper=button.closest('[data-provided-reader]'),view=wrapper?.querySelector('.az-board-view');
+            if(!view||typeof AzBoardEditor==='undefined'||typeof AzBoardEditor.playProvidedView!=='function')return;
+            event.preventDefault();event.stopPropagation();const buttons=[...wrapper.querySelectorAll('[data-provided-play]')],status=wrapper.querySelector('[data-provided-playback-status]');
+            buttons.forEach(b=>b.disabled=true);if(status)status.textContent='';
+            try{const playback=AzBoardEditor.playProvidedView(view,{sound:button.dataset.providedPlay==='sound'});const result=await (playback?.finished||playback);if(result?.error)throw Error(result.error)}catch(e){if(status&&status.isConnected)status.textContent='再生できませんでした。もう一度お試しください。'}finally{buttons.forEach(b=>b.disabled=false)}
+        });
         function buildInteractiveSentencesHtml(rawText, frames) {
             if (!rawText.trim()) return '<span class="text-softMuted">本文がありません</span>';
             const paragraphs = rawText.split('\n');
@@ -5502,15 +6145,65 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             const BBS_CLS = { '定番': 'classic', 'ふつう': 'flat', '明るい': 'lite', '裏': 'dark', '裏掲示板': 'dark' };
             const kkOpen = f => '<div class="fxkk fxphone' + (f.notype ? ' notype' : '') + '">';
             const kkMsg = (f, li, body) => '<div class="pnote"><div class="pnh"><i class="kki"></i><span>カカオトーク</span></div><div class="kkq">' + body + '</div><div class="kkbtn"><button type="button" class="y">はい</button><button type="button" class="n">いいえ</button></div></div>';
-            const bbsOpen = f => '<div class="fxbbs ' + (BBS_CLS[f.look] || 'classic') + sm(f) + (f.notype ? ' notype' : '') + '">' + (f.board || f.title ? '<div class="bbh">' + (f.board ? '<div class="bbn">' + escapeHtml(f.board) + '</div>' : '') + (f.title ? '<div class="bbt">' + escapeHtml(f.title) + '</div>' : '') + '</div>' : '');
-            const bbsPost = (f, li, body) => { const p = f.posts[li - f.from] || {}; if (p.compact) return '<div class="bpost bpc' + (p.depth ? ' bd' + Math.min(p.depth, 3) : '') + '"><div class="bpb">' + (p.depth ? '<span class="bpa">└ </span>' : '') + body + '</div></div>'; return '<div class="bpost' + (p.depth ? ' bd' + Math.min(p.depth, 3) : '') + '"><div class="bpm">' + p.n + '：<b>' + escapeHtml(p.name || '名無しさん') + '</b>' + (p.id ? '　ID:' + escapeHtml(p.id) : '') + '</div>' + (p.depth && p.rp ? '<div class="bpr">└ &gt;&gt;' + escapeHtml(p.rp) + '</div>' : '') + '<div class="bpb">' + body + '</div></div>'; };
+            const bbsStyle = f => {const c=f.colors||{};return [['--bg',c.bg],['--fg',c.fg],['--nm',c.name],['--bd',c.border],['background',c.bg],['color',c.fg],['border-color',c.border]].filter(([,v])=>/^#[0-9a-fA-F]{6}$/.test(v||'')).map(([k,v])=>k+':'+v+' !important').join(';');};
+            const bbsInline = value => typeof AzBoardEditor!=='undefined' ? AzBoardEditor.inlineHTML(String(value)) : escapeHtml(String(value));
+            const bbsOpen = f => '<div style="'+bbsStyle(f)+'" class="fxbbs ' + (BBS_CLS[f.look] || 'classic') + sm(f) + (f.notype ? ' notype' : '') + '">' + (f.board || f.title ? '<div class="bbh">' + (f.board ? '<div class="bbn">' + bbsInline(f.board) + '</div>' : '') + (f.title ? '<div class="bbt">' + bbsInline(f.title) + '</div>' : '') + '</div>' : '');
+            const bbsPost = (f, li, body) => {
+                if(f.boardModel&&f.boardModel.posts.length===0)return '';
+                if(f.postBreaks)body=body.split('［投稿改行］').join('<br>');
+                if(f.postEscapes)body=body.replace(/［投稿記号］([EN])/g,(_,code)=>code==='N'?'［投稿改行］':'［投稿記号］');
+                const p=f.posts[li-f.from]||{},depth=Math.min(p.depth||0,6),style=depth?' style="margin-left:'+depth+'em;padding-left:.7em;border-left:3px solid var(--bd)"':'';
+                const number=Object.prototype.hasOwnProperty.call(p,'numberLabel')?p.numberLabel:String(p.n),replyLabel=Object.prototype.hasOwnProperty.call(p,'replyLabel')?p.replyLabel:String(p.rp);
+                const meta=p.metaLabel!==undefined?'<div class="bpm">'+bbsInline(p.metaLabel)+'</div>':p.compact?'':'<div class="bpm"><span class="bpno">'+bbsInline(number)+'：</span><b>'+bbsInline(p.name||'')+'</b>'+(p.id?'<span class="bpid">ID:'+bbsInline(p.id)+'</span>':'')+'</div>';
+                if(!depth&&p.rp)body=body.replace(new RegExp('(?:&gt;&gt;|>>)'+p.rp+' '),p.replyLineLabel!==undefined?'':'<span class="bpr" style="display:block">&gt;&gt;'+bbsInline(replyLabel)+'</span>');
+                const reply=p.replyLineLabel!==undefined?'<div class="bpr">'+bbsInline(p.replyLineLabel)+'</div>':depth&&p.rp?'<div class="bpr">└ &gt;&gt;'+bbsInline(replyLabel)+'</div>':(depth&&p.compact?'<div class="bpr">└</div>':'');
+                return '<div class="bpost'+(p.compact?' bpc':'')+'"'+style+'>'+meta+reply+'<div class="bpb">'+body+'</div></div>';
+            };
             const wkR = (() => { try { const bk = state.books.find(b => b.id === state.currentBookId); const r = bk && fxSettingsFor(bk).wikiHl ? wikiHlRegex(bk.id) : null; wkRenderedKey = r ? r.key : ''; return r; } catch (e) { return null; } })();
             const smallAll = (() => { try { return !!fxSettingsFor(state.books.find(b => b.id === state.currentBookId)).small; } catch (e) { return false; } })();
             const sm = f => (smallAll || f.small) ? ' small' : '';
             const defCol = (() => { try { return fxSettingsFor(state.books.find(b => b.id === state.currentBookId)).frameColor || ''; } catch (e) { return ''; } })();
             const boxOpen = f => { const col = FRAME_COLORS[f.color] || FRAME_COLORS[defCol] || FRAME_COLORS['青']; return '<div class="fxbox' + sm(f) + (f.note ? ' fxnote' : '') + '" style="--fxc:' + col[0] + ';--fxb:' + col[1] + '">'; };
 
+            const providedReaderHtml=(frame,startIndex)=>{
+                const template=document.createElement('template');template.innerHTML=AzBoardEditor.html(frame.boardModel);
+                let index=startIndex;
+                const list=AzBoardEditor.ordered(frame.boardModel);
+                for(let row=frame.from;row<=frame.to;row++){
+                    const raw=paragraphs[row]||'',post=list[row-frame.from]?.post;
+                    const article=post?[...template.content.querySelectorAll('article[data-post-key]')].find(n=>n.dataset.postKey===post.key):null;
+                    const bodies=article?[...article.querySelectorAll('.az-board-post-body')]:[];
+                    let first=true;
+                    const markup=raw.trim()?splitSentencesSafe(raw).map(sent=>{
+                        const current=index++;let value=sent;
+                        if(first&&post){const rp=AzBoardEditor.replyNumberOf(frame.boardModel,post);if(rp)value=value.replace(new RegExp('^>>'+rp+' '),'');first=false;}
+                        let parsed=wkR?wikiMark(parseNovelRuby(value),wkR):parseNovelRuby(value);
+                        if(frame.postBreaks)parsed=parsed.split('［投稿改行］').join('<br>');
+                        if(frame.postEscapes)parsed=parsed.replace(/［投稿記号］([EN])/g,(_,code)=>code==='N'?'［投稿改行］':'［投稿記号］');
+                        return '<span class="tts-sentence" data-sent-idx="'+current+'" onclick="jumpTtsToSentence('+current+')">'+parsed+'</span>';
+                    }).join(''):'';
+                    if(bodies.length===1)bodies[0].innerHTML=markup;
+                    else if(bodies.length){ // Preserve uncommon multi-part display without dropping content.
+                        const firstIndex=index-(raw.trim()?splitSentencesSafe(raw).length:0);
+                        bodies.forEach(body=>{const span=document.createElement('span');span.className='tts-sentence';span.dataset.sentIdx=String(firstIndex);span.setAttribute('onclick','jumpTtsToSentence('+firstIndex+')');span.innerHTML=body.innerHTML;body.replaceChildren(span)});
+                    }
+                }
+                if(frame.boardModel.presentation.effect!=='none'){
+                    const controls=document.createElement('div');controls.dataset.providedPlaybackControls='1';controls.style.cssText='display:flex;gap:8px;flex-wrap:wrap;margin:8px 0';
+                    for(const [sound,label]of [['silent','演出を再生'],['sound','音付きで再生']]){const button=document.createElement('button');button.type='button';button.dataset.providedPlay=sound;button.textContent=label;button.style.cssText='padding:8px 12px;border:1px solid #b9aa94;border-radius:8px;background:#fff;color:#332e27';controls.append(button)}
+                    const status=document.createElement('span');status.dataset.providedPlaybackStatus='1';status.setAttribute('role','status');controls.append(status);template.content.append(controls);
+                    return '<div data-provided-reader="1">'+template.innerHTML+'</div>';
+                }
+                return template.innerHTML;
+            };
             return paragraphs.map((para, li) => {
+                const providedFrame=frameOf(li);
+                if(providedFrame?.kind==='bbs'&&providedFrame.boardModel?.presentation&&typeof AzBoardEditor!=='undefined'){
+                    // Render the supplied presentation once, without legacy per-row BBS chrome.
+                    const rendered=li===providedFrame.from?providedReaderHtml(providedFrame,globalSentenceIndex):'';
+                    if(para.trim())globalSentenceIndex+=splitSentencesSafe(para).length;
+                    return rendered;
+                }
                 const fb = frameOf(li), isB = fb && fb.kind === 'bbs', isK = fb && fb.kind === 'kk', pre = fb && li === fb.from ? (isK ? kkOpen(fb) : isB ? bbsOpen(fb) : boxOpen(fb)) : '', post = fb && li === fb.to ? '</div>' : '';
                 if (!para.trim()) return pre + (isB ? '' : '<div class="h-4"></div>') + post;
                 const tokens = splitSentencesSafe(para);
@@ -6020,6 +6713,25 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                     const raw = []; let k = li + 1, consumed = li;
                     while (k < L.length) { const tj = L[k].trim(); if (/^［／掲示板］$/.test(tj)) { consumed = k; break; } if (!closed && !tj) break; if (/^［(窓|システム画面|ステータス|LINE通知|トーク|招待状|掲示板)[\s　］]/.test(tj)) break; if (tj) raw.push(L[k]); consumed = k; k++; }
                     li = consumed;
+                    // Closed boards share the editor codec so forward/dangling replies and escaped fields stay readable.
+                    if(closed&&typeof AzBoardEditor!=='undefined'){
+                        try{
+                            const board=AzBoardEditor.parse(lt+'\n'+(raw.length?raw.join('\n')+'\n':'')+'［／掲示板］');
+                            const list=AzBoardEditor.ordered(board),from=out.length;
+                            const postBreaks=list.some(({post:p})=>p.parts.some(part=>part.type==='text'&&/[\r\n]/.test(part.text)))||/^[12]$/.test(attr('投稿書式'));
+                            const encodeBody=s=>postBreaks?s.replace(/［投稿記号］/g,'［投稿記号］E').replace(/［投稿改行］/g,'［投稿記号］N').replace(/\r\n?|\n/g,'［投稿改行］'):s;
+                            list.forEach(({post:p,depth})=>{
+                                const body=p.parts.map(part=>part.type==='text'?part.text:'（写真）').join('\n');
+                                const rp=AzBoardEditor.replyNumberOf(board,p),prefix=!depth&&rp?'>>'+rp+' ':'';
+                                out.push(prefix+(frames?encodeBody(body):body.replace(/\r\n?|\n/g,'　')));
+                            });
+                            if(frames){
+                                if(!list.length)out.push('\u200b');
+                                frames.push({from,to:out.length-1,kind:'bbs',look:board.look,postBreaks,postEscapes:postBreaks,colors:board.colors,notype:/演出=なし/.test(ps),small:/大きさ=(小|小さめ)/.test(ps),board:board.board,title:board.title,boardModel:board,...(board.presentation?{presentation:board.presentation}:{}),posts:list.length?list.map(({post:p,depth})=>({n:p.number,name:p.name,id:p.authorId,rp:AzBoardEditor.replyNumberOf(board,p)||'',depth,compact:!board.numbered,...Object.fromEntries(['numberLabel','replyLabel','metaLabel','replyLineLabel','date'].filter(k=>p[k]!==undefined).map(k=>[k,p[k]]))})):[{n:0,compact:true,empty:true,depth:0}]});
+                            }
+                            continue;
+                        }catch(e){/* Retain the original malformed/unknown legacy fallback below. */}
+                    }
                     const hasNum = raw.some(r => /^\s*\d+\s+.+?：/.test(r));
                     const posts = raw.map((r, i) => {
                         const m = r.trim().match(/^(\d+)\s+(.+?)(?:\s+ID:(\S+))?：(?:>>(\d+)\s*)?(.*)$/); if (m) return { n: +m[1], name: m[2], id: m[3] || '', rp: m[4] || '', body: m[5] };
@@ -6035,8 +6747,8 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                         ordered = []; const walk = (p, d) => { ordered.push({ p, d }); (kids[p.n] || []).forEach(c => walk(c, d + 1)); }; roots.forEach(p => walk(p, 0));
                     }
                     const from = out.length;
-                    ordered.forEach(({ p, d }) => out.push((!d && p.rp ? '>>' + p.rp + ' ' : '') + p.body));
-                    if (frames) frames.push({ from, to: out.length - 1, kind: 'bbs', look, notype: /演出=なし/.test(ps), small: /大きさ=(小|小さめ)/.test(ps), board: attr('板'), title: attr('題'), posts: ordered.map(({ p, d }) => ({ n: p.n, name: p.name, id: p.id, rp: p.rp, depth: d, compact: !!p.compact })) });
+                    ordered.forEach(({ p, d }) => { const body=!frames&&attr('投稿書式')==='1'?p.body.split('［投稿改行］').join('　'):p.body; out.push((!d && p.rp ? '>>' + p.rp + ' ' : '') + body); });
+                    if (frames) frames.push({ from, to: out.length - 1, kind: 'bbs', look, postBreaks: attr('投稿書式') === '1', colors: Object.fromEntries([['背景','bg'],['本文色','fg'],['名前色','name'],['枠色','border']].map(([key,field])=>[field,attr(key)]).filter(([,value])=>/^#[0-9a-fA-F]{6}$/.test(value))), notype: /演出=なし/.test(ps), small: /大きさ=(小|小さめ)/.test(ps), board: attr('板'), title: attr('題'), posts: ordered.map(({ p, d }) => ({ n: p.n, name: p.name, id: p.id, rp: p.rp, depth: d, compact: !!p.compact })) });
                     continue;
                 }
                 if ((fm = lt.match(/^［(窓|システム画面|ステータス|LINE通知|トーク|招待状)([^］\n]*)］$/))) {
@@ -6130,8 +6842,12 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             return c;
         }
         let fxViewer = null;
+        function fxHasProvidedBoard(chap) {
+            return /^［掲示板[^\r\n］]*[\s　]bbs(?:Theme|Layout|Effect)=/m.test(String(chap?.content||''));
+        }
         function fxOpenViewer(bookId, chapId) {
             const ref = commentFindChap(bookId, chapId); if (!ref) return;
+            if(fxHasProvidedBoard(ref.chap)){toast('この話には新しい掲示板があります。別画面の演出ビューは未対応です。掲示板の「演出を再生」か「この画面で、もう一度動かす」を使ってください。');return;}
             if (fxViewer) fxViewer.close();
             const cfg = fxSettingsFor(ref.book);
             stopSpeech(); hideTtsFloatingBar();
@@ -6152,17 +6868,26 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             window.addEventListener('message', onMsg); fxViewer = { close };
         }
         // 読む画面の中の掲示板・カカオの招待を、もう一度、最初から動かす
+        let providedReplaySequence=0;
+        async function fxReplayProvidedInReader(views) {
+            const sequence=++providedReplaySequence;
+            for(const view of views){
+                if(sequence!==providedReplaySequence||!view.isConnected)break;
+                try{const playback=AzBoardEditor.playProvidedView(view,{sound:false});const result=await(playback?.finished||playback);if(result?.error){toast('掲示板の演出を再生できませんでした。もう一度お試しください。');break}if(result?.cancelled)break;}catch(e){toast('掲示板の演出を再生できませんでした。もう一度お試しください。');break}
+            }
+        }
         function fxReplayInReader() {
             const boxes = [...document.querySelectorAll('#view-reader .fxbbs, #view-reader .fxkk, #view-reader .fxnote, #view-reader [data-fxe]')];
-            if (!boxes.length) { toast('いまのページには、動く演出がありません。ページをめくって、探してください'); return false; }
+            const provided=[...document.querySelectorAll('#view-reader .az-board-provided')].filter(view=>view.dataset.effect&&view.dataset.effect!=='none');
+            if (!boxes.length&&!provided.length) { toast('いまのページには、動く演出がありません。ページをめくって、探してください'); return false; }
             boxes.forEach(b => {
                 fxBbsSeen.delete(fxBbsKey(b)); delete b.dataset.fxt;
                 const q = b.querySelector('.kkq'); if (q && q.dataset.orig) { q.textContent = q.dataset.orig; delete q.dataset.orig; }
                 delete b.dataset.no; b.querySelectorAll('.kkbtn button').forEach(x => { x.disabled = false; x.style.opacity = ''; x.style.transform = ''; });
                 const kn = b.querySelector('.kkbtn .n'); if (!kn && b.querySelector('.kkbtn')) { const nb = document.createElement('button'); nb.type = 'button'; nb.className = 'n'; nb.textContent = 'いいえ'; b.querySelector('.kkbtn').appendChild(nb); }
             });
-            boxes[0].scrollIntoView({ block: 'center', behavior: 'smooth' });
-            fxBbsScan(); return true;
+            if(boxes.length){boxes[0].scrollIntoView({ block: 'center', behavior: 'smooth' });fxBbsScan();}
+            if(provided.length)void fxReplayProvidedInReader(provided);return true;
         }
         function fxHeaderAction() {
             const r = commentFindChap(state.currentBookId, state.currentChapterId); if (!r) return;
@@ -6469,12 +7194,34 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         // 掲示板の見た目を選ぶ（あとで、印の「見た目=」を書き換えても、変えられる）
         const BBS_LOOKS = [['定番', '定番（2ちゃん風）', 'グレーの背景・緑の名前'], ['ふつう', 'ふつう（すっきり）', '白い背景・細い線'], ['明るい', '明るい（ピンク）', 'ファン掲示板など'], ['裏', '裏掲示板（黒×ネオン）', '黒い背景・緑の文字']];
         function openBbsLook(kindId) {
+            if(window.AzBoardEditor){openBoardEditor(kindId);return;}
             const m = document.createElement('div'); m.id = 'modal-frame-menu';
             m.innerHTML = '<div><h4>掲示板の見た目</h4><small>あとから、印の「見た目=…」を書き換えれば、変えられます。</small>'
                 + BBS_LOOKS.map(([k, n, d]) => '<button type="button" class="fm" data-l="' + k + '">' + escapeHtml(n) + '<span>' + escapeHtml(d) + '</span></button>').join('')
                 + '<button type="button" class="fm" data-l="" style="text-align:center;color:#8a7a68">やめる</button></div>';
             document.body.appendChild(m);
             m.addEventListener('click', e => { if (e.target === m) { m.remove(); return; } const b = e.target.closest('button[data-l]'); if (!b) return; m.remove(); if (b.dataset.l) insertFrame(kindId, b.dataset.l); });
+        }
+        // 専用画面の変更は下書きだけに反映し、本文の保存・取消・履歴を維持する。
+        function openBoardEditor(kindId,range) {
+            if(visualDraft.mode!=='visual'||visualDraft.composing||!window.AzBoardEditor)return;
+            const src=draftSource(),sel=range||framePickCtx||editorSelection()||{start:src.length,end:src.length};
+            const selected=src.slice(sel.start,sel.end),block=fxBlockAt(src,sel.start);
+            const existing=/^［掲示板[\s　］]/.test(selected)&&/［／掲示板］$/.test(selected)?{start:sel.start,end:sel.end,text:selected}:block&&/^［掲示板[\s　］]/.test(block.text)?block:null;
+            const ctx=existing||{start:sel.start,end:sel.end},picked=src.slice(ctx.start,ctx.end);
+            const apply=text=>{
+                if(visualDraft.mode!=='visual'||draftSource()!==src)throw Error('本文が変わりました。掲示板を開き直してください');
+                const before=src.slice(0,ctx.start),after=src.slice(ctx.end),pre=!existing&&before&&!/[\r\n]$/.test(before)?'\n':'',post=!existing&&after&&!/^[\r\n]/.test(after)?'\n':'';
+                const next=before+pre+text+post+after;storeDraftSource(next);renderVisualSource(next);setVisualSelection(before.length+pre.length+text.length);syncVisualDraft(true);framePickCtx=null;
+            };
+            try {
+                let board;
+                if(existing)board=AzBoardEditor.parse(existing.text);
+                else if(selected.trim()&&AzBoardEditor.fromText){board=AzBoardEditor.fromText(selected);const kind=FRAME_KINDS.find(x=>x.id===kindId);board.mode=kind&&kind.bbs==='ツリー'?'tree':'flat';apply(AzBoardEditor.serialize(board));toast('選択した文章を掲示板にしました');return;}
+                else {board=AzBoardEditor.providedExample?AzBoardEditor.providedExample():AzBoardEditor.example();const kind=FRAME_KINDS.find(x=>x.id===kindId);board.mode=kind&&kind.bbs==='ツリー'?'tree':'flat';board.numbered=true;if(board.presentation)board.presentation.layout=board.mode;}
+                const open=board.presentation&&AzBoardEditor.openProvided?AzBoardEditor.openProvided:AzBoardEditor.open;
+                open({board,isEditing:!!existing,onSave:(nextBoard,text)=>{apply(text);toast('掲示板を下書きに反映しました。本文の保存で確定します')}});
+            }catch(e){toast(e.message);}
         }
         function insertFrame(id, look) {
             let k = FRAME_KINDS.find(x => x.id === id); if (!k || visualDraft.mode !== 'visual') return;
@@ -8576,8 +9323,8 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         // 話の終わり・戻る・本の終わりで、読み終えた話から言葉を拾い、件数を小さく知らせる。読書は止めない
         // ===== 更新の確認：新しい版があれば、魚に青い点とメニュー（版の番号は version.json。公開のたびに、番号が変わる。番号が入っていない開発中は、確かめない） =====
         // 表示用の版。更新の検出は引き続き APP_BUILD の日時番号を使う。
-        const APP_VERSION = '10.9';
-        const APP_BUILD = '20261107150353';
+        const APP_VERSION = '10.11';
+        const APP_BUILD = '20261107192000';
         let updateCheckAt = 0;
         function paintBuild() {
             const el = document.getElementById('app-build-info'); if (!el) return;
@@ -8663,7 +9410,8 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             if (node.nodeType === Node.TEXT_NODE) return node.data;
             if (node.nodeType !== Node.ELEMENT_NODE && node.nodeType !== Node.DOCUMENT_FRAGMENT_NODE) return '';
             if (node.nodeType === Node.ELEMENT_NODE) {
-                if (node.hasAttribute('data-editor-placeholder')) return '';
+                if (node.hasAttribute('data-editor-placeholder') || node.hasAttribute('data-board-controls')) return '';
+                if (node.hasAttribute('data-board-source')) return typeof window!=='undefined' && window.AzBoardEditor && node.querySelectorAll ? visualBoardInfo(node).source : node.dataset.boardSource;
                 if (node.matches('ruby[data-source], span[data-stair][data-source]')) return node.dataset.source;
                 if (node.tagName === 'BR') return '\n';
             }
@@ -8745,10 +9493,10 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                 });
             };
             // 書式（太字・斜体・下線・取消線・色）は、入れ子にできる。中の文字も、同じ仕組みで描く
-            const appendMarked=(text,parent)=>{
+            const appendMarked=(text,parent,multiline=false)=>{
                 let rest=text;
                 for(;;){
-                    const m=MARK_RE.exec(rest);
+                    const m=(multiline?new RegExp(MARK_RE.source.replaceAll('[^\\n\\r]*?','[\\s\\S]*?')):MARK_RE).exec(rest);
                     if(!m){appendPlain(rest,parent);return}
                     appendPlain(rest.slice(0,m.index),parent);
                     const name=m[1]||(m[3]!==undefined?'色':'リンク');
@@ -8762,24 +9510,154 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                     const el=document.createElement(MARKS[name]);
                     el.dataset.mark=name;
                     if(MARK_STYLE[name])el.style.cssText=MARK_STYLE[name];
-                    if(name==='色'){el.dataset.value=m[3];el.style.color=colorOf(m[3]);appendMarked(m[4],el)}
-                    else if(name==='リンク'){el.dataset.value=m[5];appendMarked(m[6],el)}
-                    else appendMarked(m[2],el);
+                    if(name==='色'){el.dataset.value=m[3];el.style.color=colorOf(m[3]);appendMarked(m[4],el,multiline)}
+                    else if(name==='リンク'){el.dataset.value=m[5];appendMarked(m[6],el,multiline)}
+                    else appendMarked(m[2],el,multiline);
                     parent.append(el);
                     rest=rest.slice(m.index+m[0].length);
                 }
             };
-            const pieces=source.split(/(\r\n|\r|\n)/);
-            pieces.forEach(piece => appendMarked(piece,fragment));
+            const appendText=text=>text.split(/(\r\n|\r|\n)/).forEach(piece=>appendMarked(piece,fragment));
+            const boards=/^［掲示板(?:[\s　][^］\r\n]*)?］\r?\n[\s\S]*?^［／掲示板］/gm;let cursor=0;
+            if(window.AzBoardEditor)for(const match of source.matchAll(boards)){
+                let board;try{board=AzBoardEditor.parse(match[0]);}catch(e){continue;}
+                appendText(source.slice(cursor,match.index));
+                const atom=document.createElement('span');atom.dataset.boardSource=match[0];atom.style.cssText='display:block;white-space:normal;margin:8px 0';
+                atom.innerHTML=AzBoardEditor.html(board);
+                const markField=(node,field,value)=>{if(!node)return;node.dataset.boardField=field;node.replaceChildren();appendMarked(String(value??''),node,true)};
+                markField(atom.querySelector('.az-board-title'),'title',board.title);
+                markField(atom.querySelector('.az-board-label'),'board',board.board);
+                const ordered=AzBoardEditor.ordered(board);
+                [...atom.querySelectorAll('article')].forEach((article,index)=>{
+                    const post=board.posts.find(p=>p.key===article.dataset.postKey)||ordered[index]?.post;if(!post)return;article.dataset.boardPostKey=post.key;
+                    markField(article.querySelector('.az-board-number'),'number',post.numberLabel??String(post.number));
+                    markField(article.querySelector('.az-board-meta-label'),'metaLabel',post.metaLabel);
+                    markField(article.querySelector('.az-board-reply-line-label'),'replyLineLabel',post.replyLineLabel);
+                    markField(article.querySelector('.az-board-name'),'name',post.name);
+                    markField(article.querySelector('.az-board-id'),'authorId',post.authorId);
+                    markField(article.querySelector('.az-board-date'),'date',post.date);
+                    markField(article.querySelector('.az-board-reply-number'),'replyNumber',post.replyLabel??String(AzBoardEditor.replyNumberOf?AzBoardEditor.replyNumberOf(board,post)||'':(board.posts.find(p=>p.key===post.parent)?.number||'')));
+                    const bodies=[...article.querySelectorAll('.az-board-post-body')];
+                    bodies.forEach((body,i)=>{const part=post.parts.filter(p=>p.type==='text')[i];if(!part)return;markField(body,'body',part.text);body.dataset.boardPart=String(i);body.setAttribute('aria-label','投稿 '+post.number+' の本文');body.setAttribute('role','textbox');body.setAttribute('aria-multiline','true')});
+                });
+                atom.querySelectorAll('.az-board-meta,.az-board-reply').forEach(node=>node.dataset.boardShell=visualBoardShell(node));
+                atom.dataset.boardDomBaseline=atom.innerHTML;
+                const button=document.createElement('button');button.type='button';button.contentEditable='false';button.dataset.boardControls='1';button.dataset.boardEdit='1';button.textContent='この掲示板を編集';button.style.cssText='padding:8px 12px;border:1px solid #b9aa94;border-radius:8px;background:#fff;color:#332e27';
+                button.onmousedown=e=>e.preventDefault();button.onclick=()=>{const range=document.createRange();range.selectNodeContents(visualRoot());range.setEndBefore(atom);const start=serializeVisual(range.cloneContents()).length;openBoardEditor(null,{start,end:start+serializeVisual(atom).length});};
+                atom.append(button);
+                if(board.presentation){
+                    const remove=document.createElement('button');remove.type='button';remove.contentEditable='false';remove.dataset.boardControls='1';remove.dataset.boardDelete='1';remove.textContent='×';remove.setAttribute('aria-label','この掲示板を削除');remove.className='bbs-delete-btn';
+                    if(!document.getElementById('az-board-delete-style')){const style=document.createElement('style');style.id='az-board-delete-style';style.textContent='#reader-visual-editor .az-board-provided{position:relative}#reader-visual-editor .bbs-delete-btn{position:absolute;top:-10px;right:-10px;width:24px;height:24px;padding:0;margin:0;border:2px solid white;border-radius:50%;background:#ef4444;color:white;font-size:16px;font-weight:bold;line-height:1;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:10;opacity:0;transition:opacity .2s;box-shadow:0 2px 4px rgba(0,0,0,.2)}#reader-visual-editor .az-board-provided:hover>.bbs-delete-btn,#reader-visual-editor .az-board-provided:focus-within>.bbs-delete-btn,#reader-visual-editor .bbs-delete-btn:focus-visible{opacity:1}#reader-visual-editor[contenteditable="false"] .bbs-delete-btn{display:none}@media(hover:none){#reader-visual-editor .bbs-delete-btn{opacity:1}}';document.head.append(style)}
+
+                    remove.onmousedown=e=>e.preventDefault();remove.onclick=e=>{e.preventDefault();e.stopPropagation();if(visualDraft.mode!=='visual'||visualDraft.composing)return;syncVisualDraft();const r=document.createRange();r.selectNodeContents(visualRoot());r.setEndBefore(atom);const start=serializeVisual(r.cloneContents()).length;atom.remove();ensureVisualTail();setVisualSelection(start);syncVisualDraft(true)};
+                    (atom.querySelector('.az-board-provided')||atom).append(remove);
+                }
+                fragment.append(atom);cursor=match.index+match[0].length;
+            }
+            appendText(source.slice(cursor));
             root.replaceChildren(fragment);ensureVisualTail();
             if (serializeVisual() !== source) throw new Error('Visual editor round-trip mismatch');
             paintFxFrames();
         }
+        function visualBoardShell(node) {
+            if(!node)return '';const clone=node.cloneNode(true);
+            clone.querySelectorAll('[data-board-field]').forEach(field=>{field.textContent='{'+field.dataset.boardField+'}'});
+            return clone.innerHTML;
+        }
+        function visualBoardInfo(atom) {
+            const original=atom.dataset.boardSource,board=AzBoardEditor.parse(original),by=new Map(board.posts.map(p=>[p.key,p]));
+            const text=node=>node?serializeVisual(node):'',field=(node,name)=>node.querySelector('[data-board-field="'+name+'"]');
+            const currentView=atom.querySelector('.az-board-view')?.cloneNode(true);currentView?.querySelectorAll('[data-board-controls]').forEach(node=>node.remove());
+            const unchanged=currentView?.outerHTML===atom.dataset.boardDomBaseline;let posts=board.posts;
+            if(!unchanged){
+            board.title=text(field(atom,'title'));board.board=text(field(atom,'board'));
+            const seen=new Set(),nextPosts=[];
+            for(const article of atom.querySelectorAll('article[data-board-post-key]')){
+                if(!article.textContent.trim()||seen.has(article.dataset.boardPostKey))continue;seen.add(article.dataset.boardPostKey);
+                const old=by.get(article.dataset.boardPostKey);if(!old)continue;const p=JSON.parse(JSON.stringify(old));
+                const meta=article.querySelector('.az-board-meta'),metaOverride=field(article,'metaLabel');
+                if(metaOverride)p.metaLabel=text(metaOverride);
+                else if(meta&&meta.dataset.boardShell!==visualBoardShell(meta))p.metaLabel=serializeVisual(meta);
+                else if((board.numbered||board.presentation)&&!meta)p.metaLabel='';
+                else if(board.numbered||board.presentation){delete p.metaLabel;if(board.numbered){const number=text(field(article,'number'));if(/^[1-9]\d*$/.test(number)){p.number=Number(number);delete p.numberLabel}else p.numberLabel=number;}
+                    p.name=text(field(article,'name'));p.authorId=text(field(article,'authorId'));if(field(article,'date')||Object.prototype.hasOwnProperty.call(p,'date'))p.date=text(field(article,'date'));}
+                const bodyNodes=[...article.querySelectorAll('[data-board-field="body"],img')];p.parts=bodyNodes.map(n=>n.tagName==='IMG'?{type:'image',src:n.getAttribute('src'),alt:n.getAttribute('alt')||''}:{type:'text',text:text(n)});
+                if(!p.parts.length)p.parts=[{type:'text',text:''}];
+                const replyNode=article.querySelector('.az-board-reply'),replyOverride=field(article,'replyLineLabel');
+                if(replyOverride)p.replyLineLabel=text(replyOverride);
+                else if(replyNode&&replyNode.dataset.boardShell!==visualBoardShell(replyNode))p.replyLineLabel=serializeVisual(replyNode);
+                else if(!(board.presentation&&!replyNode&&p.replyLabel===undefined&&p.replyLineLabel===undefined)){delete p.replyLineLabel;const reply=text(field(article,'replyNumber'));p.parent=null;delete p.replyNumber;delete p.replyLabel;
+                    if(reply){const digits=reply.replace(/［[^］]*］/g,'').trim();if(/^[1-9]\d*$/.test(digits))p.replyNumber=Number(digits);if(reply!==digits)p.replyLabel=reply;else if(!/^[1-9]\d*$/.test(digits))p.replyLabel=reply;}}
+                nextPosts.push(p);
+            }
+            // A node removed from the editable DOM must never be resurrected from insertion metadata.
+            posts=nextPosts;board.posts=posts;
+            for(const p of posts){if(p.replyNumber){const parent=posts.find(q=>q.number===p.replyNumber&&q!==p);if(parent){p.parent=parent.key;delete p.replyNumber}}}
+            }
+            const source=AzBoardEditor.serialize(board),encoded=/(?:[\s　])投稿書式=[12](?:[\s　］])/.test(source.split(/\r?\n/)[0]);
+            const rows=[];let offset=0;for(const match of source.matchAll(/[^\r\n]*(?:\r\n|\r|\n|$)/g)){const line=match[0].replace(/[\r\n]+$/,'');if(offset&&line.trim()&&line!=='［／掲示板］')rows.push({line,start:offset});offset+=match[0].length}
+            const sequence=board.numbered?posts:AzBoardEditor.ordered(board).map(x=>x.post);
+            const spans=sequence.map((p,i)=>{const article=[...atom.querySelectorAll('article[data-board-post-key]')].find(a=>a.dataset.boardPostKey===p.key),body=article?.querySelector('[data-board-field="body"]'),value=p.parts[0]?.text||'',raw=encoded?value.replace(/\r\n?|\n/g,'［投稿改行］'):value,row=rows[i],at=row?row.line.lastIndexOf(raw):-1;return !body||at<0?null:{body,text:value,encoded,start:row.start+at,end:row.start+at+raw.length}}).filter(Boolean);
+            return {source,spans,board};
+        }
+        function visualBoardDescriptor(range) {
+            const atomOf=node=>(node.nodeType===1?node:node.parentElement)?.closest('[data-board-source]');
+            const a=atomOf(range.startContainer),b=atomOf(range.endContainer);if(!a||a!==b)return null;
+            const fieldOf=node=>(node.nodeType===1?node:node.parentElement)?.closest('[data-board-field]');
+            const point=(node,offset)=>{const field=fieldOf(node);if(!field)return null;const r=document.createRange();r.selectNodeContents(field);r.setEnd(node,offset);let value=serializeVisual(r.cloneContents()),el=node.nodeType===3?node.parentElement:node;while(el&&el!==field){if(el.dataset.mark)value=value.slice(0,-markCloseOf(el).length);el=el.parentElement}return {field:field.dataset.boardField,post:field.closest('article')?.dataset.boardNumber||'',offset:value.length}};
+            return {board:[...visualRoot().querySelectorAll('[data-board-source]')].indexOf(a),a:point(range.startContainer,range.startOffset),b:point(range.endContainer,range.endOffset)};
+        }
+        function restoreVisualBoardDescriptor(descriptor) {
+            if(!descriptor?.a||!descriptor?.b)return false;const atom=visualRoot().querySelectorAll('[data-board-source]')[descriptor.board];if(!atom)return false;
+            const locate=point=>{const scope=point.post?[...atom.querySelectorAll('article')].find(a=>a.dataset.boardNumber===point.post):atom;const field=scope?.querySelector('[data-board-field="'+point.field+'"]');if(!field)return null;let cursor=0,result=null;
+                const walk=node=>{if(result)return;if(node.nodeType===3){if(point.offset<=cursor+node.length){result=[node,Math.max(0,point.offset-cursor)];return}cursor+=node.length;return}if(node.nodeType===1&&node.dataset.mark){cursor+=markOpenOf(node).length;for(const c of node.childNodes)walk(c);cursor+=markCloseOf(node).length;return}if(node.nodeType===1&&(node.matches('ruby[data-source],span[data-stair][data-source]')||node.tagName==='BR')){const len=serializeVisual(node).length;if(point.offset<=cursor+len){result=[node.parentNode,[...node.parentNode.childNodes].indexOf(node)+(point.offset>cursor?1:0)];return}cursor+=len;return}for(const c of node.childNodes)walk(c)};walk(field);return result||[field,field.childNodes.length]};
+            const a=locate(descriptor.a),b=locate(descriptor.b);if(!a||!b)return false;const r=document.createRange();r.setStart(...a);r.setEnd(...b);const selection=getSelection();selection.removeAllRanges();selection.addRange(r);return true;
+        }
+        function visualBoardFormat(name,value) {
+            const selection=getSelection();if(!selection.rangeCount||visualDraft.composing)return false;const range=selection.getRangeAt(0),descriptor=visualBoardDescriptor(range);if(!descriptor)return false;
+            if(range.collapsed)return true;
+            const atom=visualRoot().querySelectorAll('[data-board-source]')[descriptor.board],targets=[];
+            for(const field of atom.querySelectorAll('[data-board-field]')){
+                if(!range.intersectsNode(field))continue;const r=document.createRange();r.selectNodeContents(field);
+                if(field.contains(range.startContainer))r.setStart(range.startContainer,range.startOffset);
+                if(field.contains(range.endContainer))r.setEnd(range.endContainer,range.endOffset);
+                if(!r.collapsed&&r.toString())targets.push({field,r});
+            }
+            if(!targets.length)return true;if(typeof rememberDraftPosition==='function')rememberDraftPosition();let firstSelected=null,lastSelected=null;
+            for(const {field,r}of targets){
+                let ancestor=r.commonAncestorContainer.nodeType===1?r.commonAncestorContainer:r.commonAncestorContainer.parentElement;
+                while(ancestor&&ancestor!==field&&ancestor.dataset.mark!==name)ancestor=ancestor.parentElement;
+                if(ancestor&&ancestor!==field&&ancestor.dataset.mark===name){if(name==='色'&&ancestor.dataset.value!==value){ancestor.dataset.value=value;ancestor.style.color=colorOf(value);const selected=document.createRange();selected.selectNodeContents(ancestor);firstSelected=firstSelected||selected;lastSelected=selected}else{const first=ancestor.firstChild,last=ancestor.lastChild;while(ancestor.firstChild)ancestor.parentNode.insertBefore(ancestor.firstChild,ancestor);ancestor.remove();if(first&&last){const selected=document.createRange();selected.setStartBefore(first);selected.setEndAfter(last);firstSelected=firstSelected||selected;lastSelected=selected}}continue}
+                const el=document.createElement(MARKS[name]||'span');el.dataset.mark=name;if(name==='色'||name==='リンク')el.dataset.value=value;if(MARK_STYLE[name])el.style.cssText=MARK_STYLE[name];if(name==='色')el.style.color=colorOf(value);el.append(r.extractContents());r.insertNode(el);const selected=document.createRange();selected.selectNodeContents(el);firstSelected=firstSelected||selected;lastSelected=selected;
+            }
+            if(firstSelected&&lastSelected){const selected=document.createRange();selected.setStart(firstSelected.startContainer,firstSelected.startOffset);selected.setEnd(lastSelected.endContainer,lastSelected.endOffset);selection.removeAllRanges();selection.addRange(selected)}syncVisualDraft(true);return true;
+        }
+        function visualBoardSelection(range) {
+            const descriptor=visualBoardDescriptor(range);if(!descriptor)return null;
+            const atom=visualRoot().querySelectorAll('[data-board-source]')[descriptor.board],outer=document.createRange();outer.selectNodeContents(visualRoot());outer.setEndBefore(atom);
+            const base=serializeVisual(outer.cloneContents()).length,info=visualBoardInfo(atom);
+            const fieldOf=node=>(node.nodeType===1?node:node.parentElement)?.closest('[data-board-field]');
+            const a=fieldOf(range.startContainer),b=fieldOf(range.endContainer),span=a===b?info.spans.find(s=>s.body===a):null;
+            if(!span)return {start:base,end:base+(range.collapsed?0:Math.max(1,range.toString().length)),boardSelection:descriptor,insideRuby:false};
+            const point=(node,offset)=>{const r=document.createRange();r.selectNodeContents(a);r.setEnd(node,offset);let value=serializeVisual(r.cloneContents()),el=node.nodeType===3?node.parentElement:node;while(el&&el!==a){if(el.dataset.mark)value=value.slice(0,-markCloseOf(el).length);el=el.parentElement}return base+span.start+(span.encoded?value.replace(/\r\n?|\n/g,'［投稿改行］'):value).length};
+            return {start:point(range.startContainer,range.startOffset),end:point(range.endContainer,range.endOffset),boardSelection:descriptor,insideRuby:!!((range.startContainer.nodeType===1?range.startContainer:range.startContainer.parentElement)?.closest('ruby[data-source]'))};
+        }
+        function visualBoardPoint(atom,wanted) {
+            const info=visualBoardInfo(atom),span=info.spans.find(s=>wanted>=s.start&&wanted<=s.end);if(!span)return null;
+            const prefix=info.source.slice(span.start,wanted),target=(span.encoded?prefix.split('［投稿改行］').join('\n'):prefix).length;let cursor=0,result=null;
+            const walk=node=>{if(result)return;if(node.nodeType===3){if(target<=cursor+node.length){result=[node,Math.max(0,target-cursor)];return}cursor+=node.length;return}
+                if(node.nodeType===1&&node.dataset.mark){cursor+=markOpenOf(node).length;for(const child of node.childNodes)walk(child);cursor+=markCloseOf(node).length;return}
+                if(node.nodeType===1&&(node.matches('ruby[data-source],span[data-stair][data-source]')||node.tagName==='BR')){const len=serializeVisual(node).length;if(target<=cursor+len){result=[node.parentNode,[...node.parentNode.childNodes].indexOf(node)+(target>cursor?1:0)];return}cursor+=len;return}
+                for(const child of node.childNodes)walk(child);
+            };walk(span.body);return result||[span.body,span.body.childNodes.length];
+        }
+
         function visualOffsets() {
             const root=visualRoot(), selection=getSelection();
             if (!selection.rangeCount) return null;
             const range=selection.getRangeAt(0);
             if (!root.contains(range.startContainer) || !root.contains(range.endContainer)) return null;
+            const boardSelection=visualBoardSelection(range);if(boardSelection)return boardSelection.blocked?{start:0,end:0,insideRuby:true}:boardSelection;
             const prefix=document.createRange();prefix.selectNodeContents(root);prefix.setEnd(range.startContainer,range.startOffset);
             const suffix=document.createRange();suffix.selectNodeContents(root);suffix.setEnd(range.endContainer,range.endOffset);
             const inRuby=node=>(node.nodeType===1?node:node.parentElement)?.closest('ruby[data-source]');
@@ -8797,6 +9675,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                     if(result)return;
                     if(node.nodeType===3){if(wanted<=cursor+node.length){result=[node,Math.max(0,wanted-cursor)];return;}cursor+=node.length;return;}
                     if(node.nodeType===1 && node.dataset.mark){cursor+=markOpenOf(node).length;for(const child of node.childNodes)walk(child);cursor+=markCloseOf(node).length;return;}
+                    if(node.nodeType===1 && node.hasAttribute('data-board-source')) {const len=serializeVisual(node).length;if(wanted>=cursor&&wanted<=cursor+len){const point=visualBoardPoint(node,wanted-cursor);if(point){result=point;return}}if(wanted<=cursor+len){const index=[...node.parentNode.childNodes].indexOf(node);result=[node.parentNode,index+(wanted>cursor?1:0)];return}cursor+=len;return;}
                     if(node.nodeType===1 && (node.matches('ruby[data-source], span[data-stair][data-source]') || node.tagName==='BR')) {
                         const len=serializeVisual(node).length;
                         if(wanted<=cursor+len){const index=[...node.parentNode.childNodes].indexOf(node);result=[node.parentNode,index+(wanted>cursor?1:0)];return;}cursor+=len;return;
@@ -8812,10 +9691,66 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             const ta=document.getElementById('reader-editor-textarea');
             return visualDraft.mode==='visual' ? visualOffsets() || {start:0,end:0} : {start:rawOffset(visualDraft.source,ta.selectionStart),end:rawOffset(visualDraft.source,ta.selectionEnd)};
         }
+        // 複数行は先に処理する。行をまたいで開き・閉じの印を消さない。
+        function multilineMarkEdit(src,start,end,name,value) {
+            const valued=name==='色'||name==='リンク';
+            const opening=valued?'［'+name+':'+value+'］':'［'+name+'］', closing='［／'+name+'］';
+            const tokenRe=new RegExp(MARK_ANY_RE.source,'g');
+            const rows=[];let offset=0;
+            for(const line of src.split(/(\r\n|\r|\n)/)) {
+                const base=offset;offset+=line.length;
+                if(/^[\r\n]+$/.test(line)||end<=base||start>=offset)continue;
+                let a=Math.max(0,start-base),b=Math.min(line.length,end-base);
+                const spans=[],stack=[];
+                for(const m of line.matchAll(tokenRe)) {
+                    const parsed=m[0].match(/^［(／?)([^:］]+)(?::([^］]*))?］$/);
+                    const t={at:m.index,end:m.index+m[0].length,name:parsed[2],value:parsed[3],close:!!parsed[1]};
+                    if(!t.close)stack.push(t);
+                    else {const o=stack.pop();if(!o||o.name!==t.name)return null;spans.push({o,c:t});}
+                }
+                if(stack.length)return null;
+                // 同じ書式の中からの選択は、既存の単行操作と同じく、その書式全体を対象にする。
+                let expanded=true;
+                while(expanded){expanded=false;for(const {o,c} of spans)if(o.name===name&&o.end<b&&c.at>a){const x=Math.min(a,o.at),y=Math.max(b,c.end);if(x!==a||y!==b){a=x;b=y;expanded=true;}}}
+                // 別の書式を途中で切る範囲は変更しない。印が壊れるより、安全に知らせる。
+                for(const {o,c} of spans) {
+                    if((a>o.at&&a<o.end)||(b>c.at&&b<c.end))return null;
+                    if(o.name!==name&&((a>o.at&&a<c.end&&b>c.at)||(b>o.at&&b<c.end&&a<o.end)))return null;
+                }
+                const selected=line.slice(a,b),plain=selected.replace(tokenRe,'');
+                if(!plain.trim())continue;
+                const targets=spans.filter(({o,c})=>o.name===name&&o.at>=a&&c.end<=b);
+                const covered=targets.filter(({o})=>!valued||o.value===String(value));
+                let all=true;
+                for(let i=a;i<b;i++) {
+                    if(/\s/.test(line[i])||spans.some(({o,c})=>(i>=o.at&&i<o.end)||(i>=c.at&&i<c.end)))continue;
+                    if(!covered.some(({o,c})=>i>=o.end&&i<c.at)){all=false;break;}
+                }
+                const drops=targets.flatMap(({o,c})=>[o,c]).sort((x,y)=>x.at-y.at);
+                let inner='',last=a;for(const t of drops){inner+=line.slice(last,t.at);last=t.end;}inner+=line.slice(last,b);
+                rows.push({a:base+a,b:base+b,inner,all});
+            }
+            if(!rows.length)return {src,start,end};
+            const remove=rows.every(row=>row.all);
+            let next='',last=0,selectionStart=0,selectionEnd=0;
+            rows.forEach((row,i)=>{next+=src.slice(last,row.a);if(i===0)selectionStart=next.length;
+                if(remove)next+=row.inner;
+                else {const lead=row.inner.match(/^\s*/)[0],trail=row.inner.match(/\s*$/)[0];next+=lead+opening+row.inner.slice(lead.length,row.inner.length-trail.length)+closing+trail;}
+                selectionEnd=next.length;last=row.b;});
+            next+=src.slice(last);return {src:next,start:selectionStart,end:selectionEnd};
+        }
         function toggleMark(name,value) {
+            if(typeof visualBoardFormat==='function'&&visualBoardFormat(name,value))return;
             const s=editorSelection();
             if(visualDraft.mode!=='visual'||s.end<=s.start){toast('文字を選んでから押してください');return}
             const src=draftSource();
+            if(/^［掲示板(?:[\s　][^］\r\n]*)?］/m.test(src.slice(s.start,s.end))){toast('掲示板は「この掲示板を編集」から書式を変えてください');return;}
+            if(/[\r\n]/.test(src.slice(s.start,s.end))){
+                const edit=multilineMarkEdit(src,s.start,s.end,name,value);
+                if(!edit){toast('別の書式を途中でまたいでいます。書式全体を選んでください');return;}
+                visualDraft.source=edit.src;storeDraftSource(edit.src);renderVisualSource(edit.src);
+                setVisualSelection(edit.start,edit.end);syncVisualDraft(true);return;
+            }
             // 書式の始まりと終わりの印を、範囲の前の文字から探す
             const openRe=name==='色'?new RegExp('［色:' + COLOR_VALUE + '］','g'):name==='リンク'?/［リンク:[^］\n\r]+］/g:new RegExp('［'+name+'］','g');
             const closeRe=name==='色'?/［／色］/g:new RegExp('［／'+name+'］','g');
@@ -8847,6 +9782,8 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         function setLineAlign(kind) {
             if(visualDraft.mode!=='visual'){toast('本文をタップしてから押してください');return}
             const s=editorSelection(), src=draftSource();
+            const boardBlock=fxBlockAt(src,s.start);
+            if(boardBlock&&/^［掲示板[\s　］]/.test(boardBlock.text)){toast('掲示板は専用の編集画面から変更してください');return;}
             const lineStart=src.lastIndexOf('\n',s.start-1)+1;
             let lineEnd=src.indexOf('\n',s.start);if(lineEnd<0)lineEnd=src.length;
             const line=src.slice(lineStart,lineEnd), m=line.match(/^［(中央|右)］([^\n\r]*)［／\1］$/), inner=m?m[2]:line;
@@ -8946,7 +9883,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             if(visualDraft.composing)return;
             syncVisualDraft();const index=visualDraft.index+delta;if(index<0 || index>=visualDraft.history.length)return;
             visualDraft.index=index;const entry=visualDraft.history[index],ta=document.getElementById('reader-editor-textarea');storeDraftSource(entry.source);
-            if(visualDraft.mode==='visual'){renderVisualSource(entry.source);setVisualSelection(entry.start,entry.end);}else{ta.focus();ta.setSelectionRange(normalizedSource(entry.source.slice(0,entry.start)).length,normalizedSource(entry.source.slice(0,entry.end)).length);}
+            if(visualDraft.mode==='visual'){renderVisualSource(entry.source);if(!restoreVisualBoardDescriptor(entry.boardSelection))setVisualSelection(entry.start,entry.end);}else{ta.focus();ta.setSelectionRange(normalizedSource(entry.source.slice(0,entry.start)).length,normalizedSource(entry.source.slice(0,entry.end)).length);}
             rubySelection=null;syncVisualDraft(false);
         }
         function rememberDraftPosition() {
@@ -9006,7 +9943,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             // 色の窓で、選んだ文字の位置を覚えておく（色の選択に移ると、本文の選択が外れるため）
             let lastColor='';try{lastColor=KV.getItem('yomimono_last_color')||''}catch(e){}
             const paintColorBtn=v=>{const sp=colorBtn.querySelector('span');if(sp&&v)sp.style.borderBottomColor=v};paintColorBtn(lastColor);if(lastColor)document.getElementById('color-custom').value=lastColor;
-            const applyColor=v=>{try{KV.setItem('yomimono_last_color',v)}catch(e){}paintColorBtn(v);colorDialog.close();if(colorSel&&colorSel.end>colorSel.start)setVisualSelection(colorSel.start,colorSel.end);toggleMark('色',v)};
+            const applyColor=v=>{try{KV.setItem('yomimono_last_color',v)}catch(e){}paintColorBtn(v);colorDialog.close();if(colorSel&&colorSel.end>colorSel.start){if(!restoreVisualBoardDescriptor(colorSel.boardSelection))setVisualSelection(colorSel.start,colorSel.end);}toggleMark('色',v)};
             document.getElementById('color-cancel').onclick=()=>{colorDialog.close();root.focus({preventScroll:true})};
             colorDialog.addEventListener('click',e=>{const b=e.target.closest('[data-hex]');if(b)applyColor(b.dataset.hex)});
             document.getElementById('color-custom').onchange=e=>applyColor(e.target.value);
@@ -9119,7 +10056,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                 if(document.activeElement!==visualRoot())return;
                 const pos=visualOffsets();if(!pos)return;
                 syncVisualDraft(false);
-                rubySelection={source:draftSource(),...pos,visual:true,scrollTop:visualRoot().scrollTop,scrollLeft:visualRoot().scrollLeft,chapterId:state.currentChapterId};return;
+                rubySelection={source:draftSource(),...pos,boardText:pos.boardSelection?getSelection().toString():undefined,visual:true,scrollTop:visualRoot().scrollTop,scrollLeft:visualRoot().scrollLeft,chapterId:state.currentChapterId};return;
             }
             if(document.activeElement!==textarea)return;
             rubySelection = { source:draftSource(), start:rawOffset(visualDraft.source,textarea.selectionStart), end:rawOffset(visualDraft.source,textarea.selectionEnd),
@@ -9140,7 +10077,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             if (!session) return;
             const textarea = document.getElementById('reader-editor-textarea');
             if (state.currentChapterId !== session.chapterId || draftSource() !== session.source) { rubySelection = null; return; }
-            if(session.visual){setVisualSelection(session.start,session.end);visualRoot().scrollTop=session.scrollTop;visualRoot().scrollLeft=session.scrollLeft;rememberRubySelection();return;}
+            if(session.visual){if(!restoreVisualBoardDescriptor(session.boardSelection))setVisualSelection(session.start,session.end);visualRoot().scrollTop=session.scrollTop;visualRoot().scrollLeft=session.scrollLeft;rememberRubySelection();return;}
             textarea.focus({preventScroll:true});
             textarea.setSelectionRange(normalizedSource(session.source.slice(0,session.start)).length,normalizedSource(session.source.slice(0,session.end)).length,session.direction);
             textarea.scrollTop = session.scrollTop; textarea.scrollLeft = session.scrollLeft;
@@ -9156,12 +10093,12 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                 toast('本文の文字を長押しして範囲を選び、「選択にルビ」を押してください');
                 (visualDraft.mode==='visual'?visualRoot():textarea).focus({preventScroll:true});return;
             }
-            if (session.insideRuby || !rubyRangeAllowed(session.source,session.start,session.end)) {
+            if (session.insideRuby || !(session.boardSelection?rubyRangeAllowed(session.boardText||'',0,(session.boardText||'').length):rubyRangeAllowed(session.source,session.start,session.end))) {
                 toast('既存のルビや改行、書式の境目をまたがず、本文の文字だけを選んでください');return;
             }
             rubyEdit = {...session};
             document.getElementById('ruby-reading').value = '';
-            document.getElementById('ruby-selected-label').textContent = session.source.slice(session.start,session.end);
+            document.getElementById('ruby-selected-label').textContent = session.boardSelection?session.boardText:session.source.slice(session.start,session.end);
             document.getElementById('ruby-feedback').textContent = '';
             document.getElementById('ruby-apply').disabled = false;
             document.getElementById('ruby-dialog').showModal();
@@ -9178,6 +10115,13 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             const reading = document.getElementById('ruby-reading').value.trim();
             if (!reading || /[《》\r\n]/.test(reading)) {
                 document.getElementById('ruby-feedback').textContent = 'ふりがなには改行や《》を含めないでください。';return;
+            }
+            if(session.boardSelection){
+                const base=session.boardText||'';if(!base||/[｜《》\r\n]/.test(base)){document.getElementById('ruby-feedback').textContent='改行やルビ記号を含まない文字を選んでください';return;}
+                closeRubyEditor();if(!restoreVisualBoardDescriptor(session.boardSelection)){toast('選択を復元できませんでした。文字を選び直してください');return;}
+                rememberDraftPosition();const selection=getSelection(),range=selection.getRangeAt(0),node=document.createElement('ruby'),rt=document.createElement('rt');
+                node.dataset.source='｜'+base+'《'+reading+'》';node.contentEditable='false';node.append(document.createTextNode(base));rt.textContent=reading;node.append(rt);range.deleteContents();range.insertNode(node);range.setStartAfter(node);range.collapse(true);selection.removeAllRanges();selection.addRange(range);
+                syncVisualDraft();rememberRubySelection();toast('選択した箇所にルビを付けました');return;
             }
             const ruby = `｜${session.source.slice(session.start,session.end)}《${reading}》`;
             const historyEntry=visualDraft.history[visualDraft.index];if(historyEntry && historyEntry.source===session.source)Object.assign(historyEntry,{start:session.start,end:session.end});
