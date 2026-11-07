@@ -338,12 +338,18 @@
         .txs.txsl > span { margin-left: 0; margin-right: calc(var(--i) * 1em); }
         .wkr { background: rgba(160, 60, 60, .10); border-bottom: 1px dotted rgba(160, 60, 60, .7); border-radius: 2px; cursor: pointer; color: #8a3a3a; }
         .wkw { background: rgba(184, 146, 63, .13); border-bottom: 1px dotted rgba(138, 104, 36, .55); border-radius: 2px; cursor: pointer; }
-        #wk-card { position: fixed; left: 12px; right: 12px; bottom: 14px; z-index: 56; max-width: 520px; margin: 0 auto; max-height: 46vh; overflow-y: auto; background: #fffdf8; border: 1px solid #cdbf9f; border-radius: 14px; box-shadow: 0 10px 30px rgba(40,30,15,.28); padding: 12px 14px; font: 14px/1.7 sans-serif; color: #2a2118; }
+        #wk-card { position: fixed; left: 12px; right: 12px; bottom: 14px; z-index: 56; max-width: 520px; margin: 0 auto; max-height: 46vh; display: flex; flex-direction: column; overflow: hidden; background: #fffdf8; border: 1px solid #cdbf9f; border-radius: 14px; box-shadow: 0 10px 30px rgba(40,30,15,.28); padding: 0; font: 14px/1.7 sans-serif; color: #2a2118; }
         #wk-card[hidden] { display: none; }
-        #wk-card .wkc-h { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding-right: 34px; position: relative; }
+        #wk-card .wkc-h { display: flex; align-items: flex-start; gap: 8px; flex: none; padding: 8px 8px 8px 14px; border-bottom: 1px solid #e3d9c2; background: #fffdf8; }
+        #wk-card .wkc-meta { display: flex; flex: 1; min-width: 0; flex-wrap: wrap; align-items: center; gap: 6px; max-height: 90px; overflow-y: auto; overflow-wrap: anywhere; }
+        #wk-card .wkc-actions { display: flex; flex: none; align-items: center; gap: 4px; }
+        #wk-card .wkc-body { min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 0 14px 12px; }
+        #wk-card .wkc-open { display: inline-flex; align-items: center; justify-content: center; gap: 5px; min-width: 44px; min-height: 44px; padding: 0 10px; border: 1px solid #cdbf9f; border-radius: 10px; background: #fbf8f0; color: #2a2118; font: inherit; font-size: 12px; white-space: nowrap; }
+        #wk-card .wkc-open svg { flex: none; }
+        @media (max-width: 430px) { #wk-card .wkc-open-label { display: none; } #wk-card .wkc-open { padding: 0; } }
         #wk-card .wkc-h b { font-size: 16px; margin-right: 4px; }
         #wk-card .wk-chip { font-size: 12px; background: #e9e0cc; border-radius: 999px; padding: 1px 9px; }
-        #wk-card .wkc-x { position: absolute; right: -6px; top: -6px; width: 40px; height: 40px; border: none; background: transparent; font-size: 22px; color: #7a6a52; }
+        #wk-card .wkc-x { width: 44px; height: 44px; flex: none; border: none; background: transparent; font-size: 22px; color: #7a6a52; }
         #wk-card .wkc-b { margin-top: 6px; white-space: pre-wrap; }
         #wk-card .wkc-n { margin-top: 6px; padding-left: 8px; border-left: 3px solid #b8923f; white-space: pre-wrap; }
         #wk-card .wkc-ep { font-size: 12px; font-weight: 700; color: #7a6a52; }
@@ -352,8 +358,6 @@
         #wk-card .wkc-r { display: flex; justify-content: space-between; gap: 10px; padding: 2px 2px; border-bottom: 1px dotted #e3d9c2; }
         #wk-card .wkc-r b { font-weight: 600; text-align: right; }
         #wk-card .wkc-m, #wk-card .wkc-lock { margin-top: 6px; font-size: 13px; color: #7a6a52; }
-        #wk-card .wkc-f { margin-top: 8px; text-align: right; }
-        #wk-card .wkc-f button { min-height: 40px; padding: 0 14px; border: 1px solid #cdbf9f; border-radius: 10px; background: #fff; font-size: 13px; color: #2a2118; }
         @media (max-width: 430px) { #view-reader > header button.w-8 { width: 30px; height: 30px; } }
         /* 設定の項目：見出しを押すと、開け閉めできる */
         .cs-card > .cs-head { cursor: pointer; display: flex !important; align-items: center; justify-content: space-between; user-select: none; }
@@ -1798,7 +1802,7 @@
         <button type="button" id="assist-btn" aria-expanded="false" aria-controls="assist-panel" aria-label="アシスタントを開く">🐟</button>
         <div id="assist-panel" role="dialog" aria-label="アシスタント" hidden></div>
         <div id="wiki-proto-sheet" class="wiki-sheet" role="dialog" aria-label="Wiki（試作）">
-            <div class="wk-head"><button type="button" id="wiki-back" aria-label="戻る">‹</button><h3 id="wiki-title">Wiki</h3><button type="button" id="wiki-home" aria-label="本棚（TOP）へ" title="本棚（TOP）へ">🏠</button><button type="button" id="wiki-book" aria-label="この作品のページへ" title="この作品のページへ">📖</button><button type="button" id="wiki-edit" aria-label="編集する" title="編集する" hidden style="margin-left:auto;font-size:18px">✎</button><button type="button" id="wiki-save" aria-label="保存して閉じる" title="保存して閉じる" hidden style="margin-left:auto;font-weight:700">✓</button><button type="button" id="wiki-close" aria-label="閉じる">×</button></div>
+            <div class="wk-head"><button type="button" id="wiki-back" aria-label="戻る">‹</button><h3 id="wiki-title">Wiki</h3><button type="button" id="wiki-home" aria-label="本棚（TOP）へ" title="本棚（TOP）へ">🏠</button><button type="button" id="wiki-book" aria-label="この作品のページへ" title="この作品のページへ">📖</button><button type="button" id="wiki-new" data-w="new" aria-label="新しい項目を登録" title="新しい項目を登録" hidden>＋</button><button type="button" id="wiki-edit" aria-label="編集する" title="編集する" hidden style="margin-left:auto;font-size:18px">✎</button><button type="button" id="wiki-save" aria-label="保存して閉じる" title="保存して閉じる" hidden style="margin-left:auto;font-weight:700">✓</button><button type="button" id="wiki-close" aria-label="閉じる">×</button></div>
             <div class="wk-body" id="wiki-body"></div>
         </div>
         <div id="modal-wiki-index" class="hidden fixed inset-0 z-50 bg-black/40 flex items-end sm:items-center justify-center" role="dialog" aria-label="Wiki（作品ごと）">
@@ -1880,6 +1884,7 @@
                     <div class="pt-3 border-t border-woodBorder">
                         <span class="font-bold text-softMuted block mb-1">更新履歴</span>
                         <div id="changelog" class="text-[11px] text-softMuted leading-relaxed">
+<div class="mb-1.5"><b class="text-softText">Version 10.13（2026-11-07）</b><br>用語カードの「Wikiを開く」を右上に固定しました。Wikiページの上部に新しい項目を登録する＋ボタンを追加しました。</div>
 <div class="mb-1.5"><b class="text-softText">Version 10.12（2026-11-07）</b><br>1ページに収まる掲示板は途中で切らずに表示します。読む画面の文字・余白と共通の演出再生を整え、特殊演出の説明書を更新しました。</div>
 <div class="mb-1.5"><b class="text-softText">Version 10.11（2026-11-07）</b><br>掲示板メーカーを新しい画面に更新しました。8種類のテーマで作成でき、本文では左寄せで表示します。閉じるボタンも使えます。</div>
 <div class="mb-1.5"><b class="text-softText">Version 10.10（2026-11-07）</b><br>複数行の書式設定と解除を修正。掲示板を見た目のまま編集でき、番号あり／なし・返信・投稿内の改行・色・ルビ・（写真）の文字に対応しました。</div>
@@ -6118,7 +6123,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             const bookId = state.currentBookId, e = wikiEntries(bookId).find(x => x.id === id); if (!e) return;
             let c = document.getElementById('wk-card'); if (!c) { c = document.createElement('div'); c.id = 'wk-card'; document.body.appendChild(c); }
             const cur = wikiEpisode(bookId), notes = (e.notes || []).slice().sort((a, b) => (a.ep || 0) - (b.ep || 0)), vis = notes.filter(n => !wikiNoteLocked(n, cur)), lockedN = notes.length - vis.length;
-            let h = '<div class="wkc-h"><b>' + wEsc(e.name) + '</b><span class="wk-chip">' + wEsc(e.category) + '</span>' + (wikiWhenText(e) ? '<span class="wk-chip" style="background:#d9e6df">' + wEsc(wikiWhenText(e)) + '</span>' : '') + (e.groups || []).map(g => '<span class="wk-chip">' + wEsc(g) + '</span>').join('') + '<button type="button" class="wkc-x" data-wkc="close" aria-label="閉じる">×</button></div>';
+            let h = '<div class="wkc-h"><div class="wkc-meta"><b>' + wEsc(e.name) + '</b><span class="wk-chip">' + wEsc(e.category) + '</span>' + (wikiWhenText(e) ? '<span class="wk-chip" style="background:#d9e6df">' + wEsc(wikiWhenText(e)) + '</span>' : '') + (e.groups || []).map(g => '<span class="wk-chip">' + wEsc(g) + '</span>').join('') + '</div><div class="wkc-actions"><button type="button" class="wkc-open" data-wkc="open" data-id="' + wEsc(e.id) + '" aria-label="Wikiを開く" title="Wikiを開く"><svg aria-hidden="true" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6c-3-2-6-2-9-1v14c3-1 6-1 9 1 3-2 6-2 9-1V5c-3-1-6-1-9 1Z"/><path d="M12 6v14"/></svg><span class="wkc-open-label">Wikiを開く</span></button><button type="button" class="wkc-x" data-wkc="close" aria-label="閉じる">×</button></div></div><div class="wkc-body">';
             if (e.basic) h += '<div class="wkc-b">' + wikiLinkify(bookId, e.basic, e.id) + '</div>';
             for (const n of vis) h += '<div class="wkc-n">' + (n.ep ? '<span class="wkc-ep">' + n.ep + '話</span> ' : '') + wikiLinkify(bookId, n.text, e.id) + '</div>';
             let lockedR = 0;
@@ -6131,8 +6136,8 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             if (!e.basic && !vis.length && !(e.sections || []).length && !relV.length) h += '<div class="wkc-m">まだ、書いてあることがありません</div>';
             if (lockedR) h += '<div class="wkc-lock">🔒 先の欄の内容が' + lockedR + '件あります（読み進めると、見られます）</div>';
             if (lockedN) h += '<div class="wkc-lock">🔒 先の設定が' + lockedN + '件あります（読み進めると、見られます）</div>';
-            h += '<div class="wkc-f"><button type="button" data-wkc="open" data-id="' + wEsc(e.id) + '">ウィキで開く</button></div>';
-            c.innerHTML = h; c.hidden = false;
+            h += '</div>';
+            c.innerHTML = h; c.hidden = false; c.querySelector('.wkc-body').scrollTop = 0;
         }
         document.addEventListener('click', ev => {
             const chl = ev.target.closest && ev.target.closest('.wkch');
@@ -8858,7 +8863,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                 if (wikiState.editId) h += `<button class="wk-btn wk-danger" data-w="del">${wikiState.confirmDel ? 'もう一度押すと削除します' : '削除'}</button>`;
             }
             body.innerHTML = h;
-            { const sv = document.getElementById('wiki-save'); if (sv) sv.hidden = wikiState.view !== 'detail' || !wikiState.draft; const ed = document.getElementById('wiki-edit'); if (ed) ed.hidden = wikiState.view !== 'page'; if (wikiState.view === 'page') { const bd = document.getElementById('wiki-body'); if (bd && wikiState.pageScroll !== wikiState.pageId) { bd.scrollTop = 0; wikiState.pageScroll = wikiState.pageId; } } else wikiState.pageScroll = null; }
+            { const nw = document.getElementById('wiki-new'); if (nw) nw.hidden = !book || !['list', 'page'].includes(wikiState.view); const sv = document.getElementById('wiki-save'); if (sv) sv.hidden = wikiState.view !== 'detail' || !wikiState.draft; const ed = document.getElementById('wiki-edit'); if (ed) ed.hidden = wikiState.view !== 'page'; if (wikiState.view === 'page') { const bd = document.getElementById('wiki-body'); if (bd && wikiState.pageScroll !== wikiState.pageId) { bd.scrollTop = 0; wikiState.pageScroll = wikiState.pageId; } } else wikiState.pageScroll = null; }
             if (wikiState.view === 'detail' && wikiState.draft && wikiState.snapFor !== wikiState.draft) { wikiState.snapFor = wikiState.draft; wikiState.snap = JSON.stringify(wikiState.draft); }
         }
         function wikiNewDraft(name, category) { return { name: name || '', category: category || '未分類', year: '', month: '', aliases: [], rels: [], events: [], groups: [], sections: [], basic: '', notes: [] }; }
@@ -8920,7 +8925,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                 delete t.dismissed[name]; termAddPending(t, { name, cat: wikiAutoCat(name, wikiEntries(bookId)), count: 1 });
                 termsSave(bookId, t); toast('仮登録に戻しました'); wikiRender(); return;
             }
-            if (act === 'new') { wikiState.view = 'detail'; wikiState.editId = null; wikiState.pendingName = null; wikiState.draft = wikiNewDraft('', '未分類'); wikiRender(); return; }
+            if (act === 'new') { if (!wikiBook() || wikiState.view === 'detail') return; wikiState.newReturn = wikiState.view === 'page' ? { pageId: wikiState.pageId, pageFrom: wikiState.pageFrom, scrollTop: document.getElementById('wiki-body').scrollTop } : null; wikiState.view = 'detail'; wikiState.editId = null; wikiState.pendingName = null; wikiState.confirmDel = false; wikiState.draft = wikiNewDraft('', '未分類'); wikiRender(); document.getElementById('wiki-body').scrollTop = 0; document.getElementById('wk-name')?.focus({ preventScroll: true }); return; }
             if (act === 'from-pending') {
                 const g = wikiPending(bookId).find(x => x.name === el.dataset.name); if (!g) return;
                 wikiState.view = 'detail'; wikiState.editId = null; wikiState.pendingName = g.name; wikiState.draft = wikiNewDraft(g.name, g.category); wikiRender(); return;
@@ -9023,7 +9028,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                     const t = termsBook(bookId); delete t.pending[wikiState.pendingName]; termsSave(bookId, t);
                 }
                 savedToast('保存しました');
-                { const backId = wikiState.editId; wikiState.view = wikiState.pendingName && wikiPending(bookId).length ? 'pending' : (backId ? 'page' : 'list'); wikiState.pageId = backId || null; }
+                { const backId = wikiState.editId; wikiState.view = wikiState.pendingName && wikiPending(bookId).length ? 'pending' : (backId ? 'page' : 'list'); wikiState.pageId = backId || null; wikiState.newReturn = null; }
                 wikiState.pendingName = null; wikiState.editId = null; wikiState.draft = null; wikiRender(); return;
             }
             if (act === 'del') {
@@ -9305,6 +9310,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             document.getElementById('wiki-back').onclick = () => {
                 if (wikiState.view === 'list') { wikiClose(); return; }
                 if (!wikiLeaveOk()) return;
+                if (wikiState.view === 'detail' && !wikiState.editId && wikiState.newReturn) { const ret = wikiState.newReturn; wikiState.newReturn = null; wikiState.view = 'page'; wikiState.pageId = ret.pageId; wikiState.pageFrom = ret.pageFrom; wikiState.pendingName = null; wikiState.draft = null; wikiState.confirmDel = false; wikiRender(); document.getElementById('wiki-body').scrollTop = ret.scrollTop; return; }
                 if (wikiState.view === 'graph') { wikiState.view = wikiState.graphFrom === 'page' && wikiState.pageId ? 'page' : 'list'; wikiState.graphFrom = null; wikiRender(); return; }
                 if (wikiState.view === 'page' && wikiState.pageFrom === 'timeline') { wikiState.view = 'timeline'; wikiState.pageFrom = null; wikiRender(); return; }
                 { const backId = (wikiState.view === 'detail' && !wikiState.pendingName) ? wikiState.editId : null; wikiState.view = (wikiState.view === 'detail' && wikiState.pendingName) ? 'pending' : (backId ? 'page' : 'list'); wikiState.pageId = backId || wikiState.pageId; }
@@ -9321,8 +9327,8 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         // 話の終わり・戻る・本の終わりで、読み終えた話から言葉を拾い、件数を小さく知らせる。読書は止めない
         // ===== 更新の確認：新しい版があれば、魚に青い点とメニュー（版の番号は version.json。公開のたびに、番号が変わる。番号が入っていない開発中は、確かめない） =====
         // 表示用の版。更新の検出は引き続き APP_BUILD の日時番号を使う。
-        const APP_VERSION = '10.12';
-        const APP_BUILD = '20261107201500';
+        const APP_VERSION = '10.13';
+        const APP_BUILD = '20261107210027';
         let updateCheckAt = 0;
         function paintBuild() {
             const el = document.getElementById('app-build-info'); if (!el) return;
