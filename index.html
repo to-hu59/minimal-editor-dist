@@ -1854,6 +1854,7 @@
                     <div class="pt-3 border-t border-woodBorder">
                         <span class="font-bold text-softMuted block mb-1">更新履歴</span>
                         <div id="changelog" class="text-[11px] text-softMuted leading-relaxed">
+<div class="mb-1.5"><b class="text-softText">Version 10.8（2026-11-07）</b><br>Wikiの項目の、「先の話に出てくる分」の枠を消した（押しても、中身が出ないため）。</div>
 <div class="mb-1.5"><b class="text-softText">Version 10.7（2026-11-07）</b><br>Wikiのネタバレを、「タップでネタバレを表示」で、いつでも1つずつ開けるようにした。「ネタバレを全部見る」で、まとめて開き、「全部閉じる」で閉じられる。</div>
 <div class="mb-1.5"><b class="text-softText">Version 10.6（2026-11-07）</b><br>初期化のバックアップの窓を、「はい（バックアップしてから初期化）」「いいえ（バックアップせずに初期化）」「初期化をやめる」の3つにした。「初期化をやめる」を押すと、何もしない。</div>
 <div class="mb-1.5"><b class="text-softText">Version 10.5（2026-11-07）</b><br>初期化：押す前に「いまの作品はすべて消えます」と確認し、バックアップを書き出せるようにした。「Driveの中身も消す」に☑を入れると、Driveのこのアプリのフォルダをゴミ箱に移す。初期化のあとは、Driveとのつながりを切る（☁からつなぎ直す）。</div>
@@ -5250,7 +5251,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                 const sumText = s ? [s.sub, s.story, s.points, s.memo].join(String.fromCharCode(10)) : '';
                 const hitSum = sumText && wikiMentions(e, sumText), hitBody = wikiMentions(e, f.chap.content || '');
                 if (!hitSum && !hitBody) return;
-                if (cur && no > cur) { hidden++; if (!wikiShowKey(e.id, 'refs')) return; }
+                if (cur && no > cur) { hidden++; return; }
                 if (hitSum) inSum.push({ no, id: f.chap.id });
                 if (hitBody) inBody.push({ no, id: f.chap.id });
             });
@@ -5259,7 +5260,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             if (inSum.length) h += '<div class="wk-row" style="margin-top:4px;align-items:flex-start;justify-content:space-between"><span>話のまとめ</span><span style="display:flex;flex-wrap:wrap;gap:4px;justify-content:flex-end">' + inSum.slice(0, 60).map(c => chip(c.no + '話', 'data-w="sumopen" data-id="' + wEsc(c.id) + '"')).join('') + (inSum.length > 60 ? '<span class="wk-muted">…ほか' + (inSum.length - 60) + '話</span>' : '') + '</span></div>';
             if (inBody.length) h += '<div class="wk-row" style="margin-top:4px;align-items:flex-start;justify-content:space-between"><span>本文に出る話（' + inBody.length + '話）</span><span style="display:flex;flex-wrap:wrap;gap:4px;justify-content:flex-end">' + inBody.slice(0, 60).map(c => chip(c.no + '話', 'data-w="readchap" data-id="' + wEsc(c.id) + '"')).join('') + (inBody.length > 60 ? '<span class="wk-muted">…ほか' + (inBody.length - 60) + '話</span>' : '') + '</span></div>';
             if (!h) return '';
-            return '<div class="wk-label" style="margin-top:14px">この項目が、出てくるところ</div><div class="wk-sec">' + h + (hidden ? wikiLockBtn(e.id, 'refs', '先の話に出てくる分が' + hidden + '話あります', wikiShowKey(e.id, 'refs')) : '') + '</div>';
+            return '<div class="wk-label" style="margin-top:14px">この項目が、出てくるところ</div><div class="wk-sec">' + h + '' + '</div>';
         }
         // ===== 話のまとめ：各話に、サブタイトル・あらすじ・注目ポイント・読書メモを置く。範囲（10話ごとなど）のまとめも =====
         const SUM_FIELDS = [['sub', '一行サブタイトル', '例：国民的嫌われ俳優の体に、元・闇金業者が憑依した。', 2], ['story', 'あらすじ', 'できごとを、順に。[[名前]] と書くと、その項目へのリンクになります', 8], ['points', '注目ポイント', '', 4], ['memo', '読書メモ（感想）', '', 4]];
@@ -7737,7 +7738,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         function wikiShowKey(id, k) { const R = wikiState.revealed; return !!(R['P:' + id + ':' + k] || R['P:' + id + ':all']); }
         // 鍵の枠：編集の画面と同じ、縞模様の枠。押すと、開く（開いているときは、押すと閉じる）
         function wikiLockBtn(id, k, label, open) {
-            return '<button type="button" data-w="reveal-k" data-id="' + wEsc(id) + '" data-k="' + wEsc(k) + '" class="wk-lock" style="margin-top:8px">🔒 ' + wEsc(label) + '<br>' + (open ? 'タップで閉じる' : 'タップでネタバレを表示') + '</button>';
+            return '<button type="button" data-w="reveal-k" data-id="' + wEsc(id) + '" data-k="' + wEsc(k) + '" class="wk-lock" style="margin-top:8px"><span style="display:block;font-size:22px;line-height:1.2"><i class="fa-solid fa-lock"></i></span>' + wEsc(label) + '<br>' + (open ? 'タップで閉じる' : 'タップでネタバレを表示') + '</button>';
         }
         function wikiToggleKey(id, k) {
             const R = wikiState.revealed, pre = 'P:' + id + ':';
@@ -8007,13 +8008,12 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                 {
                     const keys = [], rowsOpen = wikiShowKey(e.id, 'rows');
                     if (lockedRows) keys.push('rows');
-                    keys.push('refs');
                     notes.forEach(n => { if (wikiNoteLocked(n, cur)) keys.push('n:' + n.id); });
                     wikiState.lockKeys = wikiState.lockKeys || {}; wikiState.lockKeys[e.id] = keys;
                     const allOn = !!wikiState.revealed['P:' + e.id + ':all'];
                     let lk = '';
                     if (lockedRows) lk += wikiLockBtn(e.id, 'rows', '先の項目の内容が' + lockedRows + '件あります', rowsOpen);
-                    nLocked.forEach(n => { lk += wikiLockBtn(e.id, 'n:' + n.id, (n.ep ? n.ep + '話判明予定の追記' : 'ネタバレとして保存された追記'), false); });
+                    nLocked.forEach(n => { lk += wikiLockBtn(e.id, 'n:' + n.id, (n.ep ? '現在の進捗(' + cur + '話)より先の設定です。' : 'ネタバレとして保存された追記です。'), false); });
                     if (lk || keys.length > 1) lk += '<div style="display:flex;justify-content:flex-end;margin-top:8px"><button type="button" class="wk-chip" data-w="reveal-k" data-id="' + wEsc(e.id) + '" data-k="all">' + (allOn ? '全部閉じる' : '🔓 ネタバレを全部見る') + '</button></div>';
                     if (lk) h += '<div class="wk-sec" style="margin-top:12px">' + lk + '</div>';
                 }
@@ -8568,8 +8568,8 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         // 話の終わり・戻る・本の終わりで、読み終えた話から言葉を拾い、件数を小さく知らせる。読書は止めない
         // ===== 更新の確認：新しい版があれば、魚に青い点とメニュー（版の番号は version.json。公開のたびに、番号が変わる。番号が入っていない開発中は、確かめない） =====
         // 表示用の版。更新の検出は引き続き APP_BUILD の日時番号を使う。
-        const APP_VERSION = '10.7';
-        const APP_BUILD = '20261107142359';
+        const APP_VERSION = '10.8';
+        const APP_BUILD = '20261107143957';
         let updateCheckAt = 0;
         function paintBuild() {
             const el = document.getElementById('app-build-info'); if (!el) return;
