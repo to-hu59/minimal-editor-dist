@@ -1,0 +1,34 @@
+/* Shared reader/inline-edit adapter. It changes only the displayed copy, never stored data in reader mode. */
+(() => {
+'use strict';
+const attached=new WeakMap(),live=new Map();
+const cleanup=()=>{for(const [frame,api] of live)if(!frame.isConnected)api.dispose()};
+new MutationObserver(cleanup).observe(document.documentElement,{childList:true,subtree:true});
+window.addEventListener('pagehide',()=>{for(const api of live.values())api.dispose()});
+const textOf=node=>{const walk=n=>n.nodeType===3?n.data:n.nodeType!==1||n.hasAttribute('data-line-tail')?'':n.tagName==='BR'?'\n':[...n.childNodes].map(walk).join('')+(/^(DIV|P)$/.test(n.tagName)?'\n':'');return [...node.childNodes].map(walk).join('');};
+function attach(frame,{editable=false,onChange,onHistory,enabled=false}={}){
+ if(attached.has(frame))return attached.get(frame);
+ const win=frame.contentWindow,doc=frame.contentDocument;if(!doc)return;
+ let disposed=false,composing=false,playing=[],played=false,raf=0;
+ const style=doc.createElement('style');style.textContent=`html,body{height:auto!important;overflow:hidden!important}.reader #phoneFrame{height:auto!important;min-height:0!important;overflow:visible!important}.reader #phoneFrame>.flex-1,.reader #viewRoom,.reader #viewFriends,.reader #viewChats{flex:none!important;overflow:visible!important}.reader #roomMessageArea{flex:none!important;min-height:160px;overflow:visible!important}.reader #viewFriends>.overflow-y-auto,.reader #chatRoomList{overflow:visible!important}.reader [data-line-edit]{cursor:text!important;white-space:pre-wrap!important;overflow-wrap:anywhere;min-width:.4em;display:inline-block;outline:none}.reader [data-line-edit]:focus{box-shadow:0 1px 0 currentColor}.reader #roomHeaderTitle[data-line-edit]{text-overflow:clip;overflow:visible}.reader .chat-message-text[data-line-edit]:empty:before{content:' ';white-space:pre}`;doc.head.append(style);
+ function finish(){playing.forEach(a=>a.cancel());playing=[];}
+ function play(){finish();if(editable||!enabled||matchMedia('(prefers-reduced-motion: reduce)').matches)return;const rows=[...doc.querySelectorAll('#roomMessageArea>div')];rows.forEach((row,i)=>playing.push(row.animate([{opacity:0,transform:'translateY(6px)'},{opacity:1,transform:'translateY(0)'}],{duration:220,delay:Math.min(i,18)*140,fill:'backwards',easing:'ease-out'})));played=true;frame.dataset.linePlayed='1';}
+ function resize(){if(!frame.isConnected){dispose();return;}const phone=doc.getElementById('phoneFrame');if(!phone)return;const h=Math.ceil(phone.getBoundingClientRect().height);if(h>0&&Math.abs(frame.getBoundingClientRect().height-h)>1){frame.style.height=h+'px';frame.style.maxHeight='none';frame.dispatchEvent(new CustomEvent('line-reader-resize',{bubbles:true}));}}
+ function changed(node){const p=JSON.parse(node.dataset.lineEdit),value=textOf(node);const snapshot=win.lineMakerInlineUpdate({...p,value});onChange?.(snapshot,{...p,value,composing});requestAnimationFrame(resize);}
+ function editableField(node,params,label){if(!node||node.dataset.lineEdit)return;node.dataset.lineEdit=JSON.stringify(params);node.contentEditable='true';node.setAttribute('role','textbox');node.setAttribute('aria-label',label);node.setAttribute('aria-multiline','true');node.tabIndex=0;
+  node.addEventListener('click',e=>e.stopPropagation());node.addEventListener('contextmenu',e=>e.stopPropagation());
+  node.addEventListener('compositionstart',()=>{composing=true;onChange?.(null,{composing:true})});node.addEventListener('compositionend',()=>{composing=false;changed(node)});node.addEventListener('input',()=>changed(node));
+  node.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&!e.altKey&&['z','y'].includes(e.key.toLowerCase())){e.preventDefault();if(!composing)onHistory?.(e.key.toLowerCase()==='y'||e.shiftKey?1:-1)}});
+  const insert=text=>{const s=win.getSelection();if(!s.rangeCount)return;const r=s.getRangeAt(0);if(!node.contains(r.commonAncestorContainer))return;const rest=r.cloneRange();rest.selectNodeContents(node);rest.setStart(r.endContainer,r.endOffset);const atEnd=!rest.toString();r.deleteContents();const frag=doc.createDocumentFragment();String(text).split(/\r\n?|\n/).forEach((part,i)=>{if(i)frag.append(doc.createElement('br'));frag.append(doc.createTextNode(part))});const last=frag.lastChild;r.insertNode(frag);if(last){if(atEnd&&/[\r\n]$/.test(text)&&!node.querySelector('[data-line-tail]')){const tail=doc.createElement('br');tail.dataset.lineTail='';node.append(tail)}r.setStartAfter(last);}r.collapse(true);s.removeAllRanges();s.addRange(r);changed(node);};
+  node.addEventListener('beforeinput',e=>{if(!e.isComposing&&['insertParagraph','insertLineBreak'].includes(e.inputType)){e.preventDefault();insert('\n')}});node.addEventListener('paste',e=>{e.preventDefault();insert(e.clipboardData.getData('text/plain'))});
+ }
+ function prepare(){if(disposed)return;try{if(editable){const s=win.lineMakerSnapshot().fullState,room=s.rooms.find(r=>r.id===s.activeRoomId);if(room){editableField(doc.getElementById('roomHeaderTitle'),{roomId:room.id,field:'title'},'トーク名');[...doc.querySelectorAll('#roomMessageArea>div')].forEach((row,i)=>{const m=room.messages[i];if(!m)return;editableField(row.querySelector('.chat-message-text')||(['date','system','unsent'].includes(m.type)?row.querySelector('span'):null),{roomId:room.id,messageId:m.id,field:'text'},'メッセージの本文');});}}resize();}catch(_){} }
+ const ro=new win.ResizeObserver(()=>{cancelAnimationFrame(raf);raf=requestAnimationFrame(resize)});ro.observe(doc.getElementById('phoneFrame'));const mo=new win.MutationObserver(()=>{cancelAnimationFrame(raf);raf=requestAnimationFrame(prepare)});mo.observe(doc.getElementById('phoneFrame'),{childList:true,subtree:true});
+ const io=new IntersectionObserver(entries=>{if(entries.some(e=>e.isIntersecting)&&!played)play()},{threshold:0});io.observe(frame);
+ function dispose(){if(disposed)return;disposed=true;finish();ro.disconnect();mo.disconnect();io.disconnect();cancelAnimationFrame(raf);attached.delete(frame);live.delete(frame)}
+ const api={setEnabled(value){enabled=value;if(!enabled)finish();else if(!played&&frame.getBoundingClientRect().bottom>0&&frame.getBoundingClientRect().top<innerHeight)play()},replay(){played=false;play()},dispose};attached.set(frame,api);live.set(frame,api);prepare();doc.fonts?.ready.then(prepare);return api;
+}
+function scan(root,{enabled=true}={}){cleanup();enabled=enabled&&!root?.classList.contains('editing');root?.querySelectorAll('.ym-line-view iframe:not([data-line-inline])').forEach(frame=>{frame.dataset.lineAnimate=String(enabled);attached.get(frame)?.setEnabled(enabled)});}
+function replay(root){const frames=[...(root?.querySelectorAll('.ym-line-view iframe:not([data-line-inline])')||[])];frames.forEach(frame=>attached.get(frame)?.replay());return frames.length;}
+window.LineMakerReader={attach,scan,replay};
+})();

@@ -61,7 +61,10 @@
     #senderSwitchList{flex:1 1 100%;min-width:0}
     #roomToolbarActions{width:100%;max-width:100%;flex-wrap:wrap}
     #sendReadSelect{min-width:148px;max-width:100%;flex-shrink:0}
-    #chatTextInput{resize:none;min-height:32px;max-height:120px;line-height:20px;overflow-y:auto;white-space:pre-wrap;overflow-wrap:anywhere}
+    #roomInputBar{align-items:flex-end}
+    #roomInputBar>button{margin-bottom:2px}
+    #chatComposerStampBtn{bottom:8px}
+    #chatTextInput{display:block;resize:none;min-height:32px;max-height:180px;line-height:20px;overflow-y:hidden;white-space:pre-wrap;overflow-wrap:anywhere}
     .chat-message-text{white-space:pre-wrap;overflow-wrap:anywhere}
       .embed body{padding:0!important;min-height:0!important}
     .reader #dataBtn{display:none}
@@ -283,9 +286,9 @@
           <button onclick="openQuickInsertModal('photo')" class="w-8 h-8 rounded-full hover:bg-slate-100 text-slate-500 flex items-center justify-center shrink-0 transition" title="写真を送信">
             <i class="fa-regular fa-image text-base"></i>
           </button>
-          <div class="flex-1 min-w-0 relative flex items-center">
+          <div id="chatComposerTextField" class="flex-1 min-w-0 relative flex items-center">
             <textarea id="chatTextInput" rows="1" enterkeyhint="enter" placeholder="メッセージを入力" aria-label="メッセージ（改行できます）" oninput="resizeChatComposer()" onkeydown="handleChatComposerKey(event)" class="w-full bg-slate-100 text-slate-800 text-sm rounded-2xl pl-3.5 pr-8 py-1.5 focus:outline-none focus:ring-1 focus:ring-slate-300"></textarea>
-            <button onclick="openQuickInsertModal('stamp')" class="absolute right-2.5 text-slate-400 hover:text-slate-600" title="スタンプを送信">
+            <button id="chatComposerStampBtn" onclick="openQuickInsertModal('stamp')" class="absolute right-2.5 text-slate-400 hover:text-slate-600" title="スタンプを送信">
               <i class="fa-regular fa-face-smile text-base"></i>
             </button>
           </div>
@@ -1051,27 +1054,30 @@
     function togglePreviewCleanMode() {
       if (typeof LINE_READER !== "undefined" && LINE_READER) return;
       state.cleanMode = !state.cleanMode;
-      const btn = document.getElementById('cleanModeBtn');
-      const txt = document.getElementById('cleanModeText');
-      if (state.cleanMode) {
-        btn.className = 'bg-amber-500 text-slate-900 px-2.5 py-1.5 rounded-lg font-bold flex items-center gap-1 transition';
-        txt.textContent = 'プレビュー中';
-      } else {
-        btn.className = 'bg-slate-700 hover:bg-slate-600 text-white px-2.5 py-1.5 rounded-lg flex items-center gap-1 transition';
-        txt.textContent = '編集ON';
-      }
       applyCleanModeVisibility();
     }
 
     function applyCleanModeVisibility() {
-      const els = document.querySelectorAll('.edit-ui');
-      els.forEach(el => {
-        if (state.cleanMode) {
-          el.classList.add('hidden');
-        } else {
-          el.classList.remove('hidden');
-        }
-      });
+      const btn = document.getElementById('cleanModeBtn');
+      const txt = document.getElementById('cleanModeText');
+      if (state.cleanMode) {
+        btn.className = 'bg-amber-500 text-slate-900 px-2.5 py-1.5 rounded-lg font-bold flex items-center gap-1 transition';
+        btn.title = '編集に戻る（入力欄を押しても戻れます）';
+        txt.textContent = 'プレビュー中';
+      } else {
+        btn.className = 'bg-slate-700 hover:bg-slate-600 text-white px-2.5 py-1.5 rounded-lg flex items-center gap-1 transition';
+        btn.title = '編集UIを隠してスクショ・確認用にする';
+        txt.textContent = '編集ON';
+      }
+      document.querySelectorAll('.edit-ui').forEach(el => el.classList.toggle('hidden', !!state.cleanMode));
+      resizeChatComposer();
+    }
+
+    // プレビュー中もLINE風の入力欄は残す。入力操作を始めたら発言者を選べる編集画面に戻す。
+    function beginChatEditing() {
+      if (!state.cleanMode || document.documentElement.matches('.reader, .view')) return;
+      state.cleanMode = false;
+      applyCleanModeVisibility();
     }
 
     function editStatusBarClock() {
@@ -1460,15 +1466,60 @@
       const input = document.getElementById('chatTextInput');
       if (!input || input.dataset.compositionBound) return;
       input.dataset.compositionBound = '1';
+      input.addEventListener('focus', beginChatEditing);
+      input.addEventListener('input', beginChatEditing);
+      document.getElementById('roomInputBar').addEventListener('pointerdown', beginChatEditing);
       input.addEventListener('compositionstart', () => { input.dataset.composing = '1'; });
       input.addEventListener('compositionend', () => { delete input.dataset.composing; resizeChatComposer(); });
+      // 横幅・表示領域・フォントが変わった場合も、現在の下書きを計測し直す。
+      if (typeof ResizeObserver !== 'undefined') {
+        let lastWidth = -1, lastFrameHeight = -1;
+        const observer = new ResizeObserver(() => {
+          const width = input.getBoundingClientRect().width;
+          const frameHeight = document.getElementById('phoneFrame').clientHeight;
+          if (width !== lastWidth || frameHeight !== lastFrameHeight) {
+            lastWidth = width; lastFrameHeight = frameHeight;
+            resizeChatComposer();
+          }
+        });
+        observer.observe(document.getElementById('chatComposerTextField'));
+        observer.observe(document.getElementById('phoneFrame'));
+      }
+      window.addEventListener('resize', resizeChatComposer);
+      window.visualViewport?.addEventListener('resize', resizeChatComposer);
+      document.fonts?.ready.then(resizeChatComposer);
     }
 
     function resizeChatComposer() {
       const input = document.getElementById('chatTextInput');
-      if (!input) return;
+      if (!input || !input.getClientRects().length || input.clientWidth === 0) return;
+      const frame = document.getElementById('phoneFrame');
+      const room = document.getElementById('viewRoom');
+      const bar = document.getElementById('roomInputBar');
+      const messages = document.getElementById('roomMessageArea');
+      const verticalEdges = element => {
+        const css = getComputedStyle(element);
+        return ['paddingTop', 'paddingBottom', 'borderTopWidth', 'borderBottomWidth'].reduce((sum, key) => sum + (parseFloat(css[key]) || 0), 0);
+      };
+      const fixedHeight = [...room.children].filter(el => el !== bar && el !== messages).reduce((sum, el) => sum + el.getBoundingClientRect().height, 0);
+      // キーボードで画面が狭い場合は、会話欄の余白から先に縮めて送信ボタンを残す。
+      messages.style.removeProperty('padding-top');
+      messages.style.removeProperty('padding-bottom');
+      let available = room.clientHeight - fixedHeight - verticalEdges(bar) - verticalEdges(messages);
+      if (available < 32) {
+        const padding = Math.max(0, Math.floor((room.clientHeight - fixedHeight - verticalEdges(bar) - 32) / 2));
+        messages.style.paddingTop = padding + 'px';
+        messages.style.paddingBottom = padding + 'px';
+        available = room.clientHeight - fixedHeight - verticalEdges(bar) - verticalEdges(messages);
+      }
+      const maxHeight = Math.max(32, Math.floor(Math.min(180, (frame.clientHeight || innerHeight) * 0.35, available)));
+      input.style.maxHeight = maxHeight + 'px';
       input.style.height = 'auto';
-      input.style.height = Math.max(32, Math.min(input.scrollHeight, 120)) + 'px';
+      const border = input.offsetHeight - input.clientHeight;
+      const contentHeight = input.value ? input.scrollHeight + border : 32;
+      const height = Math.max(32, Math.min(contentHeight, maxHeight));
+      input.style.height = height + 'px';
+      input.style.overflowY = contentHeight > height ? 'auto' : 'hidden';
     }
 
     function handleChatComposerKey(event) {
@@ -2771,6 +2822,15 @@
       if (!window.__lineInitialized) throw new Error('トークメーカーを読み込み中です。少し待ってから保存してください。');
       const r = stateToRows() || {rows:[],attrs:{}};
       return {...r, fullState:JSON.parse(JSON.stringify({...state, _lineMakerExtras:{...state._lineMakerExtras, screenShare:shareState}}))};
+    };
+
+    window.lineMakerInlineUpdate = ({roomId,messageId,field,value}) => {
+      if (!new URLSearchParams(location.search).has('inlineedit') || !window.__lineInitialized) throw new Error('本文編集から開いてください');
+      const room=state.rooms.find(r=>r.id===roomId);if(!room)throw new Error('トークが見つかりません');
+      if(field==='title'&&!messageId)room.title=String(value);
+      else if(field==='text'&&messageId){const msg=room.messages.find(m=>m.id===messageId);if(!msg)throw new Error('メッセージが見つかりません');msg.text=String(value);}
+      else throw new Error('この項目は編集できません');
+      return window.lineMakerSnapshot();
     };
     // 初期起動
     window.onload = () => {

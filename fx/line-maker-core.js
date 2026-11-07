@@ -29,12 +29,33 @@
   };
   const html=source=>{
     const {attrs}=parse(source);if(!attrs[KEY])throw Error('保存したトークがありません。');
-    return '<span class="ym-line-view" data-line-state="'+esc(attrs[KEY])+'" style="display:block;width:100%;max-width:440px;margin:8px auto;writing-mode:horizontal-tb;white-space:normal"><iframe title="保存したトーク" src="fx/linemaker.html?embed=1&inline=1&reader=1" style="display:block;border:0;border-radius:12px;width:100%;height:680px;max-height:75dvh" loading="eager"></iframe></span>';
+    return '<span class="ym-line-view" data-line-state="'+esc(attrs[KEY])+'" style="display:block;width:100%;max-width:440px;margin:8px 0;writing-mode:horizontal-tb;white-space:normal"><iframe title="保存したトーク" src="fx/linemaker.html?embed=1&inline=1&reader=1" style="display:block;border:0;border-radius:12px;width:100%;height:280px;max-height:none" loading="eager"></iframe></span>';
   };
+  const inlineBindings=new WeakMap();
+  const mountInlineEditable=(atom,source,onChange,onHistory)=>{
+    atom.dataset.lineSource=source;atom.innerHTML=html(source);
+    const frame=atom.querySelector('iframe');frame.dataset.lineInline='1';frame.src+='&inlineedit=1';
+    inlineBindings.set(frame,{atom,initial:parse(source),onChange,onHistory});
+  };
+  const inlineSource=atom=>atom.dataset.lineSource;
   window.addEventListener('message',e=>{
-    if(e.origin!==origin||e.data?.type!=='ready')return;
+    if(e.origin!==origin)return;
     for(const frame of document.querySelectorAll('.ym-line-view iframe')){
-      if(e.source===frame.contentWindow){try{frame.contentWindow.postMessage({type:'init',fullState:unpack(frame.parentElement.dataset.lineState)},origin)}catch(_){}break;}
+      if(e.source!==frame.contentWindow)continue;
+      if(e.data?.type==='ready'){try{frame.contentWindow.postMessage({type:'init',fullState:unpack(frame.parentElement.dataset.lineState)},origin)}catch(_){} }
+      if(e.data?.type==='initialized'){
+        const binding=inlineBindings.get(frame);
+        LineMakerReader.attach(frame,{editable:!!binding,enabled:frame.dataset.lineAnimate==='true',onHistory:binding?.onHistory,onChange:(snapshot,change)=>{
+          if(!binding)return;
+          if(snapshot){
+            const state=binding.initial.fullState,room=state.rooms.find(r=>r.id===change.roomId);
+            if(change.messageId){const message=room?.messages.find(m=>m.id===change.messageId);if(message)message[change.field]=change.value;}else if(room)room[change.field]=change.value;
+            snapshot.fullState=state;const next=serialize(snapshot,binding.initial);binding.atom.dataset.lineSource=next;binding.atom.querySelector('.ym-line-view').dataset.lineState=pack(state);
+          }
+          binding.onChange?.(binding.atom.dataset.lineSource,change);
+        }});
+      }
+      break;
     }
   });
   let current=null;
@@ -60,5 +81,5 @@
     window.addEventListener('message',listener);viewport?.addEventListener('resize',fit);current={close};dialog.showModal();fit();
     return current;
   };
-  window.LineMaker={parse,isSource,pack,unpack,serialize,html,open};
+  window.LineMaker={parse,isSource,pack,unpack,serialize,html,open,mountInlineEditable,inlineSource,scan:(...args)=>LineMakerReader.scan(...args),replay:(...args)=>LineMakerReader.replay(...args)};
 })();

@@ -849,6 +849,9 @@
 </style>
 <link rel="stylesheet" href="fx/document-style.css">
 <script src="fx/document-core.js"></script>
+<script src="fx/document-motion.js"></script>
+<script src="fx/document-reader.js"></script>
+<script src="fx/line-reader.js"></script>
 <script src="fx/line-maker-core.js"></script>
 </head>
 <body class="flex justify-center min-h-screen hide-reading-tools">
@@ -1892,6 +1895,7 @@
                     <div class="pt-3 border-t border-woodBorder">
                         <span class="font-bold text-softMuted block mb-1">更新履歴</span>
                         <div id="changelog" class="text-[11px] text-softMuted leading-relaxed">
+<div class="mb-1.5"><b class="text-softText">Version 11（2026-11-08）</b><br>LINEの送信者切替と入力欄の自動拡大、読書中の左寄せ・見切れ・演出を直しました。手紙・LINE・掲示板は挿入後も本文の中で直接編集できます。手紙は読書画面で書き込み演出が動き、内容量と文字サイズに合わせて大きさが変わります。</div>
 <div class="mb-1.5"><b class="text-softText">Version 10.17（2026-11-08）</b><br>LINE／カカオ風メーカーのトーク設定の保存ボタンを固定しました。送信者の表示名をトーク名に合わせ、既読欄と「既読なし」、吹き出し内の改行を直しました。初期アイコンを人型のシルエットに変更しました。</div>
 <div class="mb-1.5"><b class="text-softText">Version 10.16（2026-11-07）</b><br>LINE／カカオ風メーカーを直接開き、本文へ挿入・再編集できるようにしました。読む画面にも完成したトークを表示します。メーカーの見た目と入力方式はそのままです。</div>
 <div class="mb-1.5"><b class="text-softText">Version 10.15（2026-11-07）</b><br>Wikiの追記欄を広げ、長文に合わせた自動拡大と大きく開くボタンを追加しました。特殊演出から手紙・調査票・LINE／カカオ風メーカーを開けます。手紙は文字の位置を保った書き込み演出にし、LINEは写真・プロフィール・返信・複数のトークも保存します。</div>
@@ -4616,6 +4620,8 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         function fxBbsKey(b) { const t = b.textContent.replace(/\s+/g, ''); let h = 7; for (let i = 0; i < t.length; i++) h = (h * 31 + t.charCodeAt(i)) >>> 0; return state.currentChapterId + ':' + h; }
         function fxBbsScan() {
             const stg = (() => { try { return fxSettingsFor(state.books.find(b => b.id === state.currentBookId)); } catch (e) { return { enabled: true, typeBbs: true }; } })();
+            ProvidedDocumentReader.scan(document.getElementById('view-reader'),stg,state.currentBookId+':'+state.currentChapterId);
+            window.LineMaker?.scan?.(document.getElementById('view-reader'),{enabled:stg.enabled!==false&&stg.typeBbs!==false});
             if (stg.enabled === false) return;
             const boards = document.querySelectorAll('#view-reader [data-fxe]:not([data-fxt])' + (stg.typeBbs !== false ? ', #view-reader .fxbbs:not([data-fxt]):not(.notype), #view-reader .fxkk:not([data-fxt]):not(.notype), #view-reader .fxnote:not([data-fxt]), #view-reader .az-board-reader:not([data-fxt]):not(.notype):not([data-effect="none"])' : '')); if (!boards.length) return;
             if (!fxBbsIO) fxBbsIO = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting && e.target.isConnected && e.target.dataset.fxt === 'wait') { fxBbsIO.unobserve(e.target); (e.target.dataset.fxe ? fxEffectRun : e.target.classList.contains('fxkk') ? fxKkType : e.target.classList.contains('fxnote') ? fxNoteShow : fxBbsType)(e.target); } }), { threshold: 0.3 });
@@ -6692,10 +6698,10 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         function fxHasViewerEffects(chap) {
             const text = String((chap && chap.content) || ''); if (text.indexOf('［') < 0) return false;
             const re = fxTagRe(); let m;
-            while ((m = re.exec(text))) if (!m[1] && FX_NAMES.has(m[2]) && m[2] !== '掲示板' && !(m[2] === 'システム' && /文=/.test(m[3] || '')) && !(m[2] === '招待状' && /(見た目=カカオ|[\s　]カカオ[\s　])/.test(m[3] || ''))) return true;
+            while ((m = re.exec(text))) if (!m[1] && FX_NAMES.has(m[2]) && m[2] !== '掲示板' && !(m[2]==='トーク'&&/(?:^|[\s　])チャットJSON=/.test(m[3]||'')) && !(['手紙','書類'].includes(m[2]) && /(?:^|[\s　])見た目=提供版(?:[\s　]|$)/.test(m[3]||'')) && !(m[2] === 'システム' && /文=/.test(m[3] || '')) && !(m[2] === '招待状' && /(見た目=カカオ|[\s　]カカオ[\s　])/.test(m[3] || ''))) return true;
             return false;
         }
-        function fxHasInReader(chap) { return /［掲示板[\s　］]|［招待状[^］\n]*カカオ|［システム[\s　][^］]*文=|［(着信|バイブ|怒鳴り|どなる|ノイズ|ジジッ?|頭痛|どくん|心臓)[\s　］]/.test(String((chap && chap.content) || '')); }
+        function fxHasInReader(chap) { if(/^［トーク[^］\n]*[\s　]チャットJSON=/m.test(String(chap?.content||'')))return true; if(/^［(?:手紙|書類)[^］\n]*[\s　]見た目=提供版(?:[\s　］])/m.test(String(chap?.content||'')))return true;return /［掲示板[\s　］]|［招待状[^］\n]*カカオ|［システム[\s　][^］]*文=|［(着信|バイブ|怒鳴り|どなる|ノイズ|ジジッ?|頭痛|どくん|心臓)[\s　］]/.test(String((chap && chap.content) || '')); }
         // ふつうの本文では、演出の印を目立たなくする：印だけの行は消す。画面系のはじまりは「〔名前〕」。文中の印は消す
         // frames に配列を渡すと、枠の位置（表示する行の番号）が入る。印の行は、表示からは消える（朗読の行とも同じにそろう）
         function fxDisplayText(text, frames) {
@@ -6903,8 +6909,10 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         }
         // 読む画面の中の掲示板・カカオの招待を、もう一度、最初から動かす
         function fxReplayInReader() {
+            const documentReplay=ProvidedDocumentReader.replay(document.getElementById('view-reader'),fxSettingsFor(ttsBook()),state.currentBookId+':'+state.currentChapterId);
+            const lineReplay=window.LineMaker?.replay?.(document.getElementById('view-reader'));
             const boxes = [...document.querySelectorAll('#view-reader .fxbbs, #view-reader .fxkk, #view-reader .fxnote, #view-reader [data-fxe], #view-reader .az-board-reader:not([data-effect="none"])')];
-            if (!boxes.length) { toast('いまのページには、動く演出がありません。ページをめくって、探してください'); return false; }
+            if (!boxes.length) { if(documentReplay||lineReplay)return true;toast('いまのページには、動く演出がありません。ページをめくって、探してください'); return false; }
             boxes.forEach(b => {
                 b._fxBbsStop?.();
                 fxBbsSeen.delete(fxBbsKey(b)); delete b.dataset.fxt;
@@ -6922,7 +6930,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             if (!inR) { fxOpenViewer(state.currentBookId, state.currentChapterId); return; }
             const old = document.getElementById('modal-frame-menu'); if (old) old.remove();
             const m = document.createElement('div'); m.id = 'modal-frame-menu';
-            m.innerHTML = '<div><h4>演出</h4><small>この話には、読む画面で動く演出と、演出ビューで見る演出が、あります。</small><button type="button" class="fm" data-a="here">この画面で、もう一度動かす<span>掲示板・カカオの招待</span></button><button type="button" class="fm" data-a="viewer">演出ビューで見る<span>別の画面が開きます</span></button><button type="button" class="fm" data-a="" style="text-align:center;color:#8a7a68">やめる</button></div>';
+            m.innerHTML = '<div><h4>演出</h4><small>この話には、読む画面で動く演出と、演出ビューで見る演出が、あります。</small><button type="button" class="fm" data-a="here">この画面で、もう一度動かす<span>手紙・調査票・LINE・掲示板など</span></button><button type="button" class="fm" data-a="viewer">演出ビューで見る<span>別の画面が開きます</span></button><button type="button" class="fm" data-a="" style="text-align:center;color:#8a7a68">やめる</button></div>';
             document.body.appendChild(m);
             m.addEventListener('click', e => { if (e.target === m) { m.remove(); return; } const b = e.target.closest('button[data-a]'); if (!b) return; m.remove(); if (b.dataset.a === 'here') fxReplayInReader(); else if (b.dataset.a === 'viewer') fxOpenViewer(state.currentBookId, state.currentChapterId); });
         }
@@ -9401,8 +9409,8 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         // 話の終わり・戻る・本の終わりで、読み終えた話から言葉を拾い、件数を小さく知らせる。読書は止めない
         // ===== 更新の確認：新しい版があれば、魚に青い点とメニュー（版の番号は version.json。公開のたびに、番号が変わる。番号が入っていない開発中は、確かめない） =====
         // 表示用の版。更新の検出は引き続き APP_BUILD の日時番号を使う。
-        const APP_VERSION = '10.17';
-        const APP_BUILD = '20261108002008';
+        const APP_VERSION = '11';
+        const APP_BUILD = '20261108064424';
         let updateCheckAt = 0;
         function paintBuild() {
             const el = document.getElementById('app-build-info'); if (!el) return;
@@ -9489,8 +9497,8 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             if (node.nodeType !== Node.ELEMENT_NODE && node.nodeType !== Node.DOCUMENT_FRAGMENT_NODE) return '';
             if (node.nodeType === Node.ELEMENT_NODE) {
                 if (node.hasAttribute('data-editor-placeholder') || node.hasAttribute('data-board-controls')) return '';
-                if (node.hasAttribute('data-line-source')) return node.dataset.lineSource;
-                if (node.hasAttribute('data-document-source')) return node.dataset.documentSource;
+                if (node.hasAttribute('data-line-source')) return window.LineMaker?.inlineSource(node)||node.dataset.lineSource;
+                if (node.hasAttribute('data-document-source')) return window.ProvidedDocument?.inlineSource(node)||node.dataset.documentSource;
                 if (node.hasAttribute('data-board-source')) return typeof window!=='undefined' && window.AzBoardEditor && node.querySelectorAll ? visualBoardInfo(node).source : node.dataset.boardSource;
                 if (node.matches('ruby[data-source], span[data-stair][data-source]')) return node.dataset.source;
                 if (node.tagName === 'BR') return '\n';
@@ -9602,10 +9610,10 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             if(window.AzBoardEditor)for(const match of source.matchAll(boards)){
                 if(window.LineMaker?.isSource(match[0])){
                     appendText(source.slice(cursor,match.index));
-                    const atom=document.createElement('span');atom.contentEditable='false';atom.dataset.lineSource=match[0];atom.style.cssText='display:block;white-space:normal;margin:8px 0;writing-mode:horizontal-tb';atom.innerHTML=LineMaker.html(match[0]);
+                    const atom=document.createElement('span');atom.contentEditable='false';atom.dataset.lineSource=match[0];atom.style.cssText='display:block;white-space:normal;margin:8px 0;writing-mode:horizontal-tb';LineMaker.mountInlineEditable(atom,match[0],(next,change)=>{visualDraft.composing=!!change?.composing;syncVisualDraft(!visualDraft.composing)},delta=>editorHistory(delta));
                     const controls=document.createElement('span');controls.dataset.lineControls='true';controls.style.cssText='display:flex;gap:8px';
                     const where=()=>{const r=document.createRange();r.selectNodeContents(visualRoot());r.setEndBefore(atom);const start=serializeVisual(r.cloneContents()).length;return{start,end:start+atom.dataset.lineSource.length}};
-                    const edit=document.createElement('button');edit.type='button';edit.textContent='このトークを編集';edit.onmousedown=e=>e.preventDefault();edit.onclick=()=>openLineEditor({src:atom.dataset.lineSource,replace:where()});controls.append(edit);
+                    const edit=document.createElement('button');edit.type='button';edit.textContent='トークの詳細設定';edit.onmousedown=e=>e.preventDefault();edit.onclick=()=>openLineEditor({src:atom.dataset.lineSource,replace:where()});controls.append(edit);
                     const remove=document.createElement('button');remove.type='button';remove.textContent='×';remove.setAttribute('aria-label','このトークを削除');remove.onmousedown=e=>e.preventDefault();remove.onclick=()=>{if(visualDraft.mode!=='visual'||visualDraft.composing)return;const pos=where().start;atom.remove();ensureVisualTail();setVisualSelection(pos);syncVisualDraft(true)};controls.append(remove);
                     for(const button of controls.children)button.style.cssText='padding:8px 12px;border:1px solid #b9aa94;border-radius:8px;background:#fff;color:#332e27';
                     atom.append(controls);fragment.append(atom);cursor=match.index+match[0].length;continue;
@@ -9613,10 +9621,10 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                 if(window.ProvidedDocument?.isSource(match[0])){
                     let html;try{html=ProvidedDocument.parse(match[0])}catch(e){continue}
                     appendText(source.slice(cursor,match.index));
-                    const atom=document.createElement('span');atom.contentEditable='false';atom.dataset.documentSource=match[0];atom.className='ymdoc';atom.style.cssText='display:block;white-space:normal;margin:8px 0';atom.innerHTML=ProvidedDocument.rendered(html);
+                    const atom=document.createElement('span');atom.contentEditable='false';atom.dataset.documentSource=match[0];atom.className='ymdoc';atom.style.cssText='display:block;white-space:normal;margin:8px 0';ProvidedDocument.mountInlineEditable(atom,match[0],()=>syncVisualDraft(!visualDraft.composing));
                     const controls=document.createElement('div');controls.dataset.documentControls='true';controls.style.cssText='display:flex;gap:8px';
-                    const where=()=>{const r=document.createRange();r.selectNodeContents(visualRoot());r.setEndBefore(atom);const start=serializeVisual(r.cloneContents()).length;return{start,end:start+atom.dataset.documentSource.length}};
-                    const edit=document.createElement('button');edit.type='button';edit.textContent='この文書を編集';edit.onmousedown=e=>e.preventDefault();edit.onclick=()=>fxOpenMaker({src:atom.dataset.documentSource,title:'手紙・調査票',replace:where()});controls.append(edit);
+                    const where=()=>{const r=document.createRange();r.selectNodeContents(visualRoot());r.setEndBefore(atom);const start=serializeVisual(r.cloneContents()).length;return{start,end:start+ProvidedDocument.inlineSource(atom).length}};
+                    const edit=document.createElement('button');edit.type='button';edit.textContent='文書の詳細設定';edit.onmousedown=e=>e.preventDefault();edit.onclick=()=>fxOpenMaker({src:ProvidedDocument.inlineSource(atom),title:'手紙・調査票',replace:where()});controls.append(edit);
                     const remove=document.createElement('button');remove.type='button';remove.textContent='×';remove.setAttribute('aria-label','この文書を削除');remove.onmousedown=e=>e.preventDefault();remove.onclick=()=>{if(visualDraft.composing)return;const pos=where().start;atom.remove();ensureVisualTail();setVisualSelection(pos);syncVisualDraft(true)};controls.append(remove);atom.append(controls);
                     fragment.append(atom);cursor=match.index+match[0].length;continue;
                 }
@@ -9625,7 +9633,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                 appendText(source.slice(cursor,match.index));
                 const atom=document.createElement('span');atom.dataset.boardSource=match[0];atom.style.cssText='display:block;white-space:normal;margin:8px 0';
                 atom.innerHTML=AzBoardEditor.html(board);
-                const markField=(node,field,value)=>{if(!node)return;node.dataset.boardField=field;node.replaceChildren();appendMarked(String(value??''),node,true)};
+                const markField=(node,field,value)=>{if(!node)return;node.dataset.boardField=field;node.contentEditable='true';node.tabIndex=0;node.setAttribute('role','textbox');node.setAttribute('aria-label',field==='title'?'掲示板の題名':field==='body'?'投稿の本文':'掲示板の'+field);node.replaceChildren();appendMarked(String(value??''),node,true)};
                 markField(atom.querySelector('.az-board-title'),'title',board.title);
                 markField(atom.querySelector('.az-board-label'),'board',board.board);
                 const ordered=AzBoardEditor.ordered(board);
@@ -9642,8 +9650,8 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                     bodies.forEach((body,i)=>{const part=post.parts.filter(p=>p.type==='text')[i];if(!part)return;markField(body,'body',part.text);body.dataset.boardPart=String(i);body.setAttribute('aria-label','投稿 '+post.number+' の本文');body.setAttribute('role','textbox');body.setAttribute('aria-multiline','true')});
                 });
                 atom.querySelectorAll('.az-board-meta,.az-board-reply').forEach(node=>node.dataset.boardShell=visualBoardShell(node));
-                atom.dataset.boardDomBaseline=atom.innerHTML;
-                const button=document.createElement('button');button.type='button';button.contentEditable='false';button.dataset.boardControls='1';button.dataset.boardEdit='1';button.textContent='この掲示板を編集';button.style.cssText='padding:8px 12px;border:1px solid #b9aa94;border-radius:8px;background:#fff;color:#332e27';
+                atom.dataset.boardDomBaseline=visualBoardMarkup(atom.querySelector('.az-board-view'));
+                const button=document.createElement('button');button.type='button';button.contentEditable='false';button.dataset.boardControls='1';button.dataset.boardEdit='1';button.textContent='掲示板の詳細設定';button.style.cssText='padding:8px 12px;border:1px solid #b9aa94;border-radius:8px;background:#fff;color:#332e27';
                 button.onmousedown=e=>e.preventDefault();button.onclick=()=>{const range=document.createRange();range.selectNodeContents(visualRoot());range.setEndBefore(atom);const start=serializeVisual(range.cloneContents()).length;openBoardEditor(null,{start,end:start+serializeVisual(atom).length});};
                 atom.append(button);
                 if(board.presentation){
@@ -9660,16 +9668,17 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             if (serializeVisual() !== source) throw new Error('Visual editor round-trip mismatch');
             paintFxFrames();
         }
+        function visualBoardMarkup(node) {if(!node)return '';const clone=node.cloneNode(true);clone.querySelectorAll('[data-board-controls]').forEach(n=>n.remove());clone.querySelectorAll('[style=""]').forEach(n=>n.removeAttribute('style'));if(clone.getAttribute('style')==='')clone.removeAttribute('style');return clone.outerHTML;}
         function visualBoardShell(node) {
             if(!node)return '';const clone=node.cloneNode(true);
             clone.querySelectorAll('[data-board-field]').forEach(field=>{field.textContent='{'+field.dataset.boardField+'}'});
-            return clone.innerHTML;
+            clone.querySelectorAll('[style=""]').forEach(n=>n.removeAttribute('style'));return clone.innerHTML;
         }
         function visualBoardInfo(atom) {
             const original=atom.dataset.boardSource,board=AzBoardEditor.parse(original),by=new Map(board.posts.map(p=>[p.key,p]));
             const text=node=>node?serializeVisual(node):'',field=(node,name)=>node.querySelector('[data-board-field="'+name+'"]');
             const currentView=atom.querySelector('.az-board-view')?.cloneNode(true);currentView?.querySelectorAll('[data-board-controls]').forEach(node=>node.remove());
-            const unchanged=currentView?.outerHTML===atom.dataset.boardDomBaseline;let posts=board.posts;
+            const unchanged=visualBoardMarkup(currentView)===atom.dataset.boardDomBaseline;let posts=board.posts;
             if(!unchanged){
             board.title=text(field(atom,'title'));board.board=text(field(atom,'board'));
             const seen=new Set(),nextPosts=[];
@@ -9758,6 +9767,8 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             if (!selection.rangeCount) return null;
             const range=selection.getRangeAt(0);
             if (!root.contains(range.startContainer) || !root.contains(range.endContainer)) return null;
+            const documentSelection=window.ProvidedDocument?.selectionDescriptor(range);
+            if(documentSelection){const atom=(range.startContainer.nodeType===1?range.startContainer:range.startContainer.parentElement).closest('[data-document-source]'),r=document.createRange();r.selectNodeContents(root);r.setEndBefore(atom);const start=serializeVisual(r.cloneContents()).length;return {start,end:start+(range.collapsed?0:Math.max(1,range.toString().length)),documentSelection,insideRuby:false};}
             const boardSelection=visualBoardSelection(range);if(boardSelection)return boardSelection.blocked?{start:0,end:0,insideRuby:true}:boardSelection;
             const prefix=document.createRange();prefix.selectNodeContents(root);prefix.setEnd(range.startContainer,range.startOffset);
             const suffix=document.createRange();suffix.selectNodeContents(root);suffix.setEnd(range.endContainer,range.endOffset);
@@ -9777,7 +9788,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                     if(node.nodeType===3){if(wanted<=cursor+node.length){result=[node,Math.max(0,wanted-cursor)];return;}cursor+=node.length;return;}
                     if(node.nodeType===1 && node.dataset.mark){cursor+=markOpenOf(node).length;for(const child of node.childNodes)walk(child);cursor+=markCloseOf(node).length;return;}
                     if(node.nodeType===1 && node.hasAttribute('data-line-source')) {const len=node.dataset.lineSource.length;if(wanted<=cursor+len){const i=[...node.parentNode.childNodes].indexOf(node);result=[node.parentNode,i+(wanted>cursor?1:0)];return}cursor+=len;return}
-                    if(node.nodeType===1 && node.hasAttribute('data-document-source')) {const len=node.dataset.documentSource.length;if(wanted<=cursor+len){const i=[...node.parentNode.childNodes].indexOf(node);result=[node.parentNode,i+(wanted>cursor?1:0)];return}cursor+=len;return}
+                    if(node.nodeType===1 && node.hasAttribute('data-document-source')) {const len=serializeVisual(node).length;if(wanted<=cursor+len){const i=[...node.parentNode.childNodes].indexOf(node);result=[node.parentNode,i+(wanted>cursor?1:0)];return}cursor+=len;return}
                     if(node.nodeType===1 && node.hasAttribute('data-board-source')) {const len=serializeVisual(node).length;if(wanted>=cursor&&wanted<=cursor+len){const point=visualBoardPoint(node,wanted-cursor);if(point){result=point;return}}if(wanted<=cursor+len){const index=[...node.parentNode.childNodes].indexOf(node);result=[node.parentNode,index+(wanted>cursor?1:0)];return}cursor+=len;return;}
                     if(node.nodeType===1 && (node.matches('ruby[data-source], span[data-stair][data-source]') || node.tagName==='BR')) {
                         const len=serializeVisual(node).length;
@@ -9843,6 +9854,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             next+=src.slice(last);return {src:next,start:selectionStart,end:selectionEnd};
         }
         function toggleMark(name,value) {
+            if(visualDraft.mode==='visual'&&window.ProvidedDocument?.formatSelection(name,value))return;
             if(typeof visualBoardFormat==='function'&&visualBoardFormat(name,value))return;
             const s=editorSelection();
             if(visualDraft.mode!=='visual'||s.end<=s.start){toast('文字を選んでから押してください');return}
@@ -9986,7 +9998,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             if(visualDraft.composing)return;
             syncVisualDraft();const index=visualDraft.index+delta;if(index<0 || index>=visualDraft.history.length)return;
             visualDraft.index=index;const entry=visualDraft.history[index],ta=document.getElementById('reader-editor-textarea');storeDraftSource(entry.source);
-            if(visualDraft.mode==='visual'){renderVisualSource(entry.source);if(!restoreVisualBoardDescriptor(entry.boardSelection))setVisualSelection(entry.start,entry.end);}else{ta.focus();ta.setSelectionRange(normalizedSource(entry.source.slice(0,entry.start)).length,normalizedSource(entry.source.slice(0,entry.end)).length);}
+            if(visualDraft.mode==='visual'){renderVisualSource(entry.source);if(!window.ProvidedDocument?.restoreSelection(visualRoot(),entry.documentSelection)&&!restoreVisualBoardDescriptor(entry.boardSelection))setVisualSelection(entry.start,entry.end);}else{ta.focus();ta.setSelectionRange(normalizedSource(entry.source.slice(0,entry.start)).length,normalizedSource(entry.source.slice(0,entry.end)).length);}
             rubySelection=null;syncVisualDraft(false);
         }
         function rememberDraftPosition() {
@@ -10002,6 +10014,15 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         }
         function setupVisualEditor() {
             const root=visualRoot(),ta=document.getElementById('reader-editor-textarea');
+            document.querySelector('.editor-tools').addEventListener('click',e=>{
+                const button=e.target.closest('button');if(!button)return;
+                const docSelection=window.ProvidedDocument?.selectionDescriptor(),lineFocused=document.activeElement?.matches?.('[data-line-inline]');
+                if(!docSelection&&!lineFocused)return;
+                const shared=['editor-undo','editor-redo','editor-deselect','editor-selectall','editor-orient'];
+                const documentTools=['editor-copy','editor-cut','editor-paste','editor-bold','editor-italic','editor-underline','editor-strike','editor-marker','editor-bigger','editor-smaller','editor-color'];
+                if(shared.includes(button.id)||docSelection&&documentTools.includes(button.id))return;
+                e.preventDefault();e.stopImmediatePropagation();toast('この欄では、文字の直接入力'+(docSelection?'と基本の書式':'')+'が使えます');
+            },true);
             document.getElementById('editor-mode-toggle').onclick=toggleEditorMode;
             document.getElementById('editor-undo').onclick=()=>editorHistory(-1);
             document.getElementById('editor-redo').onclick=()=>editorHistory(1);
@@ -10046,7 +10067,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             // 色の窓で、選んだ文字の位置を覚えておく（色の選択に移ると、本文の選択が外れるため）
             let lastColor='';try{lastColor=KV.getItem('yomimono_last_color')||''}catch(e){}
             const paintColorBtn=v=>{const sp=colorBtn.querySelector('span');if(sp&&v)sp.style.borderBottomColor=v};paintColorBtn(lastColor);if(lastColor)document.getElementById('color-custom').value=lastColor;
-            const applyColor=v=>{try{KV.setItem('yomimono_last_color',v)}catch(e){}paintColorBtn(v);colorDialog.close();if(colorSel&&colorSel.end>colorSel.start){if(!restoreVisualBoardDescriptor(colorSel.boardSelection))setVisualSelection(colorSel.start,colorSel.end);}toggleMark('色',v)};
+            const applyColor=v=>{try{KV.setItem('yomimono_last_color',v)}catch(e){}paintColorBtn(v);colorDialog.close();if(colorSel&&colorSel.end>colorSel.start){if(!window.ProvidedDocument?.restoreSelection(visualRoot(),colorSel.documentSelection)&&!restoreVisualBoardDescriptor(colorSel.boardSelection))setVisualSelection(colorSel.start,colorSel.end);}toggleMark('色',v)};
             document.getElementById('color-cancel').onclick=()=>{colorDialog.close();root.focus({preventScroll:true})};
             colorDialog.addEventListener('click',e=>{const b=e.target.closest('[data-hex]');if(b)applyColor(b.dataset.hex)});
             document.getElementById('color-custom').onchange=e=>applyColor(e.target.value);
@@ -10156,7 +10177,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             const textarea = document.getElementById('reader-editor-textarea');
             if (rubySelectionLocked || rubyEdit) return;
             if (visualDraft.mode==='visual') {
-                if(document.activeElement!==visualRoot())return;
+                if(document.activeElement!==visualRoot()&&!visualRoot().contains(document.activeElement))return;
                 const pos=visualOffsets();if(!pos)return;
                 syncVisualDraft(false);
                 rubySelection={source:draftSource(),...pos,boardText:pos.boardSelection?getSelection().toString():undefined,visual:true,scrollTop:visualRoot().scrollTop,scrollLeft:visualRoot().scrollLeft,chapterId:state.currentChapterId};return;

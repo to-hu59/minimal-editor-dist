@@ -72,3 +72,69 @@ function example(kind){
 }
 global.ProvidedDocument={sanitize,plain,source,parse,isSource,rendered,editorHTML,editorSource,example};
 })(window);
+
+/* Inline document editing and content-sized presentation. */
+(function(global){
+'use strict';
+const api=global.ProvidedDocument,originalRendered=api.rendered;
+const plain=n=>n.nodeType===3?n.data:n.nodeType!==1?'':n.tagName==='BR'?'\n':[...n.childNodes].map(plain).join('')+(/^(DIV|P)$/.test(n.tagName)?'\n':'');
+function decorate(root,editing=false){
+ if(!root)return;if(editing)root.contentEditable='false';
+ const fields=[...root.querySelectorAll('[contenteditable="true"],[data-ym-editable="true"]')];
+ fields.forEach((field,i)=>{field.dataset.documentField=String(i);field.dataset.ymEditable='true';field.dataset.ymEmpty=String(!field.textContent.trim());if(editing){field.contentEditable='true';field.setAttribute('role','textbox');field.setAttribute('aria-multiline','true');field.setAttribute('tabindex','0');}});
+ if(root.classList.contains('letter-container')){
+  const title=root.querySelector('.letter-title');if(title){title.dataset.ymDocRole='title';const holder=title.parentElement;holder.dataset.ymDocTitle='';holder.dataset.ymEmpty=String(!title.textContent.trim());title.setAttribute('aria-label','宛名');}
+  const body=fields.find(f=>f!==title);if(body){body.dataset.ymDocRole='body';body.setAttribute('aria-label','手紙の本文');}
+  const sender=fields.length>2?fields[fields.length-1]:null;if(sender){sender.dataset.ymDocRole='sender';sender.setAttribute('aria-label','差出人');}
+ }
+ root.toggleAttribute('data-ym-doc-editing',editing);
+}
+api.rendered=(html,edit=false)=>{const box=document.createElement('div');box.innerHTML=originalRendered(html,edit);decorate(box.firstElementChild,edit);return box.innerHTML;};
+function inlineSource(atom){
+ const doc=atom.querySelector('.letter-container,.report-container');if(!doc)return atom.dataset.documentSource||'';
+ const copy=doc.cloneNode(true);copy.querySelectorAll('[data-document-placeholder]').forEach(n=>n.remove());const html=api.sanitize(copy.outerHTML);
+ return html===atom.dataset.documentBaseline?atom.dataset.documentSource:api.source(html);
+}
+function insertText(text){
+ const selection=getSelection();if(!selection.rangeCount)return;const range=selection.getRangeAt(0),fragment=document.createDocumentFragment();
+ String(text).split(/\r\n?|\n/).forEach((line,i)=>{if(i)fragment.append(document.createElement('br'));fragment.append(document.createTextNode(line))});
+ const last=fragment.lastChild;let placeholder=null;if(/(?:\r\n?|\n)$/.test(String(text))){placeholder=document.createElement('br');placeholder.dataset.documentPlaceholder='true';fragment.append(placeholder);}
+ range.deleteContents();range.insertNode(fragment);if(last){range.setStartAfter(last);range.collapse(true);selection.removeAllRanges();selection.addRange(range);}
+}
+function mountInlineEditable(atom,src,onChange){
+ atom.dataset.documentSource=src;atom.contentEditable='false';atom.classList.add('ymdoc');
+ atom.innerHTML=api.rendered(api.parse(src));const doc=atom.firstElementChild;decorate(doc,true);atom.dataset.documentBaseline=api.sanitize(doc.outerHTML);
+ const change=()=>{decorate(doc,true);onChange?.();};
+ // Keep native field input inside the document. Never splice its base64 payload as plain text.
+ atom.addEventListener('beforeinput',e=>{if(!e.target.closest('[data-document-field]'))return;if(e.inputType==='historyUndo'||e.inputType==='historyRedo')return;e.stopPropagation();if(!e.isComposing&&['insertParagraph','insertLineBreak'].includes(e.inputType)){e.preventDefault();insertText('\n');change();}});
+ atom.addEventListener('paste',e=>{if(!e.target.closest('[data-document-field]'))return;e.preventDefault();e.stopPropagation();insertText(e.clipboardData.getData('text/plain'));change();});
+ for(const type of ['copy','cut'])atom.addEventListener(type,e=>{
+  const selection=getSelection();if(!selection.rangeCount)return;const range=selection.getRangeAt(0),element=n=>n.nodeType===1?n:n.parentElement;
+  const a=element(range.startContainer)?.closest('[data-document-field]'),b=element(range.endContainer)?.closest('[data-document-field]');if(!a||!b||!atom.contains(a)||!atom.contains(b))return;
+  e.preventDefault();e.stopPropagation();e.clipboardData?.setData('text/plain',selection.toString());
+  if(type==='cut'){if(a!==b){if(typeof global.toast==='function')global.toast('切り取る文字は同じ欄の中で選んでください');return;}range.deleteContents();change();}
+ });
+ atom.addEventListener('drop',e=>{e.preventDefault();e.stopPropagation();});
+ atom.addEventListener('input',change);
+ return doc;
+}
+function descriptor(range=getSelection().rangeCount?getSelection().getRangeAt(0):null){
+ if(!range)return null;const asElement=n=>n.nodeType===1?n:n.parentElement;
+ const a=asElement(range.startContainer)?.closest('[data-document-source]'),b=asElement(range.endContainer)?.closest('[data-document-source]');if(!a||a!==b)return null;
+ const at=(node,offset)=>{const field=asElement(node)?.closest('[data-document-field]');if(!field)return null;const r=document.createRange();r.selectNodeContents(field);r.setEnd(node,offset);const box=document.createElement('span');box.append(r.cloneContents());return{field:Number(field.dataset.documentField),offset:plain(box).length}};
+ return {document:[...a.parentElement.querySelectorAll('[data-document-source]')].indexOf(a),a:at(range.startContainer,range.startOffset),b:at(range.endContainer,range.endOffset)};
+}
+function restore(root,d){
+ if(!d?.a||!d?.b)return false;const atom=root.querySelectorAll('[data-document-source]')[d.document];if(!atom)return false;
+ const locate=point=>{const f=atom.querySelector('[data-document-field="'+point.field+'"]');if(!f)return null;let at=0,answer=null;const walk=n=>{if(answer)return;if(n.nodeType===3){if(point.offset<=at+n.length){answer=[n,Math.max(0,point.offset-at)];return;}at+=n.length;return;}if(n.nodeType===1&&n.tagName==='BR'){if(point.offset<=at+1){answer=[n.parentNode,[...n.parentNode.childNodes].indexOf(n)+(point.offset>at?1:0)];return;}at++;return;}for(const c of n.childNodes)walk(c);};walk(f);return answer||[f,f.childNodes.length];};
+ const a=locate(d.a),b=locate(d.b);if(!a||!b)return false;const r=document.createRange();r.setStart(...a);r.setEnd(...b);const selection=getSelection();selection.removeAllRanges();selection.addRange(r);(a[0].nodeType===1?a[0]:a[0].parentElement)?.closest('[data-document-field]')?.focus({preventScroll:true});selection.removeAllRanges();selection.addRange(r);return true;
+}
+function formatSelection(kind,value){
+ const d=descriptor();if(!d)return false;const selection=getSelection(),range=selection.getRangeAt(0);if(range.collapsed)return true;
+ const atom=(range.startContainer.nodeType===1?range.startContainer:range.startContainer.parentElement).closest('[data-document-source]');
+ if(d.a?.field!==d.b?.field)return true;
+ const tags={'太字':'b','斜体':'i','下線':'u','取消線':'s','色':'span','マーカー':'span','大きく':'span','小さく':'span'};if(!tags[kind])return false;
+ const el=document.createElement(tags[kind]);if(kind==='色')el.style.color=value||'';if(kind==='マーカー')el.style.backgroundColor='#fff2a8';if(kind==='大きく')el.style.fontSize='1.2em';if(kind==='小さく')el.style.fontSize='.85em';el.append(range.extractContents());range.insertNode(el);range.selectNodeContents(el);selection.removeAllRanges();selection.addRange(range);atom.dispatchEvent(new InputEvent('input',{bubbles:true,inputType:'format'+kind}));return true;
+}
+Object.assign(api,{decorate,mountInlineEditable,inlineSource,selectionDescriptor:descriptor,restoreSelection:restore,formatSelection});
+})(window);
