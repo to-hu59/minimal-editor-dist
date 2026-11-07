@@ -768,8 +768,9 @@
 .page-reading .reader-turn-content p { margin-block-start:0; }
 .reader-turn-sheet.previous { animation-name:sheet-previous; box-shadow:-12px 0 24px #30241830; }
 .rp-spread { display:flex; width:100%; height:100%; writing-mode:horizontal-tb; }
-.rp-leaf { flex:none; height:100%; overflow:hidden; box-sizing:border-box; }
-.rp-gutter { flex:none; width:56px; height:100%; background:linear-gradient(90deg,transparent 40%,#3024180d 50%,transparent 60%); position:relative; }
+.page-reading:not(.editing) #reader-content-text.reader-spread-content { padding:0; }
+.rp-leaf { flex:none; height:100%; overflow:hidden; box-sizing:border-box; padding:8px; }
+.rp-gutter { flex:none; width:var(--reader-spread-gap,48px); height:100%; background:linear-gradient(90deg,transparent 40%,#3024180d 50%,transparent 60%); position:relative; }
 .rp-gutter::before { content:""; position:absolute; left:50%; top:4%; bottom:4%; width:1px; background:#d9cfbf; }
 .reader-turn-stage.fast .reader-turn-sheet,.reader-turn-stage.fast .reader-turn-shade { animation-duration:150ms; }
 .reader-turn-shade { position:absolute; inset:0; background:#302418; pointer-events:none; animation:sheet-shade 400ms ease-out both; }
@@ -1884,6 +1885,7 @@
                     <div class="pt-3 border-t border-woodBorder">
                         <span class="font-bold text-softMuted block mb-1">更新履歴</span>
                         <div id="changelog" class="text-[11px] text-softMuted leading-relaxed">
+<div class="mb-1.5"><b class="text-softText">Version 10.14（2026-11-07）</b><br>見開き表示で右ページの右端が切れる不具合を修正しました。ページごとの余白と幅の計算をそろえ、画面幅に合わせて本文・掲示板が収まるようにしました。</div>
 <div class="mb-1.5"><b class="text-softText">Version 10.13（2026-11-07）</b><br>用語カードの「Wikiを開く」を右上に固定しました。Wikiページの上部に新しい項目を登録する＋ボタンを追加しました。</div>
 <div class="mb-1.5"><b class="text-softText">Version 10.12（2026-11-07）</b><br>1ページに収まる掲示板は途中で切らずに表示します。読む画面の文字・余白と共通の演出再生を整え、特殊演出の説明書を更新しました。</div>
 <div class="mb-1.5"><b class="text-softText">Version 10.11（2026-11-07）</b><br>掲示板メーカーを新しい画面に更新しました。8種類のテーマで作成でき、本文では左寄せで表示します。閉じるボタンも使えます。</div>
@@ -9327,8 +9329,8 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         // 話の終わり・戻る・本の終わりで、読み終えた話から言葉を拾い、件数を小さく知らせる。読書は止めない
         // ===== 更新の確認：新しい版があれば、魚に青い点とメニュー（版の番号は version.json。公開のたびに、番号が変わる。番号が入っていない開発中は、確かめない） =====
         // 表示用の版。更新の検出は引き続き APP_BUILD の日時番号を使う。
-        const APP_VERSION = '10.13';
-        const APP_BUILD = '20261107210027';
+        const APP_VERSION = '10.14';
+        const APP_BUILD = '20261107211500';
         let updateCheckAt = 0;
         function paintBuild() {
             const el = document.getElementById('app-build-info'); if (!el) return;
@@ -10817,7 +10819,7 @@ function updatePageControls(){
  document.getElementById('reader-page-hint').textContent=pageReader.vertical?'横スワイプ：右へ次・左へ前':'横スワイプ：左へ次・右へ前';
  updateReaderProgress();paintTitleCardBtn();
 }
-function restoreScrollContent(){const text=document.getElementById('reader-content-text');text.style.writingMode='';text.style.width='';text.style.marginLeft=text.style.marginRight=text.style.marginTop='';text.style.height='';text.replaceChildren();text.innerHTML=pageReader.source;document.getElementById('view-reader').classList.remove('page-reading');}
+function restoreScrollContent(){const text=document.getElementById('reader-content-text');text.classList.remove('reader-spread-content');text.style.writingMode='';text.style.width='';text.style.marginLeft=text.style.marginRight=text.style.marginTop='';text.style.height='';text.replaceChildren();text.innerHTML=pageReader.source;document.getElementById('view-reader').classList.remove('page-reading');}
 function setPagingChapter(html){
  cancelReaderTurn();clearPageNeighbors();
  pageReader.generation++;pageReader.building&&(pageReader.building.cancelled=true);pageReader.model&&(pageReader.model.cancelled=true);pageReader.model=null;pageReader.source=html;pageReader.key=JSON.stringify([state.currentBookId,state.currentChapterId]);
@@ -10832,10 +10834,13 @@ async function rebuildPages(){
  if(!wrap.clientHeight||document.getElementById('view-reader').classList.contains('hidden'))return;
  pageReader.model=null;document.getElementById('view-reader').classList.add('page-reading');updatePageControls();
  // Page padding includes a ruby gutter on all four sides.
- const spreadOn=pageReader.spread&&wrap.clientWidth>=READER_SPREAD_MIN_W,pageW=spreadOn?Math.min(READER_SPREAD_PAGE_W,Math.floor((wrap.clientWidth-96-READER_SPREAD_GAP)/2)):0,width=spreadOn?pageW*2+READER_SPREAD_GAP:Math.min(wrap.clientWidth-48,pageReader.vertical?1e6:READER_PAGE_MAX_W),wide=matchMedia('(min-width:768px)').matches,height=wrap.clientHeight-48-(wide?READER_PAGE_BAR_TOP+READER_PAGE_BAR_BOTTOM:44);
+ const wrapStyle=getComputedStyle(wrap),availableWidth=wrap.clientWidth-parseFloat(wrapStyle.paddingLeft)-parseFloat(wrapStyle.paddingRight),availableHeight=wrap.clientHeight-parseFloat(wrapStyle.paddingTop)-parseFloat(wrapStyle.paddingBottom);
+ const spreadOn=pageReader.spread&&wrap.clientWidth>=READER_SPREAD_MIN_W,pageW=spreadOn?Math.min(READER_SPREAD_PAGE_W,Math.floor((availableWidth-READER_SPREAD_GAP)/2)):0,width=spreadOn?pageW*2+READER_SPREAD_GAP:Math.min(availableWidth,pageReader.vertical?1e6:READER_PAGE_MAX_W),wide=matchMedia('(min-width:768px)').matches,height=availableHeight-(wide?READER_PAGE_BAR_TOP+READER_PAGE_BAR_BOTTOM:44);
  if(width<60||height<80)return;
+ // Spread leaves use the same border-box size and ruby padding as the measuring page.
+ text.classList.toggle('reader-spread-content',spreadOn);text.style.setProperty('--reader-spread-gap',READER_SPREAD_GAP+'px');
  text.style.writingMode=pageReader.vertical?'vertical-rl':'horizontal-tb';text.style.width=(spreadOn?pageW:width)+'px';text.style.marginLeft=text.style.marginRight='auto';text.style.marginTop=wide?READER_PAGE_BAR_TOP+'px':'';text.style.height=height+'px';
- const measure=text.cloneNode(false);measure.removeAttribute('id');measure.classList.add('reader-page-measure');measure.style.position='fixed';measure.style.left='-100000px';measure.style.top='0';measure.style.visibility='hidden';measure.style.pointerEvents='none';measure.style.overflow='hidden';measure.style.boxSizing='border-box';
+ const measure=text.cloneNode(false);measure.removeAttribute('id');measure.classList.remove('reader-spread-content');measure.classList.add('reader-page-measure');measure.style.position='fixed';measure.style.left='-100000px';measure.style.top='0';measure.style.visibility='hidden';measure.style.pointerEvents='none';measure.style.overflow='hidden';measure.style.boxSizing='border-box';
  const computed=getComputedStyle(text);for(const name of ['fontFamily','fontSize','fontWeight','lineHeight','letterSpacing','whiteSpace','overflowWrap'])measure.style[name]=computed[name];
  document.body.append(measure);text.style.width=width+'px';const model=new ReaderPaginator(pageReader.source,measure,{vertical:pageReader.vertical});model.spread=spreadOn;model.pageW=pageW;pageReader.building=model;
  try{
