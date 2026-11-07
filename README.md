@@ -25,7 +25,7 @@
 
 PDFはそのまま読めます。Wordはダウンロードして開きます。
 
-- クイックスタート（画像つき）：[PDFを読む](docs/start.pdf) / [Wordをダウンロード](https://raw.githubusercontent.com/to-hu59/minimal-editor-dist/main/docs/start.docx)
+- クイックスタート（画像つき）：[PDFを読む](docs/%E3%82%AF%E3%82%A4%E3%83%83%E3%82%AF%E3%82%B9%E3%82%BF%E3%83%BC%E3%83%88.pdf) / [Wordをダウンロード](https://raw.githubusercontent.com/to-hu59/minimal-editor-dist/main/docs/%E3%82%AF%E3%82%A4%E3%83%83%E3%82%AF%E3%82%B9%E3%82%BF%E3%83%BC%E3%83%88.docx)
 - 画面ガイド・上級編（編集・特殊な文字と演出・音読・Wikiなど）：[PDFを読む](docs/app.pdf) / [Wordをダウンロード](https://raw.githubusercontent.com/to-hu59/minimal-editor-dist/main/docs/app.docx)
 - 保存・同期と注意事項（READMEの日本語版）：[PDFを読む](README.pdf) / [Wordをダウンロード](https://raw.githubusercontent.com/to-hu59/minimal-editor-dist/main/README.docx)
 - Googleドライブの設定（かんたん版）：[PDF](docs/drive-setup-easy.pdf) / [Word](https://raw.githubusercontent.com/to-hu59/minimal-editor-dist/main/docs/drive-setup-easy.docx)
@@ -80,7 +80,7 @@ Tip: In Word for Windows, turning on View → Navigation Pane shows a heading li
 
 If Word shows two pages side by side, click View → One Page → 100% in that order. The key is to press One Page first, not to change only the zoom. This shows the pages in a single column.
 
-- Quick start (with screenshots): [Read PDF](docs/start.pdf) / [Download Word](https://raw.githubusercontent.com/to-hu59/minimal-editor-dist/main/docs/start.docx)
+- Quick start (with screenshots): [Read PDF](docs/%E3%82%AF%E3%82%A4%E3%83%83%E3%82%AF%E3%82%B9%E3%82%BF%E3%83%BC%E3%83%88.pdf) / [Download Word](https://raw.githubusercontent.com/to-hu59/minimal-editor-dist/main/docs/%E3%82%AF%E3%82%A4%E3%83%83%E3%82%AF%E3%82%B9%E3%82%BF%E3%83%BC%E3%83%88.docx)
 - Screens guide, advanced (editing, special text and effects, reading aloud, wiki and more): [Read PDF](docs/app.pdf) / [Download Word](https://raw.githubusercontent.com/to-hu59/minimal-editor-dist/main/docs/app.docx)
 - Saving, sync and notes (README): [Read PDF](README.pdf) / [Download Word](https://raw.githubusercontent.com/to-hu59/minimal-editor-dist/main/README.docx)
 - Google Drive setup: [Quick guide PDF](docs/drive-setup-easy.pdf) / [Word](https://raw.githubusercontent.com/to-hu59/minimal-editor-dist/main/docs/drive-setup-easy.docx)
