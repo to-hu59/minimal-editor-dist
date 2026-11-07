@@ -14,6 +14,9 @@
   #srcBtn { display: none !important; }
   #cover { display: none !important; }
 </style>
+<link rel="stylesheet" href="document-style.css">
+<script src="document-core.js"></script>
+<script src="document-motion.js"></script>
 </head>
 <body>
 <!-- 演出ビュー：読む画面から、章の本文（［ ］の印つき）を受け取って、演出つきで読む。
@@ -75,6 +78,9 @@
     if (!opts.vibrate) { try { Object.defineProperty(navigator, 'vibrate', { value: () => false, configurable: true }); } catch (x) {} }
     const s = document.createElement('script'); s.src = 'fx.js';
     s.onload = () => {
+      const bridge = document.createElement('script'); bridge.src = 'line-maker-bridge.js';
+      bridge.onload = () => {
+      const docs=document.createElement('script');docs.src='document-bridge.js';docs.onload=()=>{
       try {
         S.pvMute = !opts.sound;                       // 音は、はじめは出さない
         document.querySelector('.hd .ttl').textContent = d.title || '';
@@ -83,6 +89,11 @@
       } catch (x) { post({ type: 'fx-error', message: String(x && x.message || x) }); }
       let last = -1;
       setInterval(() => { try { if (typeof S !== 'undefined' && S.cur != null && S.cur !== last) { last = S.cur; post({ type: 'fx-page', i: S.cur, n: BOOK.pages.length }); } } catch (x) {} }, 400);
+    };
+      docs.onerror=()=>post({type:'fx-error',message:'手紙・調査票の演出を読み込めませんでした'});document.body.appendChild(docs);
+      };
+      bridge.onerror = () => post({ type: 'fx-error', message: 'トークメーカーの接続を読み込めませんでした' });
+      document.body.appendChild(bridge);
     };
     s.onerror = () => post({ type: 'fx-error', message: 'fx.js を読み込めませんでした' });
     document.body.appendChild(s);

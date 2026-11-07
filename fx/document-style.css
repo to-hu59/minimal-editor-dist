@@ -1,0 +1,129 @@
+.ymdoc{font-size:16px;line-height:normal;white-space:normal;text-align:left;writing-mode:horizontal-tb;color:#111}.ymdoc *, .ymdoc *::before, .ymdoc *::after{box-sizing:border-box}.ymdoc .font-bold{font-weight:700}.ymdoc .text-red-600{color:#dc2626}
+        .ymdoc .letter-container {
+            margin: 2rem auto;
+            /* 上下の余白も line-height の倍数(2.4rem)に合わせるとズレません */
+            padding: 2.4rem 2rem;
+            max-width: 85%;
+            background-color: #fdf6e3;
+            color: #4a3b32;
+            border-radius: 2px;
+            box-shadow: 2px 4px 12px rgba(0,0,0,0.15);
+            font-family: "Yu Mincho", "MS Mincho", serif;
+            font-size: 1.1rem;
+            
+            /* 文字切れ防止 */
+            word-break: break-word;
+            overflow-wrap: break-word;
+            
+            /* 行の高さを指定し、それと同じ高さの背景ブロックを作って下線を引く */
+            line-height: 2.4rem;
+            /* よりズレにくい repeating-linear-gradient を使用 */
+            background-image: repeating-linear-gradient(transparent, transparent calc(2.4rem - 1px), rgba(168,141,94,0.4) calc(2.4rem - 1px), rgba(168,141,94,0.4) 2.4rem);
+        }
+        .ymdoc .letter-title {
+            text-align: center;
+            font-size: 1.3rem;
+            font-weight: bold;
+            /* 行の高さと余白を調整し、文字の下が切れないようにする */
+            line-height: 1.5;
+            background: #fdf6e3;
+            display: inline-block;
+            padding: 0.2rem 1rem;
+            position: relative;
+            top: -0.3rem; /* 背景の罫線を程よく隠すための微調整 */
+        }
+        .ymdoc /* ブロック要素のマージンを無くし、改行(br)でコントロールする */
+        .letter-container p, .ymdoc .letter-container div {
+            margin: 0;
+        }
+        
+        .ymdoc /* =========================================
+           調査証風スタイル
+        ========================================= */
+        .report-container {
+            margin: 2rem auto;
+            padding: 2.5rem;
+            max-width: 90%;
+            background-color: #fff;
+            color: #111;
+            border: 1px solid #ccc;
+            box-shadow: 0 0 0 1px #fff, 0 0 0 4px #444; 
+            font-family: "Yu Gothic", "MS Gothic", sans-serif;
+            position: relative;
+            overflow: hidden;
+            line-height: 1.6;
+            
+            /* 文字切れ防止 */
+            word-break: break-word;
+            overflow-wrap: break-word;
+        }
+        .ymdoc /* 以前の ::before 要素を削除し、専用のスタンプクラスに変更 */
+        .secret-stamp {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(-25deg);
+            font-size: 8rem;
+            color: rgba(220, 38, 38, 0.08);
+            font-weight: 900;
+            pointer-events: none;
+            z-index: 0;
+            border: 8px solid rgba(220, 38, 38, 0.08);
+            padding: 1rem 3rem;
+            border-radius: 10px;
+            letter-spacing: 0.2em;
+            /* 以下を追加して枠の中央ズレを修正 */
+            text-indent: 0.2em; 
+            line-height: 1;
+            white-space: nowrap;
+            text-align: center;
+        }
+        
+        .ymdoc /* スタンプアニメーション用の状態 */
+        .stamp-hidden {
+            opacity: 0;
+            transform: translate(-50%, -50%) rotate(-25deg) scale(3);
+        }
+        .ymdoc .stamp-anim {
+            animation: stamp-drop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+        
+
+        .ymdoc .report-header {
+            border-bottom: 3px double #111;
+            padding-bottom: 1rem;
+            margin-bottom: 1.5rem;
+            position: relative;
+            z-index: 1;
+        }
+        .ymdoc .report-title {
+            font-size: 1.6rem;
+            font-weight: 900;
+            text-align: center;
+            letter-spacing: 0.4em;
+        }
+        .ymdoc .report-meta {
+            text-align: right;
+            font-size: 0.9rem;
+            margin-top: 1rem;
+            color: #444;
+        }
+        .ymdoc .report-body {
+            position: relative;
+            z-index: 1;
+            font-size: 1.05rem;
+        }
+        .ymdoc .report-item {
+            display: flex;
+            border-bottom: 1px dotted #999;
+            padding: 0.75rem 0;
+        }
+        .ymdoc .report-item-label {
+            width: 30%;
+            font-weight: bold;
+            color: #333;
+        }
+        .ymdoc .report-item-value {
+            width: 70%;
+        }
+    

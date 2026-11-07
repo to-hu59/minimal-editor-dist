@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>手紙＆調査証 エディタ</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js" crossorigin="anonymous"></script>
+    <style>
+        /* エディタ用のスタイル */
+        #editor {
+            min-height: 70vh;
+            outline: none;
+        }
+        #editor:empty:before {
+            content: attr(placeholder);
+            color: #aaa;
+            pointer-events: none;
+            display: block;
+        }
+
+        /* 削除ボタン */
+        #editor .letter-container, #editor .report-container { position: relative; }
+        .doc-delete-btn {
+            position: absolute;
+            top: -10px;
+            right: -10px;
+            background: #ef4444;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            font-size: 14px;
+            font-weight: bold;
+            line-height: 24px;
+            text-align: center;
+            cursor: pointer;
+            display: none;
+            z-index: 10;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            user-select: none;
+        }
+        #editor .letter-container:hover .doc-delete-btn,
+        #editor .report-container:hover .doc-delete-btn {
+            display: block;
+        }
+
+        /* アニメーション用 */
+        .anim-hidden { opacity: 0; transform: translateY(10px); }
+        .anim-show { opacity: 1; transform: translateY(0); transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
+        /* タイピング（手書き）カーソル */
+        .writing-cursor::after { content: ''; animation: blink 1s step-end infinite; font-size: 0.9em; opacity: 0.8; margin-left: 2px;}
+        @keyframes blink { 50% { opacity: 0; } }
+
+        /* =========================================
+           手紙風スタイル（罫線ズレ修正版）
+        ========================================= */
+        .letter-container {
+            margin: 2rem auto;
+            /* 上下の余白も line-height の倍数(2.4rem)に合わせるとズレません */
+            padding: 2.4rem 2rem;
+            max-width: 85%;
+            background-color: #fdf6e3;
+            color: #4a3b32;
+            border-radius: 2px;
+            box-shadow: 2px 4px 12px rgba(0,0,0,0.15);
+            font-family: "Yu Mincho", "MS Mincho", serif;
+            font-size: 1.1rem;
+            
+            /* 文字切れ防止 */
+            word-break: break-word;
+            overflow-wrap: break-word;
+            
+            /* 行の高さを指定し、それと同じ高さの背景ブロックを作って下線を引く */
+            line-height: 2.4rem;
+            /* よりズレにくい repeating-linear-gradient を使用 */
+            background-image: repeating-linear-gradient(transparent, transparent calc(2.4rem - 1px), rgba(168,141,94,0.4) calc(2.4rem - 1px), rgba(168,141,94,0.4) 2.4rem);
+        }
+        .letter-title {
+            text-align: center;
+            font-size: 1.3rem;
+            font-weight: bold;
+            /* 行の高さと余白を調整し、文字の下が切れないようにする */
+            line-height: 1.5;
+            background: #fdf6e3;
+            display: inline-block;
+            padding: 0.2rem 1rem;
+            position: relative;
+            top: -0.3rem; /* 背景の罫線を程よく隠すための微調整 */
+        }
+        /* ブロック要素のマージンを無くし、改行(br)でコントロールする */
+        .letter-container p, .letter-container div {
+            margin: 0;
+        }
+        
+        /* =========================================
+           調査証風スタイル
+        ========================================= */
+        .report-container {
+            margin: 2rem auto;
+            padding: 2.5rem;
+            max-width: 90%;
+            background-color: #fff;
+            color: #111;
+            border: 1px solid #ccc;
+            box-shadow: 0 0 0 1px #fff, 0 0 0 4px #444; 
+            font-family: "Yu Gothic", "MS Gothic", sans-serif;
+            position: relative;
+            overflow: hidden;
+            line-height: 1.6;
+            
+            /* 文字切れ防止 */
+            word-break: break-word;
+            overflow-wrap: break-word;
+        }
+        /* 以前の ::before 要素を削除し、専用のスタンプクラスに変更 */
+        .secret-stamp {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(-25deg);
+            font-size: 8rem;
+            color: rgba(220, 38, 38, 0.08);
+            font-weight: 900;
+            pointer-events: none;
+            z-index: 0;
+            border: 8px solid rgba(220, 38, 38, 0.08);
+            padding: 1rem 3rem;
+            border-radius: 10px;
+            letter-spacing: 0.2em;
+            /* 以下を追加して枠の中央ズレを修正 */
+            text-indent: 0.2em; 
+            line-height: 1;
+            white-space: nowrap;
+            text-align: center;
+        }
+        
+        /* スタンプアニメーション用の状態 */
+        .stamp-hidden {
+            opacity: 0;
+            transform: translate(-50%, -50%) rotate(-25deg) scale(3);
+        }
+        .stamp-anim {
+            animation: stamp-drop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+        @keyframes stamp-drop {
+            0% { opacity: 0; transform: translate(-50%, -50%) rotate(-25deg) scale(3); }
+            50% { opacity: 1; color: rgba(220, 38, 38, 0.3); border-color: rgba(220, 38, 38, 0.3); } /* 押した瞬間は少し濃い */
+            100% { opacity: 1; transform: translate(-50%, -50%) rotate(-25deg) scale(1); color: rgba(220, 38, 38, 0.08); border-color: rgba(220, 38, 38, 0.08); }
+        }
+
+        .report-header {
+            border-bottom: 3px double #111;
+            padding-bottom: 1rem;
+            margin-bottom: 1.5rem;
+            position: relative;
+            z-index: 1;
+        }
+        .report-title {
+            font-size: 1.6rem;
+            font-weight: 900;
+            text-align: center;
+            letter-spacing: 0.4em;
+        }
+        .report-meta {
+            text-align: right;
+            font-size: 0.9rem;
+            margin-top: 1rem;
+            color: #444;
+        }
+        .report-body {
+            position: relative;
+            z-index: 1;
+            font-size: 1.05rem;
+        }
+        .report-item {
+            display: flex;
+            border-bottom: 1px dotted #999;
+            padding: 0.75rem 0;
+        }
+        .report-item-label {
+            width: 30%;
+            font-weight: bold;
+            color: #333;
+        }
+        .report-item-value {
+            width: 70%;
+        }
+    
+        #editor .letter-container:focus-within .doc-delete-btn,#editor .report-container:focus-within .doc-delete-btn { display:block; }
+        @media(hover:none){ #editor .doc-delete-btn { display:block; } }
+        @media(max-width:640px){header{flex-wrap:wrap;gap:8px}header>div:last-child{flex-wrap:wrap}}
+</style>
+</head>
+<body class="bg-gray-100 text-gray-800 h-screen flex flex-col font-sans">
+
+    <!-- ツールバー -->
+    <header class="bg-white shadow-sm px-4 md:px-6 py-3 flex justify-between items-center z-10 relative">
+        <div>
+            <h1 class="text-lg md:text-xl font-bold text-gray-700">劇中劇エディタ (手紙・調査証)</h1>
+            <p class="text-[10px] md:text-xs text-gray-500">掲示板機能を省いたシンプル版</p>
+        </div>
+        <div class="flex gap-2">
+            <button id="btn-test-anim" class="bg-purple-600 hover:bg-purple-700 text-white px-3 md:px-4 py-2 rounded shadow flex items-center gap-1 transition text-sm font-bold">
+                ▶ 演出をテスト
+            </button>
+            <button id="btn-insert-letter" class="bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded shadow font-bold transition text-sm">
+                ✉️ 手紙を挿入
+            </button>
+            <button id="btn-insert-report" class="bg-gray-700 hover:bg-gray-800 text-white px-4 py-2 rounded shadow font-bold transition text-sm">
+                📋 調査証を挿入
+            </button>
+        </div>
+    </header>
+
+    <!-- メインエディタ領域 -->
+    <main class="flex-1 overflow-y-auto p-4 md:p-8 flex justify-center">
+        <div class="bg-white w-full max-w-4xl shadow-md rounded-lg p-8 md:p-12 text-lg leading-relaxed border border-gray-200">
+            <div id="editor" contenteditable="true" placeholder="ここに本文を入力してください。上のボタンから手紙や調査証を挿入できます。">
+                <p>主人公は古びた机の引き出しから、一通の封筒を見つけた。</p>
+                <p><br></p>
+            </div>
+        </div>
+    </main>
+
+    <footer id="doc-integration" hidden style="flex-shrink:0;background:#fff;padding:10px;box-shadow:0 -1px 5px #0002;"><div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap"><button id="doc-back" type="button" style="padding:10px 16px;border:1px solid #ccc;border-radius:6px">もどる</button><button id="doc-save" type="button" style="padding:10px 16px;border:1px solid #ccc;border-radius:6px">この作品に保存</button><button id="doc-insert" type="button" style="padding:10px 16px;background:#b45309;color:white;border-radius:6px">本文に入れる</button></div></footer>
+    <script src="document-core.js"></script><script src="document-motion.js"></script>
+    <script>
+        const editor = document.getElementById('editor');
+
+        // カーソル位置にHTMLを挿入する関数
+        function insertHtmlToEditor(html) {
+            editor.focus();
+            const selection = window.getSelection();
+            if (selection.getRangeAt && selection.rangeCount) {
+                let range = selection.getRangeAt(0);
+                if (!editor.contains(range.commonAncestorContainer)) {
+                    editor.innerHTML += html + "<p><br></p>";
+                } else {
+                    const tempDiv = document.createElement('div');
+                    tempDiv.innerHTML = html + "<p><br></p>"; 
+                    const frag = document.createDocumentFragment();
+                    let node, lastNode;
+                    while ((node = tempDiv.firstChild)) {
+                        lastNode = frag.appendChild(node);
+                    }
+                    range.insertNode(frag);
+                    if (lastNode) {
+                        range = range.cloneRange();
+                        range.setStartAfter(lastNode);
+                        range.collapse(true);
+                        selection.removeAllRanges();
+                        selection.addRange(range);
+                    }
+                }
+            } else {
+                editor.innerHTML += html + "<p><br></p>";
+            }
+        }
+
+        // 手紙を挿入
+        document.getElementById('btn-insert-letter').addEventListener('click', () => {
+            const html = `
+            <div class="letter-container" contenteditable="false">
+                <button class="doc-delete-btn" contenteditable="false" title="削除">×</button>
+                <div style="text-align:center;"><span class="letter-title" contenteditable="true">親愛なる友へ</span></div>
+                <div contenteditable="true">
+                    この手紙が君に届く頃、私はもうこの街にはいないだろう。<br>
+                    例の件についてだが、君の予想通りだった。<br>
+                    どうか気を付けてくれ。
+                </div>
+                <div style="width: fit-content; margin-left: auto; text-align: left; margin-top: 2.4rem;" contenteditable="true">差出人不明より</div>
+            </div>`;
+            insertHtmlToEditor(html);
+        });
+
+        // 調査証を挿入
+        document.getElementById('btn-insert-report').addEventListener('click', () => {
+            const html = `
+            <div class="report-container" contenteditable="false">
+                <button class="doc-delete-btn" contenteditable="false" title="削除">×</button>
+                <div class="secret-stamp">極 秘</div>
+                <div class="report-header" contenteditable="true">
+                    <div class="report-title">対象者 調査報告書</div>
+                    <div class="report-meta">作成日: 20XX年X月X日<br>担当: 特務第4課</div>
+                </div>
+                <div>
+                    <div class="report-item">
+                        <div class="report-item-label" contenteditable="true">氏名</div>
+                        <div class="report-item-value" contenteditable="true">名無し の 太郎</div>
+                    </div>
+                    <div class="report-item">
+                        <div class="report-item-label" contenteditable="true">危険度レベル</div>
+                        <div class="report-item-value font-bold text-red-600" contenteditable="true">クラスA (要監視)</div>
+                    </div>
+                    <div class="report-item">
+                        <div class="report-item-label" contenteditable="true">特記事項</div>
+                        <div class="report-item-value" contenteditable="true">対象は現在、ネット上の掲示板にて頻繁に活動している。周囲への影響力が極めて高いため、早急な対応が求められる。</div>
+                    </div>
+                </div>
+            </div>`;
+            insertHtmlToEditor(html);
+        });
+
+        // 削除ボタンの処理
+        editor.addEventListener('click', (e) => {
+            if (e.target.classList.contains('doc-delete-btn')) {
+                const container = e.target.closest('.letter-container, .report-container');
+                if (container) container.remove();
+            }
+        });
+
+        // The editor and its layout are unchanged. Only ink visibility is animated.
+        let documentRun=null, synthPop=null;
+        const cancelWriting=()=>{documentRun?.cancel();documentRun=null;};
+        async function popAudio(){
+            try {
+                if(!window.Tone)return;
+                await Tone.start();
+                if(!synthPop){synthPop=new Tone.MembraneSynth().toDestination();synthPop.volume.value=-10;}
+                synthPop.triggerAttackRelease('C4','8n');
+            } catch(e) {}
+        }
+        document.getElementById('btn-test-anim').addEventListener('click',()=>{
+            cancelWriting();
+            const targets=editor.querySelectorAll('.letter-container,.report-container');
+            if(!targets.length){alert('エディタ内に演出対象がありません。手紙か調査証を追加してください。');return;}
+            popAudio();
+            documentRun=DocumentWriting.play(targets[targets.length-1],{sound:true,onStamp:()=>{
+                try{if(synthPop){synthPop.volume.value=-2;synthPop.triggerAttackRelease('G2','8n');setTimeout(()=>synthPop.volume.value=-10,500);}}catch(e){}
+            }});
+        });
+        editor.addEventListener('beforeinput',cancelWriting,true);
+        document.getElementById('btn-insert-letter').addEventListener('pointerdown',cancelWriting);
+        document.getElementById('btn-insert-report').addEventListener('pointerdown',cancelWriting);
+        editor.addEventListener('click',e=>{if(e.target.closest('.doc-delete-btn'))cancelWriting();},true);
+        window.addEventListener('pagehide',cancelWriting);
+        const post=m=>parent.postMessage(m,location.origin==='null'?'*':location.origin);
+        const current=()=>{cancelWriting();return ProvidedDocument.editorSource(editor);};
+        document.getElementById('doc-back').onclick=()=>{cancelWriting();post({type:'fx-close'});};
+        document.getElementById('doc-insert').onclick=()=>{try{post({type:'fx-insert',src:current()});}catch(e){alert(e.message);}};
+        document.getElementById('doc-save').onclick=()=>{try{post({type:'fx-save',src:current()});}catch(e){alert(e.message);}};
+        let received=false;
+        window.addEventListener('message',e=>{
+            if(e.source!==parent || (location.origin!=='null'&&e.origin!==location.origin))return;
+            const d=e.data;if(!d||d.type!=='fx-make'||received)return;received=true;
+            cancelWriting();
+            try{editor.innerHTML=ProvidedDocument.editorHTML(d.src||'');}
+            catch(error){post({type:'fx-error',message:error.message});}
+        });
+        if(parent!==window){document.getElementById('doc-integration').hidden=false;post({type:'fx-ready'});}
+    </script>
+</body>
+</html>

@@ -1,0 +1,2764 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Chat Maker（カタログ組み込み）</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      font-family: 'Noto Sans JP', -apple-system, BlinkMacSystemFont, sans-serif;
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+    /* カスタムスクロールバー */
+    ::-webkit-scrollbar { width: 4px; height: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.2); border-radius: 4px; }
+
+    /* LINE風 / カカオトーク風 吹き出しのしっぽ */
+    .bubble-left-line::before {
+      content: '';
+      position: absolute;
+      top: 8px;
+      left: -6px;
+      border-top: 6px solid transparent;
+      border-bottom: 6px solid transparent;
+      border-right: 8px solid #ffffff;
+    }
+    .bubble-right-line::before {
+      content: '';
+      position: absolute;
+      top: 8px;
+      right: -6px;
+      border-top: 6px solid transparent;
+      border-bottom: 6px solid transparent;
+      border-left: 8px solid #8de055;
+    }
+    .bubble-right-kakao::before {
+      content: '';
+      position: absolute;
+      top: 8px;
+      right: -6px;
+      border-top: 6px solid transparent;
+      border-bottom: 6px solid transparent;
+      border-left: 8px solid #fee500;
+    }
+
+    /* 通知バナーアニメーション */
+    @keyframes slideDown {
+      0% { transform: translateY(-120%); opacity: 0; }
+      100% { transform: translateY(0); opacity: 1; }
+    }
+    .banner-anim {
+      animation: slideDown 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+    /* 長押ししたときに、スマホの「コピー」などのメニューが出ないように */
+    #roomMessageArea, #roomMessageArea * { -webkit-touch-callout: none; }
+      .embed body{padding:0!important;min-height:0!important}
+    .reader #dataBtn{display:none}
+    .embed #phoneFrame{height:calc(100vh - 44px - var(--kbpad,0px))!important;max-width:100%!important;border-radius:0!important}
+    .inline body>.bg-slate-800,.inline #embedNote,.inline #exitFullBtn{display:none!important}
+    .inline #phoneFrame{height:100vh!important;max-width:100%!important;border:0!important;border-radius:12px!important}
+    .inline body{background:transparent!important}
+    #roomEditorToolbar{flex-wrap:wrap}
+    #senderSwitchList{flex:1 1 100%;min-width:0}
+    #senderSwitchList>*{flex-shrink:0}
+    .view #roomInputBar,.view #roomEditorToolbar{display:none!important}
+  .reader .edit-ui,.reader #roomEditorToolbar,.reader #roomInputBar,.reader #msgQuickMenu,.reader #dataBtn{display:none!important}
+  .embed:not(.inline) #phoneFrame{height:calc(100dvh - var(--line-toolbar-height,44px) - var(--kbpad,0px))!important}
+  </style>
+</head>
+<body class="bg-slate-900 min-h-screen flex flex-col items-center justify-center p-0 sm:p-4 select-none">
+
+  <!-- 上部コントロールバー（PC・外部操作用） -->
+  <div class="w-full max-w-[420px] bg-slate-800 text-white px-3 py-2 sm:rounded-t-2xl flex items-center justify-between text-xs border-b border-slate-700 shadow-md z-30">
+    <div class="flex items-center gap-1.5">
+      <button id="themeToggleBtn" onclick="toggleAppTheme()" class="px-2.5 py-1.5 rounded-lg font-bold flex items-center gap-1.5 transition shadow">
+        <i class="fa-solid fa-palette"></i>
+        <span id="themeToggleText">LINE風</span>
+      </button>
+      <button onclick="openBannerConfigModal()" class="bg-slate-700 hover:bg-slate-600 px-2.5 py-1.5 rounded-lg flex items-center gap-1 transition" title="上部通知バナーを表示">
+        <i class="fa-solid fa-bell text-amber-400"></i>
+        <span>通知演出</span>
+      </button>
+    </div>
+    <div class="flex items-center gap-1.5">
+      <button id="exitFullBtn" onclick="parent.postMessage({type:'exitFull'},'*')" class="hidden bg-amber-500 text-slate-900 px-2.5 py-1.5 rounded-lg font-bold text-xs">← 戻る</button>
+      <button onclick="togglePreviewCleanMode()" id="cleanModeBtn" class="bg-slate-700 hover:bg-slate-600 px-2.5 py-1.5 rounded-lg flex items-center gap-1 transition" title="編集UIを隠してスクショ・確認用にする">
+        <i class="fa-solid fa-eye"></i>
+        <span id="cleanModeText">編集ON</span>
+      </button>
+      <button id="dataBtn" onclick="openDataModal()" class="bg-indigo-600 hover:bg-indigo-500 px-2.5 py-1.5 rounded-lg font-medium flex items-center gap-1 transition">
+        <i class="fa-solid fa-code"></i>
+        <span>データ出力</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- スマホ本体フレーム -->
+  <div id="phoneFrame" class="w-full max-w-[420px] h-[calc(100vh-44px)] sm:h-[780px] bg-white sm:rounded-b-2xl shadow-2xl overflow-hidden flex flex-col relative border-x border-b border-slate-700">
+
+    <!-- ステータスバー（時計・電波・バッテリー） -->
+    <div id="statusBar" onclick="editStatusBarClock()" class="h-7 px-5 flex items-center justify-between text-xs font-semibold cursor-pointer shrink-0 z-20 transition-colors">
+      <span id="statusClock" class="hover:underline" title="タップして時刻を変更">23:40</span>
+      <div class="flex items-center gap-1.5 text-[11px]">
+        <i class="fa-solid fa-signal"></i>
+        <i class="fa-solid fa-wifi"></i>
+        <i class="fa-solid fa-battery-three-quarters text-sm"></i>
+      </div>
+    </div>
+
+    <!-- 画面上部 通知バナー（ピロンと降りてくる演出） -->
+    <div id="topNotificationBanner" class="hidden absolute top-8 left-3 right-3 z-50 banner-anim">
+      <div onclick="onBannerClick()" class="bg-slate-900/95 backdrop-blur-md text-white p-3 rounded-2xl shadow-xl border border-white/10 flex items-center gap-3 cursor-pointer">
+        <img id="bannerAvatar" src="" class="w-10 h-10 rounded-full object-cover shrink-0 bg-slate-700" alt="icon">
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center justify-between">
+            <span id="bannerSender" class="font-bold text-xs truncate">ハル</span>
+            <span id="bannerAppLabel" class="text-[10px] text-emerald-400 font-medium">今</span>
+          </div>
+          <p id="bannerText" class="text-xs text-slate-200 truncate mt-0.5">今どこ？</p>
+        </div>
+        <button onclick="event.stopPropagation(); hideBanner();" class="text-slate-400 hover:text-white px-1.5 py-1">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+    </div>
+
+    <div id="embedNote" class="hidden bg-amber-100 text-amber-900 text-[11px] px-3 py-1 text-center shrink-0">このトークルームも、写真・プロフィールと一緒に保存されます。</div>
+    <!-- ==================== メインビュー領域 ==================== -->
+    <div class="flex-1 flex flex-col overflow-hidden relative">
+
+      <!-- 1. 友だち一覧画面 -->
+      <div id="viewFriends" class="flex-1 flex flex-col overflow-hidden bg-white">
+        <!-- ヘッダー -->
+        <div id="friendsHeader" class="px-4 py-3 flex items-center justify-between border-b border-slate-100 shrink-0">
+          <h1 class="text-lg font-bold tracking-tight">ホーム</h1>
+          <div class="flex items-center gap-3 text-slate-600 edit-ui">
+            <button onclick="openUserModal('new_friend')" class="hover:text-emerald-600 flex items-center gap-1 text-xs font-bold bg-slate-100 px-2.5 py-1.5 rounded-full transition">
+              <i class="fa-solid fa-user-plus"></i> 友だち追加
+            </button>
+            <button onclick="openGroupModal('new')" class="hover:text-emerald-600 flex items-center gap-1 text-xs font-bold bg-slate-100 px-2.5 py-1.5 rounded-full transition">
+              <i class="fa-solid fa-users"></i> グループ作成
+            </button>
+          </div>
+        </div>
+
+        <!-- コンテンツリスト -->
+        <div class="flex-1 overflow-y-auto divide-y divide-slate-100">
+          <!-- 自分のプロフィール -->
+          <div class="p-4 hover:bg-slate-50 transition cursor-pointer flex items-center gap-3.5" onclick="openProfilePreview('me')">
+            <img id="meAvatarFriends" src="" class="w-14 h-14 object-cover shrink-0 border border-slate-200" alt="me">
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2">
+                <p id="meNameFriends" class="font-bold text-base text-slate-900 truncate"></p>
+                <span class="edit-ui text-[10px] bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded">自分・タップで編集</span>
+              </div>
+              <p id="meStatusFriends" class="text-xs text-slate-500 truncate mt-0.5"></p>
+            </div>
+          </div>
+
+          <!-- グループセクション -->
+          <div class="py-2">
+            <div class="px-4 py-1.5 flex items-center justify-between text-xs font-bold text-slate-400">
+              <span>グループ <span id="groupCountLabel">0</span></span>
+              <button onclick="openGroupModal('new')" class="edit-ui text-emerald-600 hover:underline text-[11px]">+ 追加</button>
+            </div>
+            <div id="friendsGroupList" class="divide-y divide-slate-50"></div>
+          </div>
+
+          <!-- 友だちセクション -->
+          <div class="py-2">
+            <div class="px-4 py-1.5 flex items-center justify-between text-xs font-bold text-slate-400">
+              <span>友だち <span id="friendCountLabel">0</span></span>
+              <button onclick="openUserModal('new_friend')" class="edit-ui text-emerald-600 hover:underline text-[11px]">+ 追加</button>
+            </div>
+            <div id="friendsUserList" class="divide-y divide-slate-50"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. トーク一覧画面 -->
+      <div id="viewChats" class="hidden flex-1 flex flex-col overflow-hidden bg-white">
+        <!-- ヘッダー -->
+        <div id="chatsHeader" class="px-4 py-3 flex items-center justify-between border-b border-slate-100 shrink-0">
+          <h1 class="text-lg font-bold tracking-tight">トーク</h1>
+          <div class="flex items-center gap-2 edit-ui">
+            <button onclick="openNewChatPickerModal()" class="text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-full flex items-center gap-1 transition">
+              <i class="fa-solid fa-plus"></i> トーク追加
+            </button>
+          </div>
+        </div>
+
+        <!-- トーク一覧リスト -->
+        <div id="chatRoomList" class="flex-1 overflow-y-auto divide-y divide-slate-100"></div>
+      </div>
+
+      <!-- 3. トークルーム画面（個人 / グループ共通） -->
+      <div id="viewRoom" class="hidden flex-1 flex flex-col overflow-hidden relative">
+        <!-- トークルーム上部ヘッダー -->
+        <div id="roomHeader" class="h-12 px-3 flex items-center justify-between shrink-0 z-10 transition-colors">
+          <div class="flex items-center gap-2 min-w-0 flex-1">
+            <button onclick="switchMainTab('chats')" class="p-1.5 hover:opacity-75 transition">
+              <i class="fa-solid fa-chevron-left text-base"></i>
+            </button>
+            <div onclick="openRoomSettingsModal()" class="flex items-center gap-1.5 min-w-0 cursor-pointer group">
+              <span id="roomHeaderTitle" class="font-bold text-base truncate">ハル</span>
+              <span id="roomHeaderMemberCount" class="text-xs opacity-80 font-medium"></span>
+              <i class="fa-solid fa-pen text-[10px] opacity-0 group-hover:opacity-60 edit-ui transition"></i>
+            </div>
+          </div>
+          <div class="flex items-center gap-3 text-sm">
+            <button onclick="toggleCallPanel()" class="hover:opacity-75 p-1" title="通話">
+              <i class="fa-solid fa-phone"></i>
+            </button>
+            <button onclick="openRoomSettingsModal()" class="hover:opacity-75 p-1" title="背景・ルーム設定・メンバー不在表示">
+              <i class="fa-solid fa-bars text-base"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- 通話メニュー（ヘッダーの受話器を押すと開く） -->
+        <div id="callPanel" class="hidden shrink-0 z-10 flex items-center justify-around py-3 border-b border-black/5 bg-white/95 text-slate-700">
+          <button onclick="startCall('voice')" class="flex flex-col items-center gap-1 px-8 py-1 hover:opacity-70">
+            <i class="fa-solid fa-phone text-xl"></i><span class="text-xs">音声通話</span>
+          </button>
+          <button onclick="startCall('video')" class="flex flex-col items-center gap-1 px-8 py-1 hover:opacity-70">
+            <i class="fa-solid fa-video text-xl"></i><span class="text-xs">ビデオ通話</span>
+          </button>
+        </div>
+
+        <!-- メッセージ表示エリア -->
+        <div id="roomMessageArea" class="flex-1 overflow-y-auto px-3 py-3 space-y-2.5 relative bg-cover bg-center">
+          <!-- JSでメッセージ描画 -->
+        </div>
+
+        <!-- リプライ選択中バー -->
+        <div id="replyPreviewBar" class="hidden bg-slate-100 border-t border-slate-200 px-3 py-1.5 flex items-center justify-between text-xs text-slate-700 z-10">
+          <div class="flex items-center gap-2 truncate">
+            <i class="fa-solid fa-reply text-emerald-600"></i>
+            <div class="truncate">
+              <span id="replyPreviewSender" class="font-bold mr-1"></span>
+              <span id="replyPreviewText" class="text-slate-500 truncate"></span>
+            </div>
+          </div>
+          <button onclick="clearReplyTarget()" class="text-slate-400 hover:text-slate-700 px-1">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+
+        <!-- 編集用：発言者切り替え＆特殊アイテム挿入ツールバー -->
+        <div id="roomEditorToolbar" class="edit-ui bg-slate-900/90 text-white px-2.5 py-1.5 flex items-center justify-between gap-2 text-[11px] shrink-0 z-10 border-t border-slate-700">
+          <!-- 発言者切替ピル -->
+          <div class="flex items-center gap-1 overflow-x-auto py-0.5 flex-1" id="senderSwitchList">
+            <!-- JSで生成 -->
+          </div>
+          <!-- 特殊イベント挿入ボタン群 -->
+          <div class="flex items-center gap-1 shrink-0">
+            <button id="sendReadToggleBtn" onclick="toggleSendRead()" class="bg-slate-700 hover:bg-slate-600 px-2 py-1 rounded text-[10px]" title="自分の発言に既読を付けるかどうか"><i class="fa-solid fa-eye"></i> 既読あり</button>
+            <select id="sendReadSelect" onchange="setSendReadText(this.value)" class="bg-slate-700 text-white rounded px-1 py-1 text-[10px] max-w-[84px]" title="送るときの既読の表記（数）"></select>
+            <button onclick="openQuickInsertModal('date')" class="bg-slate-700 hover:bg-slate-600 px-2 py-1 rounded text-[10px]" title="日付変更線を追加">
+              <i class="fa-regular fa-calendar"></i> 日付
+            </button>
+            <button onclick="openQuickInsertModal('system')" class="bg-slate-700 hover:bg-slate-600 px-2 py-1 rounded text-[10px]" title="退室・送信取消・メンバー不在などのシステム表示を追加">
+              <i class="fa-solid fa-circle-info"></i> 演出/退出
+            </button>
+          </div>
+        </div>
+
+        <!-- 下部メッセージ入力バー -->
+        <div id="roomInputBar" class="bg-white border-t border-slate-200 px-2.5 py-2 flex items-center gap-2 shrink-0 z-10">
+          <button onclick="openAttachmentMenuModal()" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center shrink-0 transition" title="写真・スタンプ・通話などを送信">
+            <i class="fa-solid fa-plus text-sm"></i>
+          </button>
+          <button onclick="openQuickInsertModal('photo')" class="w-8 h-8 rounded-full hover:bg-slate-100 text-slate-500 flex items-center justify-center shrink-0 transition" title="写真を送信">
+            <i class="fa-regular fa-image text-base"></i>
+          </button>
+          <div class="flex-1 relative flex items-center">
+            <input id="chatTextInput" type="text" placeholder="メッセージを入力" onkeydown="if(event.key==='Enter') sendTextMessage()" class="w-full bg-slate-100 text-slate-800 text-sm rounded-full pl-3.5 pr-8 py-1.5 focus:outline-none focus:ring-1 focus:ring-slate-300">
+            <button onclick="openQuickInsertModal('stamp')" class="absolute right-2.5 text-slate-400 hover:text-slate-600" title="スタンプを送信">
+              <i class="fa-regular fa-face-smile text-base"></i>
+            </button>
+          </div>
+          <button id="sendMsgBtn" onmousedown="event.preventDefault()" onclick="sendTextMessage()" class="px-3.5 py-1.5 rounded-full font-bold text-xs shrink-0 transition shadow-sm">
+            送信
+          </button>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- 下部ナビゲーションバー（友だち / トーク） -->
+    <div id="bottomNavBar" class="h-14 bg-slate-50 border-t border-slate-200 flex items-center justify-around shrink-0 z-20">
+      <button onclick="switchMainTab('friends')" id="navTabFriends" class="flex-1 h-full flex flex-col items-center justify-center gap-0.5 text-slate-800 relative">
+        <i class="fa-solid fa-user text-lg"></i>
+        <span class="text-[10px] font-bold">友だち</span>
+      </button>
+      <button onclick="switchMainTab('chats')" id="navTabChats" class="flex-1 h-full flex flex-col items-center justify-center gap-0.5 text-slate-400 relative">
+        <div class="relative">
+          <i class="fa-solid fa-comment text-lg"></i>
+          <span id="totalUnreadBadge" class="hidden absolute -top-1.5 -right-3 bg-rose-500 text-white text-[10px] font-bold px-1.5 min-w-[18px] h-[18px] rounded-full flex items-center justify-center leading-none"></span>
+        </div>
+        <span class="text-[10px] font-bold">トーク</span>
+      </button>
+    </div>
+
+    <!-- 通話画面（ぼかした相手の写真・名前・マイク／終了／スピーカー） -->
+    <div id="callScreen" class="hidden absolute inset-0 z-[48] overflow-hidden text-white flex flex-col items-center">
+      <!-- 画面シェア中：シェアしている画面を大きく、参加している人を下に小さく -->
+      <div id="shareView" class="hidden absolute inset-0 z-20 bg-[#0f1115] flex flex-col text-white">
+        <div class="px-4 pt-3 pb-2 flex items-center justify-between gap-2">
+          <div class="min-w-0">
+            <p id="shareTitle" class="font-bold text-sm truncate"></p>
+            <p id="shareSub" class="text-[11px] text-white/60"></p>
+          </div>
+          <button onclick="cycleShareOwner()" class="edit-ui shrink-0 text-[10px] bg-white/10 rounded-full px-2.5 py-1">シェアする人を変える</button>
+        </div>
+        <div class="flex-1 min-h-0 px-3 pb-2">
+          <div class="relative w-full h-full rounded-xl overflow-hidden bg-[#1c1f26] border border-white/10 flex items-center justify-center">
+            <img id="shareImg" class="hidden w-full h-full object-contain" alt="">
+            <div id="shareEmpty" class="text-center text-white/50 text-xs"><i class="fa-solid fa-display text-3xl mb-2 block"></i>シェアしている画面</div>
+            <span class="absolute top-2 left-2 text-[10px] bg-rose-500 rounded px-1.5 py-0.5 font-bold">● 画面シェア</span>
+          </div>
+        </div>
+        <div id="shareMembers" class="flex gap-3 px-4 pb-2 overflow-x-auto"></div>
+        <div class="px-4 pb-6 pt-1 flex items-center justify-between gap-2">
+          <label class="edit-ui text-[11px] bg-white/10 rounded-full px-3 py-2 cursor-pointer"><i class="fa-regular fa-image"></i> 画像を選ぶ<input type="file" accept="image/*" class="hidden" onchange="pickShareImage(event)"></label>
+          <button onclick="stopScreenShare()" class="ml-auto px-5 py-2.5 rounded-full bg-rose-500 hover:bg-rose-400 text-sm font-bold">シェアを停止</button>
+        </div>
+      </div>
+      <div id="callBg" class="absolute inset-0 bg-cover bg-center bg-slate-700" style="filter: blur(26px) brightness(.55); transform: scale(1.25);"></div>
+      <div class="edit-ui relative z-10 mt-3 flex items-center gap-1.5 text-[11px]">
+        <button id="callStateRing" onclick="setCallState('ring')" class="px-2.5 py-1 rounded-full bg-white/20">呼び出し中</button>
+        <button id="callStateOn" onclick="setCallState('on')" class="px-2.5 py-1 rounded-full bg-white/10">つながった</button>
+      </div>
+      <div id="callG" class="hidden relative z-10 w-full flex-1 flex flex-col">
+        <div class="px-4 pt-3 flex items-start justify-between">
+          <i class="fa-solid fa-bars text-lg mt-1 w-6"></i>
+          <div class="text-center">
+            <p id="callGTitle" class="font-bold text-base"></p>
+            <p id="callGSub" class="text-xs text-white/70 mt-0.5">呼び出し中…</p>
+          </div>
+          <div class="flex items-center gap-3 mt-1 w-6 justify-end"><i class="fa-solid fa-xmark text-lg"></i></div>
+        </div>
+        <div id="callGGrid" class="grid grid-cols-2 gap-y-6 px-8 mt-6"></div>
+        <p class="edit-ui text-center text-[10px] text-white/40 mt-3">人をタップ：話している → ミュート → 参加していない</p>
+        <div class="mt-auto">
+          <div id="callGWave" class="px-6 py-3 text-center border-t border-white/10"></div>
+          <div class="w-full px-5 pb-6 pt-2 flex items-center justify-between">
+            <button onclick="endCall()" class="px-6 py-2.5 rounded-full bg-rose-500 hover:bg-rose-400 text-sm font-bold">退出</button>
+            <button onclick="this.querySelector('i').classList.toggle('fa-microphone-slash')" class="flex flex-col items-center gap-1 text-white/80"><i class="fa-solid fa-microphone text-xl"></i><span class="text-[10px]">マイクをオフ</span></button>
+            <button onclick="this.querySelector('i').classList.toggle('fa-volume-xmark')" class="flex flex-col items-center gap-1 text-white/80"><i class="fa-solid fa-volume-high text-xl"></i><span class="text-[10px] text-center leading-tight">スピーカーを<br>オン</span></button>
+            <button onclick="startScreenShare()" class="flex flex-col items-center gap-1 text-white/80"><i class="fa-regular fa-square-caret-right text-xl"></i><span class="text-[10px]">画面シェア</span></button>
+          </div>
+        </div>
+      </div>
+      <div id="callOne" class="relative z-10 flex flex-col items-center mt-16">
+        <img id="callAvatar" src="" class="w-24 h-24 object-cover rounded-full border-2 border-white/70 shadow-xl" alt="">
+        <p id="callName" class="mt-4 text-2xl font-bold tracking-wide"></p>
+        <p id="callStatus" class="mt-1.5 text-sm text-white/85">呼び出し中…</p>
+      </div>
+      <div id="callCtl" class="relative z-10 mt-auto mb-10 w-full px-10 flex items-end justify-between">
+        <button onclick="toggleCallMic()" class="flex flex-col items-center gap-1.5 w-20">
+          <i id="callMicIcon" class="fa-solid fa-microphone text-2xl"></i>
+          <span id="callMicLabel" class="text-[10px] leading-tight text-center">マイクを<br>オフ</span>
+        </button>
+        <button onclick="endCall()" class="w-16 h-16 rounded-full bg-rose-500 hover:bg-rose-400 flex items-center justify-center shadow-lg" title="通話を終了">
+          <i class="fa-solid fa-xmark text-3xl"></i>
+        </button>
+        <button onclick="toggleCallSpeaker()" class="flex flex-col items-center gap-1.5 w-20">
+          <i id="callSpkIcon" class="fa-solid fa-volume-high text-2xl"></i>
+          <span id="callSpkLabel" class="text-[10px] leading-tight text-center">スピーカーを<br>オン</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- ==================== モーダル群（スマホ画面内オーバーレイ） ==================== -->
+
+    <!-- 1. 全画面プロフィール表示（X風メモアプリのような詳細画面） -->
+    <div id="profilePreviewModal" class="hidden absolute inset-0 z-40 bg-slate-900 flex flex-col justify-between text-white bg-cover bg-center">
+      <div id="profileBgOverlay" class="absolute inset-0 bg-black/40 backdrop-blur-[1px]"></div>
+      <!-- 上部バー -->
+      <div class="relative z-10 p-4 flex items-center justify-between">
+        <button onclick="closeProfilePreview()" class="w-9 h-9 rounded-full bg-black/40 flex items-center justify-center hover:bg-black/60">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+        <button id="profileEditOpenBtn" class="px-3.5 py-1.5 rounded-full bg-black/50 hover:bg-black/70 border border-white/30 text-xs font-bold flex items-center gap-1.5">
+          <i class="fa-solid fa-pen"></i> プロフィールを編集
+        </button>
+      </div>
+      <!-- 下部プロフィール情報 -->
+      <div class="relative z-10 px-6 pb-10 flex flex-col items-center text-center">
+        <img id="profilePreviewAvatar" src="" class="w-24 h-24 object-cover border-2 border-white shadow-xl mb-3 bg-slate-700" alt="avatar">
+        <h2 id="profilePreviewName" class="text-xl font-bold tracking-wide"></h2>
+        <p id="profilePreviewStatus" class="text-xs text-slate-200 mt-1.5 max-w-[260px] break-words"></p>
+
+        <!-- アクションボタン -->
+        <div class="mt-7 pt-6 border-t border-white/20 w-full flex items-center justify-around max-w-[240px]">
+          <button id="profileStartChatBtn" class="flex flex-col items-center gap-1.5 hover:opacity-80">
+            <div class="w-11 h-11 rounded-full bg-white/15 flex items-center justify-center">
+              <i class="fa-solid fa-comment text-base"></i>
+            </div>
+            <span class="text-[11px]">トーク</span>
+          </button>
+          <button id="profileStartCallBtn" class="flex flex-col items-center gap-1.5 hover:opacity-80">
+            <div class="w-11 h-11 rounded-full bg-white/15 flex items-center justify-center">
+              <i class="fa-solid fa-phone text-base"></i>
+            </div>
+            <span class="text-[11px]">無料通話</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. ユーザー追加・編集モーダル（X風メモアプリ第1画像のスタイル） -->
+    <div id="userEditModal" class="hidden absolute inset-0 z-50 bg-white flex flex-col">
+      <div class="h-12 px-4 border-b border-slate-200 flex items-center justify-between shrink-0">
+        <div class="flex items-center gap-3">
+          <button onclick="closeUserModal()" class="text-slate-600 hover:text-slate-900">
+            <i class="fa-solid fa-arrow-left"></i>
+          </button>
+          <span id="userModalTitle" class="font-bold text-sm text-slate-800">プロフィール編集</span>
+        </div>
+        <button onclick="saveUserModal()" class="text-emerald-600 font-bold text-sm hover:underline">保存</button>
+      </div>
+
+      <div class="flex-1 overflow-y-auto">
+        <!-- ヘッダー背景画像＆アイコン設定（X風メモアプリ完全再現） -->
+        <div class="relative">
+          <div id="editUserBgPreview" class="h-36 bg-slate-500 bg-cover bg-center flex items-center justify-center relative">
+            <label class="cursor-pointer bg-black/40 hover:bg-black/60 text-white p-2.5 rounded-full transition">
+              <i class="fa-solid fa-camera text-lg"></i>
+              <input type="file" accept="image/*" class="hidden" onchange="handleImageUpload(event, 'userBg')">
+            </label>
+          </div>
+          <div class="px-5 -mt-10 flex items-end justify-between relative z-10">
+            <div class="relative w-20 h-20 rounded-full bg-slate-300 border-4 border-white overflow-hidden shadow">
+              <img id="editUserAvatarPreview" src="" class="w-full h-full object-cover" alt="avatar">
+              <label class="absolute inset-0 bg-black/35 hover:bg-black/50 text-white flex items-center justify-center cursor-pointer transition">
+                <i class="fa-solid fa-camera"></i>
+                <input type="file" accept="image/*" class="hidden" onchange="handleImageUpload(event, 'userAvatar')">
+              </label>
+            </div>
+            <!-- プリセットアイコン選択 -->
+            <div class="flex items-center gap-1 pb-1">
+              <span class="text-[10px] text-slate-400 mr-1">プリセット:</span>
+              <button type="button" onclick="setPresetAvatar('pastelBlue')" class="w-6 h-6 rounded-full bg-gradient-to-tr from-sky-300 to-pink-200 border border-slate-300" title="グラデーション1"></button>
+              <button type="button" onclick="setPresetAvatar('pastelGreen')" class="w-6 h-6 rounded-full bg-gradient-to-tr from-emerald-300 to-teal-100 border border-slate-300" title="グラデーション2"></button>
+              <button type="button" onclick="setPresetAvatar('pastelAmber')" class="w-6 h-6 rounded-full bg-gradient-to-tr from-amber-300 to-rose-200 border border-slate-300" title="グラデーション3"></button>
+              <button type="button" onclick="setPresetAvatar('defaultGray')" class="w-6 h-6 rounded-full bg-slate-400 border border-slate-300" title="デフォルト人物"></button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 入力フォーム -->
+        <div class="p-5 space-y-5">
+          <div>
+            <label class="block text-xs text-slate-500 mb-1">名前</label>
+            <input id="editUserNameInput" type="text" maxlength="50" placeholder="ハル" class="w-full border-b-2 border-slate-200 focus:border-emerald-500 py-1.5 text-sm font-medium focus:outline-none">
+          </div>
+          <div>
+            <label class="block text-xs text-slate-500 mb-1">ステータスメッセージ（一言）</label>
+            <input id="editUserStatusInput" type="text" maxlength="100" placeholder="よろしくお願いします" class="w-full border-b-2 border-slate-200 focus:border-emerald-500 py-1.5 text-sm focus:outline-none">
+          </div>
+          <div>
+            <label class="block text-xs text-slate-500 mb-1">アイコン画像URL（直接入力も可）</label>
+            <input id="editUserAvatarUrlInput" type="text" placeholder="https://..." oninput="syncAvatarFromUrl()" class="w-full border-b border-slate-200 focus:border-emerald-500 py-1 text-xs text-slate-600 focus:outline-none">
+          </div>
+
+          <div id="deleteUserBtnWrap" class="pt-4 border-t border-slate-100 hidden">
+            <button type="button" onclick="deleteCurrentUser()" class="w-full py-2 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 text-xs font-bold transition">
+              この友だちを削除
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. グループ作成・編集モーダル -->
+    <div id="groupEditModal" class="hidden absolute inset-0 z-50 bg-white flex flex-col">
+      <div class="h-12 px-4 border-b border-slate-200 flex items-center justify-between shrink-0">
+        <div class="flex items-center gap-3">
+          <button onclick="closeGroupModal()" class="text-slate-600 hover:text-slate-900">
+            <i class="fa-solid fa-arrow-left"></i>
+          </button>
+          <span class="font-bold text-sm text-slate-800">グループ設定</span>
+        </div>
+        <button onclick="saveGroupModal()" class="text-emerald-600 font-bold text-sm hover:underline">保存</button>
+      </div>
+      <div class="flex-1 overflow-y-auto p-5 space-y-5">
+        <div class="flex items-center gap-4">
+          <div class="relative w-16 h-16 rounded-2xl bg-slate-200 overflow-hidden shrink-0 border border-slate-300">
+            <img id="editGroupAvatarPreview" src="" class="w-full h-full object-cover" alt="group">
+            <label class="absolute inset-0 bg-black/35 text-white flex items-center justify-center cursor-pointer">
+              <i class="fa-solid fa-camera"></i>
+              <input type="file" accept="image/*" class="hidden" onchange="handleImageUpload(event, 'groupAvatar')">
+            </label>
+          </div>
+          <div class="flex-1">
+            <label class="block text-xs text-slate-500 mb-1">グループ名</label>
+            <input id="editGroupNameInput" type="text" placeholder="バンド仲間" class="w-full border-b-2 border-slate-200 focus:border-emerald-500 py-1 text-sm font-bold focus:outline-none">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs text-slate-500 mb-1">表示メンバー数（例：バンド仲間 (5) の数字）</label>
+          <input id="editGroupCountInput" type="number" min="1" max="999" value="5" class="w-28 border border-slate-300 rounded-lg px-3 py-1.5 text-sm font-bold">
+          <p class="text-[11px] text-slate-400 mt-1">※トーク一覧やヘッダーで「グループ名 (5)」のように表示されます</p>
+        </div>
+
+        <div>
+          <label class="block text-xs text-slate-500 mb-2">発言メンバーを選択（トーク画面で切り替えられます）</label>
+          <div id="groupMemberCheckboxList" class="space-y-2 max-h-52 overflow-y-auto border border-slate-200 rounded-xl p-3"></div>
+        </div>
+
+        <div id="deleteGroupBtnWrap" class="pt-3 hidden">
+          <button type="button" onclick="deleteCurrentGroup()" class="w-full py-2 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 text-xs font-bold">
+            このグループを削除
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. トーク一覧の項目編集モーダル（通知バッジ ①・③ や最新文の書き換え） -->
+    <div id="chatListItemModal" class="hidden absolute inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+      <div class="bg-white w-full rounded-2xl p-5 shadow-xl space-y-4">
+        <div class="flex items-center justify-between">
+          <h3 class="font-bold text-sm text-slate-800">トーク一覧の表示を編集</h3>
+          <button onclick="closeChatListItemModal()" class="text-slate-400 hover:text-slate-700"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div>
+          <label class="block text-xs text-slate-500 mb-1">一覧に表示する最新メッセージ文</label>
+          <input id="editChatPreviewText" type="text" placeholder="今どこ？" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm">
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs text-slate-500 mb-1">通知バッジ数（0で非表示）</label>
+            <input id="editChatUnreadCount" type="number" min="0" max="9999" value="1" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm font-bold">
+          </div>
+          <div>
+            <label class="block text-xs text-slate-500 mb-1">表示時刻 / 日付</label>
+            <input id="editChatPreviewTime" type="text" placeholder="23:40" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm">
+          </div>
+        </div>
+        <div class="flex justify-end gap-2 pt-2">
+          <button onclick="closeChatListItemModal()" class="px-4 py-2 rounded-lg text-xs font-bold text-slate-600 bg-slate-100">キャンセル</button>
+          <button onclick="saveChatListItemModal()" class="px-4 py-2 rounded-lg text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500">保存</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 5. 個別メッセージ編集モーダル（吹き出しタップ時：文章・既読・時間・送信取消・リプライ） -->
+    <div id="messageEditModal" class="hidden absolute inset-0 z-50 bg-black/50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+      <div class="bg-white w-full rounded-t-2xl sm:rounded-2xl p-5 shadow-2xl space-y-4 max-h-[90%] overflow-y-auto">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-2.5">
+          <h3 class="font-bold text-sm text-slate-800">メッセージの編集・操作</h3>
+          <button onclick="closeMessageEditModal()" class="text-slate-400 hover:text-slate-700"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+
+        <!-- 特殊クイック操作ボタン（リプライ / 送信取消に変換） -->
+        <div class="grid grid-cols-2 gap-2">
+          <button onclick="setReplyFromEditingMessage()" class="py-2 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold flex items-center justify-center gap-1.5">
+            <i class="fa-solid fa-reply text-emerald-600"></i> この発言にリプライ
+          </button>
+          <button onclick="convertMessageToUnsent()" class="py-2 px-3 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-800 text-xs font-bold flex items-center justify-center gap-1.5">
+            <i class="fa-solid fa-rotate-left"></i> 送信取消にする
+          </button>
+        </div>
+
+        <!-- 発言者変更 -->
+        <div id="editMsgSenderWrap">
+          <label class="block text-xs text-slate-500 mb-1">発言者</label>
+          <select id="editMsgSenderSelect" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white"></select>
+        </div>
+
+        <!-- テキスト内容 -->
+        <div id="editMsgTextWrap">
+          <label class="block text-xs text-slate-500 mb-1">テキスト / 表示内容</label>
+          <textarea id="editMsgTextInput" rows="2" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"></textarea>
+        </div>
+
+        <!-- 既読・未読表記と時刻 -->
+        <div id="editMsgMetaWrap" class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs text-slate-500 mb-1">既読 / 未読表記</label>
+            <input id="editMsgReadInput" type="text" placeholder="既読 / 既読 3 / 1 / 空欄" class="w-full border border-slate-300 rounded-lg px-3 py-1.5 text-sm">
+            <div class="flex gap-1 mt-1">
+              <button type="button" onclick="document.getElementById('editMsgReadInput').value='既読'" class="text-[10px] bg-slate-100 px-1.5 py-0.5 rounded">既読</button>
+              <button type="button" onclick="document.getElementById('editMsgReadInput').value='既読 1'" class="text-[10px] bg-slate-100 px-1.5 py-0.5 rounded">既読 1</button>
+              <button type="button" onclick="document.getElementById('editMsgReadInput').value='既読 2'" class="text-[10px] bg-slate-100 px-1.5 py-0.5 rounded">既読 2</button>
+              <button type="button" onclick="document.getElementById('editMsgReadInput').value='既読 3'" class="text-[10px] bg-slate-100 px-1.5 py-0.5 rounded">既読 3</button>
+              <button type="button" onclick="document.getElementById('editMsgReadInput').value='既読 4'" class="text-[10px] bg-slate-100 px-1.5 py-0.5 rounded">既読 4</button>
+              <button type="button" onclick="document.getElementById('editMsgReadInput').value='1'" class="text-[10px] bg-amber-100 px-1.5 py-0.5 rounded">1(カカオ)</button>
+              <button type="button" onclick="document.getElementById('editMsgReadInput').value=''" class="text-[10px] bg-rose-100 text-rose-700 font-bold px-1.5 py-0.5 rounded">既読つけない</button>
+            </div>
+          </div>
+          <div>
+            <label class="block text-xs text-slate-500 mb-1">時刻</label>
+            <input id="editMsgTimeInput" type="text" placeholder="23:40" class="w-full border border-slate-300 rounded-lg px-3 py-1.5 text-sm">
+          </div>
+        </div>
+
+        <!-- 順序移動・削除・保存 -->
+        <div class="flex items-center justify-between pt-3 border-t border-slate-100">
+          <div class="flex items-center gap-1">
+            <button onclick="moveEditingMessage(-1)" class="p-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs" title="上へ移動">
+              <i class="fa-solid fa-arrow-up"></i>
+            </button>
+            <button onclick="moveEditingMessage(1)" class="p-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs" title="下へ移動">
+              <i class="fa-solid fa-arrow-down"></i>
+            </button>
+            <button onclick="deleteEditingMessage()" class="p-2 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-bold ml-1">
+              <i class="fa-solid fa-trash"></i> 削除
+            </button>
+          </div>
+          <div class="flex gap-2">
+            <button onclick="closeMessageEditModal()" class="px-3.5 py-2 rounded-lg text-xs font-bold text-slate-600 bg-slate-100">閉じる</button>
+            <button onclick="saveMessageEditModal()" class="px-4 py-2 rounded-lg text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500">保存</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 6. スタンプ・写真・通話・日付・退出演出 追加モーダル -->
+    <div id="quickInsertModal" class="hidden absolute inset-0 z-50 bg-black/50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+      <div class="bg-white w-full rounded-t-2xl sm:rounded-2xl p-5 shadow-2xl space-y-4 max-h-[85%] overflow-y-auto">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-2">
+          <h3 id="quickInsertTitle" class="font-bold text-sm text-slate-800">アイテムを追加</h3>
+          <button onclick="closeQuickInsertModal()" class="text-slate-400 hover:text-slate-700"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div id="quickInsertBody" class="space-y-3"></div>
+      </div>
+    </div>
+
+    <!-- 7. トークルーム背景・名前・メンバー不在設定モーダル -->
+    <div id="roomSettingsModal" class="hidden absolute inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+      <div class="bg-white w-full rounded-2xl p-5 shadow-xl space-y-4 max-h-[90%] overflow-y-auto">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-2">
+          <h3 class="font-bold text-sm text-slate-800">トークルーム設定・背景変更</h3>
+          <button onclick="closeRoomSettingsModal()" class="text-slate-400 hover:text-slate-700"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+
+        <div>
+          <label class="block text-xs text-slate-500 mb-1">ルーム表示名</label>
+          <input id="roomSettingTitleInput" type="text" class="w-full border border-slate-300 rounded-lg px-3 py-1.5 text-sm font-bold">
+        </div>
+
+        <div>
+          <label class="block text-xs text-slate-500 mb-1.5">背景カラー / 画像</label>
+          <div class="grid grid-cols-4 gap-2 mb-2">
+            <button onclick="setRoomBackground('default')" class="h-10 rounded-lg bg-[#7494c0] text-white text-[10px] font-bold shadow-inner">LINE標準</button>
+            <button onclick="setRoomBackground('#b2c7d9')" class="h-10 rounded-lg bg-[#b2c7d9] text-slate-800 text-[10px] font-bold shadow-inner">カカオ標準</button>
+            <button onclick="setRoomBackground('#1e293b')" class="h-10 rounded-lg bg-[#1e293b] text-white text-[10px] font-bold shadow-inner">ダーク夜</button>
+            <button onclick="setRoomBackground('#fce7f3')" class="h-10 rounded-lg bg-[#fce7f3] text-pink-900 text-[10px] font-bold shadow-inner">パステル桜</button>
+          </div>
+          <label class="w-full py-2 px-3 rounded-lg border border-dashed border-slate-300 hover:bg-slate-50 flex items-center justify-center gap-2 text-xs text-slate-600 cursor-pointer">
+            <i class="fa-regular fa-image"></i> 好きな背景画像をアップロード
+            <input type="file" accept="image/*" class="hidden" onchange="handleImageUpload(event, 'roomBg')">
+          </label>
+        </div>
+
+        <!-- ブロック / アカウント削除 / メンバーがいません切替 -->
+        <div class="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-xs font-bold text-slate-800">「メンバーがいません」状態にする</p>
+              <p class="text-[10px] text-slate-500">相手がアカウント削除・退会した時の表示にします</p>
+            </div>
+            <input id="roomNoMemberToggle" type="checkbox" class="w-4 h-4 accent-emerald-600">
+          </div>
+          <button onclick="insertLeftSystemMessage()" class="w-full py-1.5 rounded-lg bg-white border border-slate-300 hover:bg-slate-100 text-xs font-bold text-slate-700">
+            ＋「〇〇が退出しました / メンバーがいません」をトークに追加
+          </button>
+        </div>
+
+        <div class="flex justify-end gap-2 pt-2">
+          <button onclick="closeRoomSettingsModal()" class="px-4 py-2 rounded-lg text-xs font-bold text-slate-600 bg-slate-100">キャンセル</button>
+          <button onclick="saveRoomSettingsModal()" class="px-4 py-2 rounded-lg text-xs font-bold text-white bg-emerald-600">保存</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 8. 上部通知バナー設定モーダル -->
+    <div id="bannerConfigModal" class="hidden absolute inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+      <div class="bg-white w-full rounded-2xl p-5 shadow-xl space-y-4">
+        <div class="flex items-center justify-between">
+          <h3 class="font-bold text-sm text-slate-800">画面上部の通知バナー演出</h3>
+          <button onclick="closeBannerConfigModal()" class="text-slate-400 hover:text-slate-700"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <p class="text-xs text-slate-500">別の画面を見ている時に上からピロンと降りてくる通知バナーを表示します。</p>
+        <div>
+          <label class="block text-xs text-slate-500 mb-1">通知の送り主</label>
+          <select id="bannerSenderSelect" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white"></select>
+        </div>
+        <div>
+          <label class="block text-xs text-slate-500 mb-1">通知メッセージ内容</label>
+          <input id="bannerMessageInput" type="text" value="今どこ？" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm">
+        </div>
+        <div class="flex justify-end gap-2 pt-2">
+          <button onclick="closeBannerConfigModal()" class="px-3.5 py-2 rounded-lg text-xs font-bold text-slate-600 bg-slate-100">キャンセル</button>
+          <button onclick="triggerTopBanner()" class="px-4 py-2 rounded-lg text-xs font-bold text-white bg-amber-500 hover:bg-amber-600">
+            <i class="fa-solid fa-bell mr-1"></i> 今すぐ通知を降らせる
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 10. 長押し・右クリックの操作メニュー -->
+    <div id="msgQuickMenuBackdrop" class="hidden absolute inset-0 z-[55]" onclick="closeMsgQuickMenu()" oncontextmenu="event.preventDefault(); closeMsgQuickMenu();"></div>
+    <div id="msgQuickMenu" class="hidden absolute z-[60] w-52 bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden py-1"></div>
+
+    <!-- 9. JSONデータ書き出し・読み込みモーダル -->
+    <div id="dataModal" class="hidden absolute inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+      <div class="bg-white w-full rounded-2xl p-5 shadow-xl space-y-3 max-h-[90%] flex flex-col">
+        <div class="flex items-center justify-between">
+          <h3 class="font-bold text-sm text-slate-800">データの出力・読み込み（リーダー組み込み用）</h3>
+          <button onclick="closeDataModal()" class="text-slate-400 hover:text-slate-700"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <p class="text-[11px] text-slate-500">作成した友だち・グループ・トーク履歴のすべてのJSONデータです。コピーしてEPUBリーダーやノベルアプリに組み込んだり、貼り付けて復元できます。</p>
+        <textarea id="jsonDataTextarea" rows="10" class="w-full border border-slate-300 rounded-xl p-2.5 text-[11px] font-mono bg-slate-50 focus:outline-none"></textarea>
+        <div id="copyFeedback" class="hidden text-center text-xs font-bold text-emerald-600">コピーしました！</div>
+        <div class="flex items-center justify-between pt-2">
+          <button onclick="resetToSampleData()" class="text-xs text-rose-600 hover:underline">初期サンプルに戻す</button>
+          <div class="flex gap-2">
+            <button onclick="importJsonData()" class="px-3 py-2 rounded-lg text-xs font-bold bg-slate-200 hover:bg-slate-300 text-slate-800">JSONを読み込む</button>
+            <button onclick="copyJsonData()" class="px-4 py-2 rounded-lg text-xs font-bold bg-indigo-600 hover:bg-indigo-500 text-white">
+              <i class="fa-regular fa-copy mr-1"></i> コピー
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    // ============================================================================
+    // SVG / グラデーション アバター生成ヘルパー
+    // ============================================================================
+    function createGradientAvatarSvg(type, label = '') {
+      const presets = {
+        pastelBlue: ['#93c5fd', '#fbcfe8'],
+        pastelGreen: ['#6ee7b7', '#99f6e4'],
+        pastelAmber: ['#fcd34d', '#fecdd3'],
+        defaultGray: ['#94a3b8', '#cbd5e1'],
+        groupPurple: ['#a78bfa', '#f472b6']
+      };
+      const [c1, c2] = presets[type] || presets.pastelBlue;
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120">
+        <defs>
+          <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="${c1}"/>
+            <stop offset="100%" stop-color="${c2}"/>
+          </linearGradient>
+        </defs>
+        <rect width="120" height="120" fill="url(#g)"/>
+        ${label ? `<text x="50%" y="54%" dominant-baseline="middle" text-anchor="middle" fill="#ffffff" font-family="sans-serif" font-weight="bold" font-size="42">${label}</text>` : `
+        <circle cx="60" cy="46" r="20" fill="rgba(255,255,255,0.85)"/>
+        <path d="M24 108 C24 82 96 82 96 108" fill="rgba(255,255,255,0.85)"/>`}
+      </svg>`;
+      return 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
+    }
+
+    function createDefaultBgSvg(c1 = '#334155', c2 = '#1e293b') {
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="400" height="240" viewBox="0 0 400 240">
+        <defs>
+          <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="${c1}"/>
+            <stop offset="100%" stop-color="${c2}"/>
+          </linearGradient>
+        </defs>
+        <rect width="400" height="240" fill="url(#bg)"/>
+      </svg>`;
+      return 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
+    }
+
+    // 内蔵スタンプSVGリスト
+    const BUILTIN_STAMPS = [
+      { id: 'ok', label: 'OK!', bg: '#34d399', icon: '🙆‍♂️' },
+      { id: 'thanks', label: 'ありがとう', bg: '#f472b6', icon: '🥰' },
+      { id: 'sorry', label: 'ごめん…', bg: '#60a5fa', icon: '🙏' },
+      { id: 'cry', label: 'ぴえん', bg: '#818cf8', icon: '😭' },
+      { id: 'wait', label: '今向かってる', bg: '#fbbf24', icon: '🏃💨' },
+      { id: 'goodnight', label: 'おやすみ', bg: '#a78bfa', icon: '🌙' }
+    ];
+
+    // ============================================================================
+    // 初期サンプルデータ（ハル・友人・バンド仲間(5)・ミオ）
+    // ============================================================================
+    function getInitialState() {
+      return {
+        theme: 'line', // 'line' または 'kakao'
+        clock: '23:40',
+        cleanMode: false,
+        currentTab: 'chats', // 'friends' | 'chats' | 'room'
+        activeRoomId: 'room_haru',
+        activeSenderId: 'me', // トーク画面で現在誰として発言するか
+        replyTargetMsgId: null,
+
+        me: {
+          id: 'me',
+          name: 'わたし',
+          status: '原稿を書く',
+          avatar: createGradientAvatarSvg('defaultGray'),
+          bg: createDefaultBgSvg('#475569', '#1e293b')
+        },
+
+        users: [
+          {
+            id: 'u_haru',
+            name: 'ハル',
+            status: 'また連絡する',
+            avatar: createGradientAvatarSvg('pastelBlue'),
+            bg: createDefaultBgSvg('#3b82f6', '#1d4ed8')
+          },
+          {
+            id: 'u_friend',
+            name: '友人',
+            status: '暇人です',
+            avatar: createGradientAvatarSvg('pastelGreen'),
+            bg: createDefaultBgSvg('#10b981', '#047857')
+          },
+          {
+            id: 'u_mio',
+            name: 'ミオ',
+            status: '楽しかったね！',
+            avatar: createGradientAvatarSvg('pastelAmber'),
+            bg: createDefaultBgSvg('#f59e0b', '#b45309')
+          },
+          {
+            id: 'u_ren',
+            name: 'レン',
+            status: 'スタジオ練習中🎸',
+            avatar: createGradientAvatarSvg('groupPurple', 'R'),
+            bg: createDefaultBgSvg('#6366f1', '#4338ca')
+          }
+        ],
+
+        groups: [
+          {
+            id: 'g_band',
+            name: 'バンド仲間',
+            memberCount: 5,
+            memberIds: ['u_friend', 'u_ren', 'u_mio'],
+            avatar: createGradientAvatarSvg('groupPurple', '🎸')
+          }
+        ],
+
+        rooms: [
+          {
+            id: 'room_friend',
+            type: 'direct',
+            targetId: 'u_friend',
+            title: '友人',
+            unreadCount: 1,
+            lastMessageText: '今何してるの',
+            lastMessageTime: '23:45',
+            bgColor: 'default',
+            noMember: false,
+            messages: [
+              { id: 'm_f1', type: 'date', text: '今日' },
+              { id: 'm_f2', type: 'text', senderId: 'u_friend', text: '今何してるの', time: '23:45', readText: '' }
+            ]
+          },
+          {
+            id: 'room_band',
+            type: 'group',
+            targetId: 'g_band',
+            title: 'バンド仲間',
+            memberCount: 5,
+            unreadCount: 3,
+            lastMessageText: '今どこ？',
+            lastMessageTime: '23:42',
+            bgColor: 'default',
+            noMember: false,
+            messages: [
+              { id: 'm_b1', type: 'date', text: '今日' },
+              { id: 'm_b2', type: 'text', senderId: 'u_ren', text: 'スタジオ入ったよ！', time: '23:38', readText: '' },
+              { id: 'm_b3', type: 'text', senderId: 'me', text: 'ごめん、あと10分で着く！', time: '23:40', readText: '既読 4' },
+              { id: 'm_b4', type: 'text', senderId: 'u_friend', text: '了解〜', time: '23:41', readText: '' },
+              { id: 'm_b5', type: 'text', senderId: 'u_mio', text: '今どこ？', time: '23:42', readText: '' }
+            ]
+          },
+          {
+            id: 'room_haru',
+            type: 'direct',
+            targetId: 'u_haru',
+            title: 'ハル',
+            unreadCount: 0,
+            lastMessageText: 'あとd',
+            lastMessageTime: '10/12',
+            bgColor: 'default',
+            noMember: false,
+            messages: [
+              { id: 'm_h1', type: 'date', text: '10月12日（土）' },
+              { id: 'm_h2', type: 'text', senderId: 'me', text: 'もう顔も見たくない', time: '23:40', readText: '既読' },
+              { id: 'm_h3', type: 'text', senderId: 'u_haru', text: 'わかった', time: '23:41', readText: '' },
+              { id: 'm_h4', type: 'text', senderId: 'u_haru', text: 'あとで話ある', time: '23:42', readText: '' },
+              { id: 'm_h5', type: 'text', senderId: 'u_haru', text: 'あとd', time: '23:43', readText: '' }
+            ]
+          },
+          {
+            id: 'room_mio',
+            type: 'direct',
+            targetId: 'u_mio',
+            title: 'ミオ',
+            unreadCount: 0,
+            lastMessageText: 'また、ふたりで行きたいな',
+            lastMessageTime: '昨日',
+            bgColor: 'default',
+            noMember: false,
+            messages: [
+              { id: 'm_m1', type: 'date', text: '今日' },
+              { id: 'm_m2', type: 'text', senderId: 'me', text: '今日はありがとう', time: '23:40', readText: '既読' },
+              { id: 'm_m3', type: 'text', senderId: 'u_mio', text: 'こちらこそ！', time: '23:41', readText: '' },
+              { id: 'm_m4', type: 'text', senderId: 'u_mio', text: 'あのね', time: '23:42', readText: '' },
+              { id: 'm_m5', type: 'text', senderId: 'u_mio', text: 'また、ふたりで行きたいな', time: '23:43', readText: '' }
+            ]
+          }
+        ]
+      };
+    }
+
+    let state = getInitialState();
+
+    // 編集用の一時変数
+    let editingUserTargetId = null;
+    let tempUserAvatar = '';
+    let tempUserBg = '';
+
+    let editingGroupTargetId = null;
+    let tempGroupAvatar = '';
+
+    let editingChatRoomId = null;
+    let editingMessageId = null;
+    let lastBannerRoomId = null;
+
+    // ============================================================================
+    // ユーティリティ関数
+    // ============================================================================
+    function getUserById(userId) {
+      if (userId === 'me') return state.me;
+      return state.users.find(u => u.id === userId) || {
+        id: userId,
+        name: '不明なユーザー',
+        status: '',
+        avatar: createGradientAvatarSvg('defaultGray')
+      };
+    }
+
+    function getGroupById(groupId) {
+      return state.groups.find(g => g.id === groupId);
+    }
+
+    function getActiveRoom() {
+      return state.rooms.find(r => r.id === state.activeRoomId) || state.rooms[0];
+    }
+
+    function getAvatarShapeClass() {
+      // LINE風は丸、カカオトーク風は角丸スクエア（Squircle）
+      return state.theme === 'kakao' ? 'rounded-[38%]' : 'rounded-full';
+    }
+
+    // ============================================================================
+    // 全体レンダリング
+    // ============================================================================
+    function renderAll() {
+      renderThemeStyles();
+      renderStatusBar();
+      renderFriendsView();
+      renderChatsView();
+      renderRoomView();
+      renderBottomNav();
+      renderSendReadButton();
+      applyCleanModeVisibility();
+      updateEmbedNote();
+    }
+
+    // 作ったものは、この端末のブラウザに自動で残す（閉じて開き直しても続きから）
+    const SAVE_KEY = 'chatMakerState_v1';
+    function saveState() {
+      if (EMBED) return;
+      try { localStorage.setItem(SAVE_KEY, JSON.stringify(state)); } catch (e) { /* 写真が大きすぎて入らないときは、保存しない */ }
+    }
+    function loadSavedState() {
+      try {
+        const s = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null');
+        if (s && s.rooms && s.users) state = s;
+      } catch (e) {}
+    }
+
+    function renderThemeStyles() {
+      const btn = document.getElementById('themeToggleBtn');
+      const txt = document.getElementById('themeToggleText');
+      if (state.theme === 'line') {
+        btn.className = 'px-2.5 py-1.5 rounded-lg font-bold flex items-center gap-1.5 transition shadow bg-[#06c755] text-white';
+        txt.textContent = 'LINE風';
+      } else {
+        btn.className = 'px-2.5 py-1.5 rounded-lg font-bold flex items-center gap-1.5 transition shadow bg-[#fee500] text-slate-900';
+        txt.textContent = 'カカオ風';
+      }
+    }
+
+    function renderStatusBar() {
+      const bar = document.getElementById('statusBar');
+      document.getElementById('statusClock').textContent = state.clock;
+      if (state.currentTab === 'room') {
+        if (state.theme === 'line') {
+          bar.className = 'h-7 px-5 flex items-center justify-between text-xs font-semibold cursor-pointer shrink-0 z-20 bg-[#253045] text-white';
+        } else {
+          bar.className = 'h-7 px-5 flex items-center justify-between text-xs font-semibold cursor-pointer shrink-0 z-20 bg-[#a9bdce] text-slate-900';
+        }
+      } else {
+        bar.className = 'h-7 px-5 flex items-center justify-between text-xs font-semibold cursor-pointer shrink-0 z-20 bg-white text-slate-800';
+      }
+    }
+
+    function toggleAppTheme() {
+      if (typeof LINE_READER !== "undefined" && LINE_READER) return;
+      state.theme = state.theme === 'line' ? 'kakao' : 'line';
+      renderAll();
+    }
+
+    function togglePreviewCleanMode() {
+      if (typeof LINE_READER !== "undefined" && LINE_READER) return;
+      state.cleanMode = !state.cleanMode;
+      const btn = document.getElementById('cleanModeBtn');
+      const txt = document.getElementById('cleanModeText');
+      if (state.cleanMode) {
+        btn.className = 'bg-amber-500 text-slate-900 px-2.5 py-1.5 rounded-lg font-bold flex items-center gap-1 transition';
+        txt.textContent = 'プレビュー中';
+      } else {
+        btn.className = 'bg-slate-700 hover:bg-slate-600 text-white px-2.5 py-1.5 rounded-lg flex items-center gap-1 transition';
+        txt.textContent = '編集ON';
+      }
+      applyCleanModeVisibility();
+    }
+
+    function applyCleanModeVisibility() {
+      const els = document.querySelectorAll('.edit-ui');
+      els.forEach(el => {
+        if (state.cleanMode) {
+          el.classList.add('hidden');
+        } else {
+          el.classList.remove('hidden');
+        }
+      });
+    }
+
+    function editStatusBarClock() {
+      if (typeof LINE_READER !== "undefined" && LINE_READER) return;
+      const next = prompt('画面上部の時刻を入力してください', state.clock);
+      if (next !== null && next.trim() !== '') {
+        state.clock = next.trim();
+        renderStatusBar();
+      }
+    }
+
+    // ============================================================================
+    // タブ切り替え（友だち / トーク / ルーム）
+    // ============================================================================
+    function switchMainTab(tab) {
+      state.currentTab = tab;
+      document.getElementById('viewFriends').classList.toggle('hidden', tab !== 'friends');
+      document.getElementById('viewChats').classList.toggle('hidden', tab !== 'chats');
+      document.getElementById('viewRoom').classList.toggle('hidden', tab !== 'room');
+      document.getElementById('bottomNavBar').classList.toggle('hidden', tab === 'room');
+      renderAll();
+    }
+
+    function renderBottomNav() {
+      const fBtn = document.getElementById('navTabFriends');
+      const cBtn = document.getElementById('navTabChats');
+      fBtn.className = `flex-1 h-full flex flex-col items-center justify-center gap-0.5 relative ${state.currentTab === 'friends' ? 'text-slate-900' : 'text-slate-400'}`;
+      cBtn.className = `flex-1 h-full flex flex-col items-center justify-center gap-0.5 relative ${state.currentTab === 'chats' ? 'text-slate-900' : 'text-slate-400'}`;
+
+      const totalUnread = state.rooms.reduce((sum, r) => sum + (Number(r.unreadCount) || 0), 0);
+      const badge = document.getElementById('totalUnreadBadge');
+      if (totalUnread > 0) {
+        badge.classList.remove('hidden');
+        badge.textContent = totalUnread > 999 ? '999+' : totalUnread;
+        badge.className = `absolute -top-1.5 -right-3 text-white text-[10px] font-bold px-1.5 min-w-[18px] h-[18px] rounded-full flex items-center justify-center leading-none ${state.theme === 'line' ? 'bg-[#06c755]' : 'bg-rose-500'}`;
+      } else {
+        badge.classList.add('hidden');
+      }
+    }
+
+    // ============================================================================
+    // 1. 友だち一覧画面の描画
+    // ============================================================================
+    function renderFriendsView() {
+      const shape = getAvatarShapeClass();
+      const meImg = document.getElementById('meAvatarFriends');
+      meImg.src = state.me.avatar;
+      meImg.className = `w-14 h-14 object-cover shrink-0 border border-slate-200 ${shape}`;
+      document.getElementById('meNameFriends').textContent = state.me.name;
+      document.getElementById('meStatusFriends').textContent = state.me.status || 'ステータスメッセージを設定';
+
+      // グループリスト
+      document.getElementById('groupCountLabel').textContent = state.groups.length;
+      const gContainer = document.getElementById('friendsGroupList');
+      gContainer.innerHTML = '';
+      state.groups.forEach(g => {
+        const div = document.createElement('div');
+        div.className = 'px-4 py-2.5 hover:bg-slate-50 flex items-center justify-between cursor-pointer transition';
+        div.onclick = () => openGroupRoom(g.id);
+        div.innerHTML = `
+          <div class="flex items-center gap-3 min-w-0">
+            <img src="${g.avatar}" class="w-11 h-11 object-cover shrink-0 border border-slate-200 ${shape}" alt="">
+            <div class="min-w-0">
+              <p class="font-bold text-sm text-slate-800 truncate">${escapeHtml(g.name)} <span class="text-slate-400 font-semibold">(${g.memberCount})</span></p>
+            </div>
+          </div>
+          <button onclick="event.stopPropagation(); openGroupModal('${g.id}')" class="edit-ui text-xs text-slate-400 hover:text-slate-700 px-2 py-1 rounded bg-slate-100">編集</button>
+        `;
+        gContainer.appendChild(div);
+      });
+
+      // 友だちリスト
+      document.getElementById('friendCountLabel').textContent = state.users.length;
+      const uContainer = document.getElementById('friendsUserList');
+      uContainer.innerHTML = '';
+      state.users.forEach(u => {
+        const div = document.createElement('div');
+        div.className = 'px-4 py-2.5 hover:bg-slate-50 flex items-center justify-between cursor-pointer transition';
+        div.onclick = () => openProfilePreview(u.id);
+        div.innerHTML = `
+          <div class="flex items-center gap-3 min-w-0 flex-1">
+            <img src="${u.avatar}" class="w-11 h-11 object-cover shrink-0 border border-slate-200 ${shape}" alt="">
+            <div class="min-w-0 flex-1">
+              <p class="font-bold text-sm text-slate-800 truncate">${escapeHtml(u.name)}</p>
+              <p class="text-xs text-slate-400 truncate">${escapeHtml(u.status || '')}</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-1.5 edit-ui">
+            <button onclick="event.stopPropagation(); openUserModal('${u.id}')" class="text-xs text-slate-500 hover:text-slate-800 px-2 py-1 rounded bg-slate-100">編集</button>
+          </div>
+        `;
+        uContainer.appendChild(div);
+      });
+    }
+
+    // ============================================================================
+    // 2. トーク一覧画面の描画（友人 ① / バンド仲間 (5) ③ 再現）
+    // ============================================================================
+    function renderChatsView() {
+      const container = document.getElementById('chatRoomList');
+      container.innerHTML = '';
+      const shape = getAvatarShapeClass();
+
+      state.rooms.forEach(room => {
+        let avatar = '';
+        let displayTitle = room.title;
+        let countSuffix = '';
+
+        if (room.type === 'direct') {
+          const u = getUserById(room.targetId);
+          avatar = u.avatar;
+          displayTitle = room.title || u.name;
+        } else {
+          const g = getGroupById(room.targetId);
+          avatar = g ? g.avatar : createGradientAvatarSvg('groupPurple', 'G');
+          displayTitle = room.title || (g ? g.name : 'グループ');
+          const mCount = room.memberCount || (g ? g.memberCount : 5);
+          countSuffix = `(${mCount})`;
+        }
+
+        const unread = Number(room.unreadCount) || 0;
+        const badgeColor = state.theme === 'line' ? 'bg-[#06c755] text-white' : 'bg-[#ff5b49] text-white';
+
+        const item = document.createElement('div');
+        item.className = 'px-4 py-3 hover:bg-slate-50 flex items-center gap-3.5 cursor-pointer transition relative group';
+        item.onclick = () => {
+          state.activeRoomId = room.id;
+          state.activeSenderId = 'me';
+          room.unreadCount = 0;
+          switchMainTab('room');
+        };
+
+        item.innerHTML = `
+          <img src="${avatar}" class="w-13 h-13 w-[52px] h-[52px] object-cover shrink-0 border border-slate-200 ${shape}" alt="">
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center justify-between gap-2">
+              <div class="flex items-center gap-1 min-w-0">
+                <span class="font-bold text-[15px] text-slate-900 truncate">${escapeHtml(displayTitle)}</span>
+                ${countSuffix ? `<span class="font-bold text-sm text-slate-400 shrink-0">${countSuffix}</span>` : ''}
+                ${room.noMember ? `<span class="text-[10px] bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded ml-1 shrink-0">メンバー不在</span>` : ''}
+              </div>
+              <span class="text-[11px] text-slate-400 shrink-0">${escapeHtml(room.lastMessageTime || '')}</span>
+            </div>
+            <div class="flex items-center justify-between gap-2 mt-1">
+              <p class="text-[13px] text-slate-500 truncate">${escapeHtml(room.lastMessageText || '')}</p>
+              <div class="flex items-center gap-1.5 shrink-0">
+                ${unread > 0 ? `<span class="${badgeColor} text-[11px] font-bold px-1.5 min-w-[20px] h-[20px] rounded-full flex items-center justify-center leading-none shadow-sm">${unread}</span>` : ''}
+                <button onclick="event.stopPropagation(); openChatListItemModal('${room.id}')" class="edit-ui text-[11px] bg-slate-100 hover:bg-slate-200 text-slate-600 px-2 py-0.5 rounded border border-slate-200" title="通知バッジ数やプレビュー文を編集">
+                  通知/文編集
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
+        container.appendChild(item);
+      });
+    }
+
+    // ============================================================================
+    // 3. トークルーム画面の描画（LINE風 / カカオトーク風 完全切替）
+    // ============================================================================
+    function renderRoomView() {
+      const room = getActiveRoom();
+      if (!room) return;
+
+      const header = document.getElementById('roomHeader');
+      const msgArea = document.getElementById('roomMessageArea');
+      const sendBtn = document.getElementById('sendMsgBtn');
+
+      // ヘッダータイトルとメンバー数
+      let displayTitle = room.title;
+      if (room.type === 'direct') {
+        const u = getUserById(room.targetId);
+        displayTitle = room.title || u.name;
+        document.getElementById('roomHeaderMemberCount').textContent = '';
+      } else {
+        const g = getGroupById(room.targetId);
+        displayTitle = room.title || (g ? g.name : 'グループ');
+        const mCount = room.memberCount || (g ? g.memberCount : 5);
+        document.getElementById('roomHeaderMemberCount').textContent = `(${mCount})`;
+      }
+      document.getElementById('roomHeaderTitle').textContent = displayTitle;
+
+      // テーマ別ヘッダー＆背景色
+      if (state.theme === 'line') {
+        header.className = 'h-12 px-3 flex items-center justify-between shrink-0 z-10 bg-[#253045] text-white shadow-sm';
+        sendBtn.className = 'px-4 py-1.5 rounded-full font-bold text-xs shrink-0 transition shadow-sm bg-[#06c755] hover:bg-[#05b34c] text-white';
+      } else {
+        header.className = 'h-12 px-3 flex items-center justify-between shrink-0 z-10 bg-[#a9bdce] text-slate-900';
+        sendBtn.className = 'px-4 py-1.5 rounded-full font-bold text-xs shrink-0 transition shadow-sm bg-[#fee500] hover:bg-[#fada0a] text-slate-900';
+      }
+
+      // 背景設定
+      msgArea.style.backgroundImage = '';
+      if (!room.bgColor || room.bgColor === 'default') {
+        msgArea.style.backgroundColor = state.theme === 'line' ? '#7494c0' : '#b2c7d9';
+      } else if (room.bgColor.startsWith('data:image') || room.bgColor.startsWith('http')) {
+        msgArea.style.backgroundImage = `url('${room.bgColor}')`;
+      } else {
+        msgArea.style.backgroundColor = room.bgColor;
+      }
+
+      // 発言者切り替えバーの描画
+      renderSenderSwitchToolbar(room);
+
+      // メッセージ一覧の描画
+      msgArea.innerHTML = '';
+      const shape = getAvatarShapeClass();
+
+      room.messages.forEach(msg => {
+        const wrap = document.createElement('div');
+
+        // ① 日付ピル
+        if (msg.type === 'date') {
+          wrap.className = 'flex justify-center my-2';
+          wrap.innerHTML = `
+            <span onclick="openMessageEditModal('${msg.id}')" class="bg-black/25 text-white text-[11px] px-3.5 py-1 rounded-full cursor-pointer hover:bg-black/40 transition">
+              ${escapeHtml(msg.text)}
+            </span>
+          `;
+          msgArea.appendChild(wrap);
+          return;
+        }
+
+        // ② 送信取り消し / 退室 / メンバー不在 などのシステムメッセージ
+        if (msg.type === 'system' || msg.type === 'unsent') {
+          wrap.className = 'flex justify-center my-2';
+          wrap.innerHTML = `
+            <span onclick="openMessageEditModal('${msg.id}')" class="bg-black/20 text-white/95 text-[11px] px-3.5 py-1 rounded-full cursor-pointer hover:bg-black/35 transition text-center max-w-[90%]">
+              ${escapeHtml(msg.text)}
+            </span>
+          `;
+          msgArea.appendChild(wrap);
+          return;
+        }
+
+        const isMe = msg.senderId === 'me';
+        const sender = getUserById(msg.senderId);
+
+        // リプライ引用ブロックの組み立て
+        let replyHtml = '';
+        if (msg.replyTo) {
+          replyHtml = `
+            <div class="mb-1.5 pb-1.5 border-b border-black/10 text-[11px] flex items-start gap-1.5 opacity-85">
+              <i class="fa-solid fa-reply text-[10px] mt-0.5"></i>
+              <div class="truncate">
+                <p class="font-bold leading-tight">${escapeHtml(msg.replyTo.senderName)}へのリプライ</p>
+                <p class="truncate opacity-80">${escapeHtml(msg.replyTo.text)}</p>
+              </div>
+            </div>
+          `;
+        }
+
+        // メッセージ本体コンテンツ（テキスト / 写真 / スタンプ / 通話）
+        let contentHtml = '';
+        if (msg.type === 'photo') {
+          contentHtml = `
+            <div onclick="openMessageEditModal('${msg.id}')" oncontextmenu="handleMsgRightClick(event, '${msg.id}')" class="cursor-pointer rounded-2xl overflow-hidden shadow-sm border border-black/5 max-w-[210px] bg-black/10">
+              <img src="${msg.imageUrl}" class="w-full h-auto max-h-56 object-cover block" alt="photo">
+              ${msg.text ? `<div class="px-3 py-1.5 bg-white text-slate-800 text-xs">${escapeHtml(msg.text)}</div>` : ''}
+            </div>
+          `;
+        } else if (msg.type === 'stamp') {
+          const st = BUILTIN_STAMPS.find(s => s.id === msg.stampId) || BUILTIN_STAMPS[0];
+          contentHtml = `
+            <div onclick="openMessageEditModal('${msg.id}')" oncontextmenu="handleMsgRightClick(event, '${msg.id}')" class="cursor-pointer w-28 h-28 rounded-2xl flex flex-col items-center justify-center shadow-sm hover:scale-105 transition select-none" style="background:${st.bg}">
+              <span class="text-4xl mb-1">${st.icon}</span>
+              <span class="text-white font-extrabold text-xs drop-shadow">${escapeHtml(msg.text || st.label)}</span>
+            </div>
+          `;
+        } else if (msg.type === 'call') {
+          const isMissed = msg.callType === 'missed';
+          const bubbleBg = isMe
+            ? (state.theme === 'line' ? 'bg-[#8de055] text-slate-900' : 'bg-[#fee500] text-slate-900')
+            : 'bg-white text-slate-900';
+          contentHtml = `
+            <div onclick="openMessageEditModal('${msg.id}')" oncontextmenu="handleMsgRightClick(event, '${msg.id}')" class="cursor-pointer ${bubbleBg} px-3.5 py-2.5 rounded-2xl shadow-sm flex items-center gap-2.5 max-w-[220px]">
+              <div class="w-8 h-8 rounded-full ${isMissed ? 'bg-rose-100 text-rose-600' : 'bg-black/10 text-slate-800'} flex items-center justify-center shrink-0">
+                <i class="fa-solid ${isMissed ? 'fa-phone-slash' : 'fa-phone'} text-xs"></i>
+              </div>
+              <div class="leading-tight">
+                <p class="font-bold text-xs">${isMissed ? '不在着信' : (/^ビデオ/.test(msg.text || '') ? 'ビデオ通話' : '音声通話')}</p>
+                <p class="text-[11px] opacity-75 mt-0.5">${escapeHtml(String(msg.text || '05:23').replace(/^ビデオ\s*/, ''))}</p>
+              </div>
+            </div>
+          `;
+        } else {
+          // 通常テキスト吹き出し
+          if (isMe) {
+            const myBubbleClass = state.theme === 'line'
+              ? 'bg-[#8de055] text-slate-900 bubble-right-line'
+              : 'bg-[#fee500] text-slate-900 bubble-right-kakao';
+            contentHtml = `
+              <div onclick="openMessageEditModal('${msg.id}')" oncontextmenu="handleMsgRightClick(event, '${msg.id}')" class="relative cursor-pointer ${myBubbleClass} px-3.5 py-2 rounded-[18px] shadow-sm max-w-[235px] break-words text-[14px] leading-snug hover:brightness-95 transition">
+                ${replyHtml}
+                <span>${escapeHtml(msg.text)}</span>
+              </div>
+            `;
+          } else {
+            contentHtml = `
+              <div onclick="openMessageEditModal('${msg.id}')" oncontextmenu="handleMsgRightClick(event, '${msg.id}')" class="relative cursor-pointer bg-white text-slate-900 bubble-left-line px-3.5 py-2 rounded-[18px] shadow-sm max-w-[235px] break-words text-[14px] leading-snug hover:bg-slate-50 transition">
+                ${replyHtml}
+                <span>${escapeHtml(msg.text)}</span>
+              </div>
+            `;
+          }
+        }
+
+        // 既読・時刻メタ情報
+        const readStr = msg.readText !== undefined ? msg.readText : (isMe ? '既読' : '');
+        const readColorClass = state.theme === 'kakao' ? 'text-[#fee500] font-bold' : 'text-white/90 font-medium';
+        const timeColorClass = state.theme === 'kakao' ? 'text-slate-700' : 'text-white/85';
+
+        const metaHtml = `
+          <div onclick="openMessageEditModal('${msg.id}')" oncontextmenu="handleMsgRightClick(event, '${msg.id}')" class="flex flex-col ${isMe ? 'items-end' : 'items-start'} justify-end text-[10px] leading-tight shrink-0 cursor-pointer pb-0.5 select-none">
+            ${readStr ? `<span class="${readColorClass}">${escapeHtml(readStr)}</span>` : ''}
+            <span class="${timeColorClass}">${escapeHtml(msg.time || '')}</span>
+          </div>
+        `;
+
+        // ③ 吹き出しの組み立て（自分は右・相手は左にアイコン。グループでは名前も出す）
+        if (isMe) {
+          wrap.className = 'msg-row flex justify-end items-end gap-1.5';
+          wrap.innerHTML = metaHtml + contentHtml;
+        } else {
+          const nameColor = state.theme === 'kakao' ? 'text-slate-700' : 'text-white/90';
+          wrap.className = 'msg-row flex justify-start items-start gap-2';
+          wrap.innerHTML = `
+            <img src="${sender.avatar}" onclick="openProfilePreview('${msg.senderId}')" class="w-9 h-9 object-cover shrink-0 border border-black/5 cursor-pointer ${shape}" alt="">
+            <div class="flex flex-col items-start min-w-0">
+              ${room.type === 'group' ? `<span class="text-[11px] mb-0.5 ${nameColor}">${escapeHtml(sender.name)}</span>` : ''}
+              <div class="flex items-end gap-1.5">${contentHtml}${metaHtml}</div>
+            </div>
+          `;
+        }
+
+        msgArea.appendChild(wrap);
+      });
+
+      // 「メンバーがいません」がONの場合、下部に固定表示
+      if (room.noMember) {
+        const emptyBar = document.createElement('div');
+        emptyBar.className = 'flex justify-center my-3';
+        emptyBar.innerHTML = `
+          <div class="bg-black/30 text-white text-xs px-4 py-1.5 rounded-full">
+            メンバーがいません
+          </div>
+        `;
+        msgArea.appendChild(emptyBar);
+      }
+    }
+
+    function renderSenderSwitchToolbar(room) {
+      const listEl = document.getElementById('senderSwitchList');
+      listEl.innerHTML = '';
+
+      let participants = [state.me];
+      if (room.type === 'direct') {
+        participants.push(getUserById(room.targetId));
+      } else {
+        const g = getGroupById(room.targetId);
+        const ids = (g && g.memberIds && g.memberIds.length > 0) ? g.memberIds : state.users.map(u => u.id);
+        ids.forEach(uid => participants.push(getUserById(uid)));
+      }
+
+      participants.forEach(p => {
+        const active = state.activeSenderId === p.id;
+        const btn = document.createElement('button');
+        btn.className = `px-2 py-1 rounded-full flex items-center gap-1 shrink-0 transition ${active ? 'bg-emerald-500 text-white font-bold shadow' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}`;
+        btn.onclick = () => {
+          state.activeSenderId = p.id;
+          renderSenderSwitchToolbar(room);
+        };
+        btn.innerHTML = `
+          <img src="${p.avatar}" class="w-4 h-4 rounded-full object-cover" alt="">
+          <span>${escapeHtml(p.id === 'me' ? '自分' : p.name)}</span>
+        `;
+        listEl.appendChild(btn);
+      });
+    }
+
+    // ============================================================================
+    // メッセージ送信処理（テキスト・リプライ反映）
+    // ============================================================================
+    function sendTextMessage() {
+      if (typeof LINE_READER !== "undefined" && LINE_READER) return;
+      const input = document.getElementById('chatTextInput');
+      const text = input.value.trim();
+      if (!text) return;
+
+      const room = getActiveRoom();
+      const isMe = state.activeSenderId === 'me';
+
+      let replyObj = null;
+      if (state.replyTargetMsgId) {
+        const targetMsg = room.messages.find(m => m.id === state.replyTargetMsgId);
+        if (targetMsg) {
+          const s = getUserById(targetMsg.senderId);
+          replyObj = {
+            senderName: targetMsg.senderId === 'me' ? state.me.name : s.name,
+            text: targetMsg.text || '[メディア]'
+          };
+        }
+      }
+
+      const defaultRead = isMe && state.sendRead !== false ? defaultReadText(room) : '';
+
+      const newMsg = {
+        id: 'm_' + Date.now(),
+        type: 'text',
+        senderId: state.activeSenderId,
+        text: text,
+        time: state.clock,
+        readText: defaultRead,
+        replyTo: replyObj
+      };
+
+      room.messages.push(newMsg);
+      if (!isMe) room.unreadCount = (Number(room.unreadCount) || 0) + 1;
+      room.lastMessageText = text;
+      room.lastMessageTime = state.clock;
+
+      input.value = '';
+      clearReplyTarget();
+      renderRoomView();
+      scrollToBottom();
+    }
+
+    function scrollToBottom() {
+      const area = document.getElementById('roomMessageArea');
+      area.scrollTop = area.scrollHeight;
+    }
+
+    function clearReplyTarget() {
+      state.replyTargetMsgId = null;
+      document.getElementById('replyPreviewBar').classList.add('hidden');
+    }
+
+    // ============================================================================
+    // 個別メッセージ編集モーダル（文章書き換え・既読変更・送信取消・リプライ設定）
+    function openMessageEditModal(msgId) {
+      if (typeof LINE_READER !== "undefined" && LINE_READER) return;
+      const room = getActiveRoom();
+      const msg = room.messages.find(m => m.id === msgId);
+      if (!msg) return;
+
+      editingMessageId = msgId;
+
+      // 発言者セレクトボックス構築
+      const sel = document.getElementById('editMsgSenderSelect');
+      sel.innerHTML = '';
+      [state.me, ...state.users].forEach(u => {
+        const opt = document.createElement('option');
+        opt.value = u.id;
+        opt.textContent = u.id === 'me' ? `自分（${u.name}）` : u.name;
+        if (u.id === msg.senderId) opt.selected = true;
+        sel.appendChild(opt);
+      });
+
+      const isDateOrSys = msg.type === 'date' || msg.type === 'system' || msg.type === 'unsent';
+      document.getElementById('editMsgSenderWrap').classList.toggle('hidden', isDateOrSys);
+      document.getElementById('editMsgMetaWrap').classList.toggle('hidden', isDateOrSys);
+
+      document.getElementById('editMsgTextInput').value = msg.text || '';
+      document.getElementById('editMsgReadInput').value = msg.readText || '';
+      document.getElementById('editMsgTimeInput').value = msg.time || '';
+
+      document.getElementById('messageEditModal').classList.remove('hidden');
+    }
+
+    // 右クリック時にブラウザ標準メニューを抑止して、小さな操作メニューを出す（長押しも同じ）
+    function handleMsgRightClick(event, msgId) {
+      if (typeof LINE_READER !== "undefined" && LINE_READER) return;
+      event.preventDefault();
+      event.stopPropagation();
+      openMsgQuickMenu(msgId, event.clientX, event.clientY);
+    }
+
+    // ============================================================================
+    // 長押し・右クリックの操作メニュー（編集・リプライ・既読・時刻・送信取消・並べ替え・削除）
+    // ============================================================================
+    let quickMenuMsgId = null;
+    let quickMenuOpenedAt = 0;
+
+    // 既読の表記の選択肢（空は「自動」＝LINEは人数に合わせる・カカオは1）
+    const READ_OPTIONS = ['', '既読', '既読 1', '既読 2', '既読 3', '既読 4', '既読 5', '既読 10', '1', '2', '3'];
+    function readOptionLabel(v) { return v === '' ? '既読の数：自動' : v; }
+    function setSendReadText(v) { state.sendReadText = v; }
+    function defaultReadText(room) {
+      if (state.sendReadText) return state.sendReadText;
+      if (state.theme === 'kakao') return '1';
+      return room.type === 'group' ? `既読 ${(room.memberCount || 3) - 1}` : '既読';
+    }
+
+    function openMsgQuickMenu(msgId, x, y) {
+      if (typeof LINE_READER !== "undefined" && LINE_READER) return;
+      const room = getActiveRoom();
+      const msg = room.messages.find(m => m.id === msgId);
+      if (!msg) return;
+      // 長押しのあと、スマホが右クリックの合図も出すので、続けて2回は開かない
+      if (quickMenuMsgId === msgId && Date.now() - quickMenuOpenedAt < 700) return;
+      quickMenuMsgId = msgId;
+      quickMenuOpenedAt = Date.now();
+
+      const isSpecial = msg.type === 'date' || msg.type === 'system' || msg.type === 'unsent';
+      const isMe = msg.senderId === 'me';
+      const hasRead = !!msg.readText;
+      const items = [['edit', 'fa-pen', '編集する']];
+      if (!isSpecial) items.push(['reply', 'fa-reply', 'リプライする']);
+      if (!isSpecial && isMe) items.push(['read', hasRead ? 'fa-eye-slash' : 'fa-eye', hasRead ? '既読をつけない' : '既読をつける'], ['readn', 'fa-list-ol', '既読の数を選ぶ']);
+      if (!isSpecial) items.push(['time', 'fa-clock', '時刻を変える']);
+      if (!isSpecial) items.push(['unsent', 'fa-rotate-left', '送信取消にする']);
+      items.push(['up', 'fa-arrow-up', '上へ'], ['down', 'fa-arrow-down', '下へ'], ['delete', 'fa-trash', '削除する']);
+
+      const menu = document.getElementById('msgQuickMenu');
+      menu.innerHTML = items.map(([k, icon, label]) => `
+        <button type="button" onclick="runMsgQuickAction('${k}')" class="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-left text-[13px] ${k === 'delete' ? 'text-rose-600' : 'text-slate-800'} hover:bg-slate-100">
+          <i class="fa-solid ${icon} w-4 text-center opacity-80"></i>${label}
+        </button>`).join('');
+
+      // 押した所のそばに出す（画面からはみ出さないように）
+      const frame = document.getElementById('phoneFrame').getBoundingClientRect();
+      menu.classList.remove('hidden');
+      const mw = menu.offsetWidth, mh = menu.offsetHeight;
+      let left = (x || frame.left + frame.width / 2) - frame.left - mw / 2;
+      let top = (y || frame.top + frame.height / 2) - frame.top + 8;
+      left = Math.max(8, Math.min(left, frame.width - mw - 8));
+      if (top + mh > frame.height - 8) top = Math.max(8, top - mh - 24);
+      menu.style.left = left + 'px';
+      menu.style.top = top + 'px';
+      document.getElementById('msgQuickMenuBackdrop').classList.remove('hidden');
+    }
+
+    function closeMsgQuickMenu() {
+      document.getElementById('msgQuickMenu').classList.add('hidden');
+      document.getElementById('msgQuickMenuBackdrop').classList.add('hidden');
+    }
+
+    function runMsgQuickAction(kind) {
+      if (typeof LINE_READER !== "undefined" && LINE_READER) return;
+      const room = getActiveRoom();
+      const msg = room.messages.find(m => m.id === quickMenuMsgId);
+      closeMsgQuickMenu();
+      if (!msg) return;
+      editingMessageId = msg.id;
+      if (kind === 'edit') { openMessageEditModal(msg.id); return; }
+      if (kind === 'reply') { setReplyFromEditingMessage(); return; }
+      if (kind === 'readn') { openQuickInsertModal('readcount'); return; }
+      if (kind === 'read') { msg.readText = msg.readText ? '' : defaultReadText(room); }
+      if (kind === 'time') {
+        const next = prompt('この発言の時刻を入力してください', msg.time || state.clock);
+        if (next === null) return;
+        msg.time = next.trim();
+      }
+      if (kind === 'unsent') { convertMessageToUnsent(); return; }
+      if (kind === 'up') { moveEditingMessage(-1); return; }
+      if (kind === 'down') { moveEditingMessage(1); return; }
+      if (kind === 'delete') { deleteEditingMessage(); return; }
+      renderRoomView();
+    }
+
+    // 長押し（スマホ）：指を0.5秒そのままにすると操作メニュー。指が動いたら（スクロール）やめる
+    (function setupLongPress() {
+      let timer = null, startX = 0, startY = 0, firedAt = 0;
+      const msgIdOf = el => {
+        const t = el && el.closest('[onclick*="openMessageEditModal"]');
+        const m = t && t.getAttribute('onclick').match(/openMessageEditModal\('([^']+)'\)/);
+        return m ? m[1] : null;
+      };
+      const cancel = () => { clearTimeout(timer); timer = null; };
+      document.addEventListener('DOMContentLoaded', () => {
+        const area = document.getElementById('roomMessageArea');
+        area.addEventListener('pointerdown', e => {
+          if (e.pointerType === 'mouse') return;
+          const id = msgIdOf(e.target);
+          if (!id) return;
+          startX = e.clientX; startY = e.clientY;
+          cancel();
+          timer = setTimeout(() => {
+            timer = null; firedAt = Date.now();
+            if (navigator.vibrate) navigator.vibrate(15);
+            openMsgQuickMenu(id, startX, startY);
+          }, 500);
+        });
+        area.addEventListener('pointermove', e => {
+          if (timer && (Math.abs(e.clientX - startX) > 10 || Math.abs(e.clientY - startY) > 10)) cancel();
+        });
+        ['pointerup', 'pointercancel', 'pointerleave'].forEach(t => area.addEventListener(t, cancel));
+        // 長押しで開いたあとの「タップ」は、編集画面を開かない
+        area.addEventListener('click', e => {
+          if (Date.now() - firedAt < 800) { e.preventDefault(); e.stopPropagation(); }
+        }, true);
+      });
+    })();
+
+    // 送るときに既読を付けるかどうか（ツールバーのボタンで切り替え）
+    function toggleSendRead() {
+      if (typeof LINE_READER !== "undefined" && LINE_READER) return;
+      state.sendRead = state.sendRead === false ? true : false;
+      renderSendReadButton();
+    }
+
+    function renderSendReadButton() {
+      const sel = document.getElementById('sendReadSelect');
+      if (sel) {
+        if (!sel.options.length) sel.innerHTML = READ_OPTIONS.map(v => '<option value="' + v + '">' + readOptionLabel(v) + '</option>').join('');
+        sel.value = state.sendReadText || '';
+      }
+      const btn = document.getElementById('sendReadToggleBtn');
+      if (!btn) return;
+      const on = state.sendRead !== false;
+      btn.innerHTML = on ? '<i class="fa-solid fa-eye"></i> 既読あり' : '<i class="fa-solid fa-eye-slash"></i> 既読なし';
+      btn.className = `${on ? 'bg-slate-700 hover:bg-slate-600' : 'bg-rose-600 hover:bg-rose-500'} px-2 py-1 rounded text-[10px]`;
+    }
+
+    function closeMessageEditModal() {
+      document.getElementById('messageEditModal').classList.add('hidden');
+      editingMessageId = null;
+    }
+
+    function saveMessageEditModal() {
+      if (typeof LINE_READER !== "undefined" && LINE_READER) return;
+      const room = getActiveRoom();
+      const msg = room.messages.find(m => m.id === editingMessageId);
+      if (!msg) return;
+
+      if (msg.type !== 'date' && msg.type !== 'system' && msg.type !== 'unsent') {
+        msg.senderId = document.getElementById('editMsgSenderSelect').value;
+        msg.readText = document.getElementById('editMsgReadInput').value;
+        msg.time = document.getElementById('editMsgTimeInput').value;
+      }
+      msg.text = document.getElementById('editMsgTextInput').value;
+
+      closeMessageEditModal();
+      renderRoomView();
+    }
+
+    function setReplyFromEditingMessage() {
+      if (typeof LINE_READER !== "undefined" && LINE_READER) return;
+      const room = getActiveRoom();
+      const msg = room.messages.find(m => m.id === editingMessageId);
+      if (!msg) return;
+
+      state.replyTargetMsgId = msg.id;
+      const s = getUserById(msg.senderId);
+      document.getElementById('replyPreviewSender').textContent = (msg.senderId === 'me' ? state.me.name : s.name) + 'へのリプライ';
+      document.getElementById('replyPreviewText').textContent = msg.text || '[メディア]';
+      document.getElementById('replyPreviewBar').classList.remove('hidden');
+
+      closeMessageEditModal();
+      document.getElementById('chatTextInput').focus();
+    }
+
+    function convertMessageToUnsent() {
+      if (typeof LINE_READER !== "undefined" && LINE_READER) return;
+      const room = getActiveRoom();
+      const msg = room.messages.find(m => m.id === editingMessageId);
+      if (!msg) return;
+
+      const s = getUserById(msg.senderId);
+      const senderLabel = msg.senderId === 'me' ? 'メッセージの送信を取り消しました' : `${s.name}がメッセージの送信を取り消しました`;
+      msg.type = 'unsent';
+      msg.text = senderLabel;
+
+      closeMessageEditModal();
+      renderRoomView();
+    }
+
+    function moveEditingMessage(dir) {
+      if (typeof LINE_READER !== "undefined" && LINE_READER) return;
+      const room = getActiveRoom();
+      const idx = room.messages.findIndex(m => m.id === editingMessageId);
+      if (idx < 0) return;
+      const targetIdx = idx + dir;
+      if (targetIdx < 0 || targetIdx >= room.messages.length) return;
+
+      const temp = room.messages[idx];
+      room.messages[idx] = room.messages[targetIdx];
+      room.messages[targetIdx] = temp;
+      renderRoomView();
+    }
+
+    function deleteEditingMessage() {
+      if (typeof LINE_READER !== "undefined" && LINE_READER) return;
+      const room = getActiveRoom();
+      room.messages = room.messages.filter(m => m.id !== editingMessageId);
+      closeMessageEditModal();
+      renderRoomView();
+    }
+
+    // ============================================================================
+    // 写真・スタンプ・通話・日付・退出システム表示の追加モーダル
+    // ============================================================================
+    function openAttachmentMenuModal() {
+      if (typeof LINE_READER !== "undefined" && LINE_READER) return;
+      openQuickInsertModal('menu');
+    }
+
+    function openQuickInsertModal(mode) {
+      if (typeof LINE_READER !== "undefined" && LINE_READER) return;
+      const modal = document.getElementById('quickInsertModal');
+      const title = document.getElementById('quickInsertTitle');
+      const body = document.getElementById('quickInsertBody');
+      body.innerHTML = '';
+
+      if (mode === 'menu') {
+        title.textContent = 'トークにアイテムを追加';
+        body.innerHTML = `
+          <div class="grid grid-cols-2 gap-2.5">
+            <button onclick="openQuickInsertModal('photo')" class="p-3 rounded-xl bg-slate-100 hover:bg-slate-200 flex items-center gap-2.5 text-xs font-bold text-slate-800">
+              <i class="fa-regular fa-image text-lg text-emerald-600"></i> 写真（画像）を送信
+            </button>
+            <button onclick="openQuickInsertModal('stamp')" class="p-3 rounded-xl bg-slate-100 hover:bg-slate-200 flex items-center gap-2.5 text-xs font-bold text-slate-800">
+              <i class="fa-regular fa-face-smile text-lg text-amber-500"></i> スタンプを送信
+            </button>
+            <button onclick="openQuickInsertModal('call')" class="p-3 rounded-xl bg-slate-100 hover:bg-slate-200 flex items-center gap-2.5 text-xs font-bold text-slate-800">
+              <i class="fa-solid fa-phone text-lg text-sky-600"></i> 通話履歴・不在着信
+            </button>
+            <button onclick="openQuickInsertModal('date')" class="p-3 rounded-xl bg-slate-100 hover:bg-slate-200 flex items-center gap-2.5 text-xs font-bold text-slate-800">
+              <i class="fa-regular fa-calendar text-lg text-indigo-600"></i> 日付変更線
+            </button>
+            <button onclick="openQuickInsertModal('system')" class="col-span-2 p-3 rounded-xl bg-slate-100 hover:bg-slate-200 flex items-center gap-2.5 text-xs font-bold text-slate-800">
+              <i class="fa-solid fa-user-slash text-lg text-rose-500"></i> 送信取消・退出・メンバー不在表示
+            </button>
+          </div>
+        `;
+      } else if (mode === 'stamp') {
+        title.textContent = 'スタンプを選択して送信';
+        const grid = document.createElement('div');
+        grid.className = 'grid grid-cols-3 gap-2.5';
+        BUILTIN_STAMPS.forEach(st => {
+          const btn = document.createElement('button');
+          btn.className = 'p-3 rounded-2xl flex flex-col items-center justify-center hover:scale-105 transition shadow-sm';
+          btn.style.background = st.bg;
+          btn.onclick = () => insertSpecialMessage({ type: 'stamp', stampId: st.id, text: st.label });
+          btn.innerHTML = `
+            <span class="text-3xl mb-1">${st.icon}</span>
+            <span class="text-[11px] font-bold text-white drop-shadow">${st.label}</span>
+          `;
+          grid.appendChild(btn);
+        });
+        body.appendChild(grid);
+      } else if (mode === 'photo') {
+        title.textContent = '写真（画像）をトークに送信';
+        body.innerHTML = `
+          <div class="space-y-3">
+            <label class="w-full py-6 rounded-xl border-2 border-dashed border-emerald-400 bg-emerald-50/50 hover:bg-emerald-50 flex flex-col items-center justify-center gap-1.5 cursor-pointer transition">
+              <i class="fa-solid fa-cloud-arrow-up text-2xl text-emerald-600"></i>
+              <span class="text-xs font-bold text-emerald-800">端末から画像ファイルを選択</span>
+              <input type="file" accept="image/*" class="hidden" onchange="handlePhotoMessageUpload(event)">
+            </label>
+            <div class="text-center text-[11px] text-slate-400">または サンプル写真を送信</div>
+            <div class="grid grid-cols-2 gap-2">
+              <button onclick="sendSamplePhoto('sunset')" class="py-2 px-3 rounded-lg bg-slate-100 hover:bg-slate-200 text-xs font-bold text-slate-700">🌇 夕焼けの風景写真</button>
+              <button onclick="sendSamplePhoto('cafe')" class="py-2 px-3 rounded-lg bg-slate-100 hover:bg-slate-200 text-xs font-bold text-slate-700">☕ カフェの写真</button>
+            </div>
+          </div>
+        `;
+      } else if (mode === 'call') {
+        title.textContent = '通話履歴・不在着信を追加';
+        body.innerHTML = `
+          <div class="space-y-2.5">
+            <button onclick="insertSpecialMessage({ type: 'call', callType: 'missed', text: '不在着信' })" class="w-full p-3 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs flex items-center justify-between">
+              <span><i class="fa-solid fa-phone-slash mr-2"></i>不在着信を追加</span>
+              <span>追加 →</span>
+            </button>
+            <div class="p-3 rounded-xl bg-slate-100 space-y-2">
+              <label class="block text-xs font-bold text-slate-700">通話時間を指定して「音声通話」を追加</label>
+              <div class="flex gap-2">
+                <input id="customCallDuration" type="text" value="12:34" class="flex-1 border border-slate-300 rounded-lg px-3 py-1.5 text-sm bg-white">
+                <button onclick="insertSpecialMessage({ type: 'call', callType: 'normal', text: document.getElementById('customCallDuration').value })" class="px-4 py-1.5 rounded-lg bg-emerald-600 text-white text-xs font-bold">追加</button>
+              </div>
+            </div>
+          </div>
+        `;
+      } else if (mode === 'date') {
+        title.textContent = '日付変更線を追加';
+        body.innerHTML = `
+          <div class="space-y-3">
+            <div class="flex gap-2">
+              <input id="customDateInput" type="text" value="10月13日（日）" class="flex-1 border border-slate-300 rounded-lg px-3 py-2 text-sm">
+              <button onclick="insertSpecialMessage({ type: 'date', text: document.getElementById('customDateInput').value })" class="px-4 py-2 rounded-lg bg-emerald-600 text-white text-xs font-bold">追加</button>
+            </div>
+            <div class="flex flex-wrap gap-1.5">
+              <button onclick="insertSpecialMessage({ type: 'date', text: '今日' })" class="text-xs bg-slate-100 px-3 py-1.5 rounded-full">今日</button>
+              <button onclick="insertSpecialMessage({ type: 'date', text: '昨日' })" class="text-xs bg-slate-100 px-3 py-1.5 rounded-full">昨日</button>
+              <button onclick="insertSpecialMessage({ type: 'date', text: '10月12日（土）' })" class="text-xs bg-slate-100 px-3 py-1.5 rounded-full">10月12日（土）</button>
+            </div>
+          </div>
+        `;
+      } else if (mode === 'readcount') {
+        title.textContent = '既読の数を選ぶ';
+        body.innerHTML = '<div class="grid grid-cols-3 gap-2">' + ['', ...READ_OPTIONS.filter(Boolean)].map(v => '<button onclick="setEditingMsgRead(\'' + v + '\')" class="py-2 rounded-xl ' + (v === '' ? 'bg-rose-100 text-rose-700' : 'bg-slate-100 hover:bg-slate-200 text-slate-800') + ' text-xs font-bold">' + (v === '' ? '既読なし' : v) + '</button>').join('') + '</div>';
+      } else if (mode === 'system') {
+        title.textContent = '送信取消・退出・メンバー不在表示を追加';
+        const s = getUserById(state.activeSenderId);
+        const name = state.activeSenderId === 'me' ? 'あなた' : s.name;
+        body.innerHTML = `
+          <div class="space-y-2">
+            <button onclick="insertSpecialMessage({ type: 'unsent', text: '${escapeHtml(name)}がメッセージの送信を取り消しました' })" class="w-full p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-left text-xs font-bold text-slate-700">
+              💬 「${escapeHtml(name)}がメッセージの送信を取り消しました」
+            </button>
+            <button onclick="insertSpecialMessage({ type: 'system', text: '${escapeHtml(name)}が退出しました。' })" class="w-full p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-left text-xs font-bold text-slate-700">
+              🚪 「${escapeHtml(name)}が退出しました。」
+            </button>
+            <button onclick="insertSpecialMessage({ type: 'system', text: 'メンバーがいません' })" class="w-full p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-left text-xs font-bold text-slate-700">
+              🚫 「メンバーがいません」
+            </button>
+            <div class="pt-2 flex gap-2">
+              <input id="customSystemInput" type="text" placeholder="自由なシステムテキストを入力..." class="flex-1 border border-slate-300 rounded-lg px-3 py-1.5 text-xs">
+              <button onclick="insertSpecialMessage({ type: 'system', text: document.getElementById('customSystemInput').value })" class="px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-xs font-bold">追加</button>
+            </div>
+          </div>
+        `;
+      }
+
+      modal.classList.remove('hidden');
+    }
+
+    function setEditingMsgRead(v) {
+      const room = getActiveRoom();
+      const msg = room.messages.find(m => m.id === editingMessageId);
+      if (msg) msg.readText = v;
+      closeQuickInsertModal();
+      renderRoomView();
+    }
+
+    function closeQuickInsertModal() {
+      document.getElementById('quickInsertModal').classList.add('hidden');
+    }
+
+    function insertSpecialMessage(payload) {
+      if (typeof LINE_READER !== "undefined" && LINE_READER) return;
+      const room = getActiveRoom();
+      const isMe = state.activeSenderId === 'me';
+      room.messages.push({
+        id: 'm_' + Date.now(),
+        type: payload.type,
+        senderId: state.activeSenderId,
+        text: payload.text || '',
+        stampId: payload.stampId || null,
+        callType: payload.callType || null,
+        imageUrl: payload.imageUrl || null,
+        time: state.clock,
+        readText: isMe && state.sendRead !== false ? defaultReadText(room) : ''
+      });
+      if (!isMe) room.unreadCount = (Number(room.unreadCount) || 0) + 1;
+      closeQuickInsertModal();
+      renderRoomView();
+      scrollToBottom();
+    }
+
+    function handlePhotoMessageUpload(e) {
+      if (typeof LINE_READER !== "undefined" && LINE_READER) return;
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        insertSpecialMessage({ type: 'photo', imageUrl: reader.result, text: '' });
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function sendSamplePhoto(kind) {
+      if (typeof LINE_READER !== "undefined" && LINE_READER) return;
+      const c1 = kind === 'sunset' ? '#f97316' : '#a16207';
+      const c2 = kind === 'sunset' ? '#7c2d12' : '#451a03';
+      const label = kind === 'sunset' ? '🌇 夕暮れの帰り道' : '☕ カフェラテ';
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="320" height="220" viewBox="0 0 320 220">
+        <defs><linearGradient id="p" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="${c1}"/><stop offset="100%" stop-color="${c2}"/></linearGradient></defs>
+        <rect width="320" height="220" fill="url(#p)"/>
+        <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#ffffff" font-family="sans-serif" font-weight="bold" font-size="20">${label}</text>
+      </svg>`;
+      insertSpecialMessage({ type: 'photo', imageUrl: 'data:image/svg+xml;utf8,' + encodeURIComponent(svg), text: '' });
+    }
+
+    // ============================================================================
+    // 全画面プロフィールプレビュー＆ユーザー追加・編集（X風メモアプリスタイル）
+    // ============================================================================
+    function openProfilePreview(userId) {
+      const u = getUserById(userId);
+      const modal = document.getElementById('profilePreviewModal');
+      modal.style.backgroundImage = `url('${u.bg || createDefaultBgSvg()}')`;
+
+      const av = document.getElementById('profilePreviewAvatar');
+      av.src = u.avatar;
+      av.className = `w-24 h-24 object-cover border-2 border-white shadow-xl mb-3 bg-slate-700 ${getAvatarShapeClass()}`;
+
+      document.getElementById('profilePreviewName').textContent = u.name;
+      document.getElementById('profilePreviewStatus').textContent = u.status || '';
+
+      document.getElementById('profileEditOpenBtn').onclick = () => {
+        closeProfilePreview();
+        openUserModal(userId);
+      };
+
+      document.getElementById('profileStartChatBtn').onclick = () => {
+        closeProfilePreview();
+        if (userId === 'me') return;
+        openOrCreateDirectRoom(userId);
+      };
+
+      document.getElementById('profileStartCallBtn').onclick = () => {
+        closeProfilePreview();
+        if (userId === 'me') return;
+        openOrCreateDirectRoom(userId);
+        insertSpecialMessage({ type: 'call', callType: 'normal', text: '03:15' });
+      };
+
+      modal.classList.remove('hidden');
+    }
+
+    function closeProfilePreview() {
+      document.getElementById('profilePreviewModal').classList.add('hidden');
+    }
+
+    function openOrCreateDirectRoom(userId) {
+      let room = state.rooms.find(r => r.type === 'direct' && r.targetId === userId);
+      if (!room) {
+        const u = getUserById(userId);
+        room = {
+          id: 'room_' + Date.now(),
+          type: 'direct',
+          targetId: userId,
+          title: u.name,
+          unreadCount: 0,
+          lastMessageText: 'トークを開始しました',
+          lastMessageTime: state.clock,
+          bgColor: 'default',
+          noMember: false,
+          messages: [{ id: 'm_' + Date.now(), type: 'date', text: '今日' }]
+        };
+        state.rooms.unshift(room);
+      }
+      state.activeRoomId = room.id;
+      state.activeSenderId = 'me';
+      switchMainTab('room');
+    }
+
+    function openGroupRoom(groupId) {
+      let room = state.rooms.find(r => r.type === 'group' && r.targetId === groupId);
+      const g = getGroupById(groupId);
+      if (!room && g) {
+        room = {
+          id: 'room_' + Date.now(),
+          type: 'group',
+          targetId: groupId,
+          title: g.name,
+          memberCount: g.memberCount,
+          unreadCount: 0,
+          lastMessageText: '',
+          lastMessageTime: state.clock,
+          bgColor: 'default',
+          noMember: false,
+          messages: [{ id: 'm_' + Date.now(), type: 'date', text: '今日' }]
+        };
+        state.rooms.unshift(room);
+      }
+      if (room) {
+        state.activeRoomId = room.id;
+        state.activeSenderId = 'me';
+        switchMainTab('room');
+      }
+    }
+
+    // ユーザー編集モーダル
+    function openUserModal(targetId) {
+      if (typeof LINE_READER !== "undefined" && LINE_READER) return;
+      editingUserTargetId = targetId;
+      const isNew = targetId === 'new_friend';
+      document.getElementById('userModalTitle').textContent = isNew ? 'ユーザー追加' : 'プロフィール編集';
+
+      const u = isNew
+        ? { name: '', status: '', avatar: createGradientAvatarSvg('pastelBlue'), bg: createDefaultBgSvg() }
+        : getUserById(targetId);
+
+      tempUserAvatar = u.avatar;
+      tempUserBg = u.bg || createDefaultBgSvg();
+
+      document.getElementById('editUserBgPreview').style.backgroundImage = `url('${tempUserBg}')`;
+      document.getElementById('editUserAvatarPreview').src = tempUserAvatar;
+      document.getElementById('editUserNameInput').value = u.name;
+      document.getElementById('editUserStatusInput').value = u.status || '';
+      document.getElementById('editUserAvatarUrlInput').value = '';
+
+      document.getElementById('deleteUserBtnWrap').classList.toggle('hidden', isNew || targetId === 'me');
+      document.getElementById('userEditModal').classList.remove('hidden');
+    }
+
+    function closeUserModal() {
+      document.getElementById('userEditModal').classList.add('hidden');
+    }
+
+    function setPresetAvatar(presetKey) {
+      tempUserAvatar = createGradientAvatarSvg(presetKey);
+      document.getElementById('editUserAvatarPreview').src = tempUserAvatar;
+    }
+
+    function syncAvatarFromUrl() {
+      const url = document.getElementById('editUserAvatarUrlInput').value.trim();
+      if (url) {
+        tempUserAvatar = url;
+        document.getElementById('editUserAvatarPreview').src = url;
+      }
+    }
+
+    function saveUserModal() {
+      if (typeof LINE_READER !== "undefined" && LINE_READER) return;
+      const name = document.getElementById('editUserNameInput').value.trim() || '名無し';
+      const status = document.getElementById('editUserStatusInput').value.trim();
+
+      if (editingUserTargetId === 'new_friend') {
+        const newId = 'u_' + Date.now();
+        state.users.push({
+          id: newId,
+          name,
+          status,
+          avatar: tempUserAvatar,
+          bg: tempUserBg
+        });
+        // トーク一覧にも追加するか自動作成
+        state.rooms.unshift({
+          id: 'room_' + Date.now(),
+          type: 'direct',
+          targetId: newId,
+          title: name,
+          unreadCount: 1,
+          lastMessageText: status || 'よろしく！',
+          lastMessageTime: state.clock,
+          bgColor: 'default',
+          noMember: false,
+          messages: [
+            { id: 'm_' + Date.now(), type: 'date', text: '今日' },
+            { id: 'm_' + (Date.now() + 1), type: 'text', senderId: newId, text: status || 'よろしく！', time: state.clock, readText: '' }
+          ]
+        });
+      } else if (editingUserTargetId === 'me') {
+        state.me.name = name;
+        state.me.status = status;
+        state.me.avatar = tempUserAvatar;
+        state.me.bg = tempUserBg;
+      } else {
+        const u = getUserById(editingUserTargetId);
+        u.name = name;
+        u.status = status;
+        u.avatar = tempUserAvatar;
+        u.bg = tempUserBg;
+        // 直通ルームのタイトルも同期
+        state.rooms.forEach(r => {
+          if (r.type === 'direct' && r.targetId === u.id) r.title = name;
+        });
+      }
+
+      closeUserModal();
+      renderAll();
+    }
+
+    function deleteCurrentUser() {
+      if (typeof LINE_READER !== "undefined" && LINE_READER) return;
+      if (!editingUserTargetId || editingUserTargetId === 'me') return;
+      state.users = state.users.filter(u => u.id !== editingUserTargetId);
+      state.rooms = state.rooms.filter(r => !(r.type === 'direct' && r.targetId === editingUserTargetId));
+      closeUserModal();
+      renderAll();
+    }
+
+    // ============================================================================
+    // グループ作成・編集モーダル
+    // ============================================================================
+    function openGroupModal(groupId) {
+      if (typeof LINE_READER !== "undefined" && LINE_READER) return;
+      editingGroupTargetId = groupId;
+      const isNew = groupId === 'new';
+      const g = isNew
+        ? { name: '', memberCount: 5, memberIds: state.users.map(u => u.id), avatar: createGradientAvatarSvg('groupPurple', 'G') }
+        : getGroupById(groupId);
+
+      tempGroupAvatar = g.avatar;
+      document.getElementById('editGroupAvatarPreview').src = tempGroupAvatar;
+      document.getElementById('editGroupNameInput').value = g.name;
+      document.getElementById('editGroupCountInput').value = g.memberCount || 5;
+
+      const listEl = document.getElementById('groupMemberCheckboxList');
+      listEl.innerHTML = '';
+      state.users.forEach(u => {
+        const checked = g.memberIds && g.memberIds.includes(u.id);
+        const label = document.createElement('label');
+        label.className = 'flex items-center gap-2.5 text-xs font-medium text-slate-700 cursor-pointer p-1 hover:bg-slate-50 rounded';
+        label.innerHTML = `
+          <input type="checkbox" value="${u.id}" ${checked ? 'checked' : ''} class="group-member-cb accent-emerald-600 w-4 h-4">
+          <img src="${u.avatar}" class="w-6 h-6 rounded-full object-cover" alt="">
+          <span>${escapeHtml(u.name)}</span>
+        `;
+        listEl.appendChild(label);
+      });
+
+      document.getElementById('deleteGroupBtnWrap').classList.toggle('hidden', isNew);
+      document.getElementById('groupEditModal').classList.remove('hidden');
+    }
+
+    function closeGroupModal() {
+      document.getElementById('groupEditModal').classList.add('hidden');
+    }
+
+    function saveGroupModal() {
+      if (typeof LINE_READER !== "undefined" && LINE_READER) return;
+      const name = document.getElementById('editGroupNameInput').value.trim() || 'グループ';
+      const memberCount = parseInt(document.getElementById('editGroupCountInput').value, 10) || 2;
+      const checkedIds = Array.from(document.querySelectorAll('.group-member-cb:checked')).map(cb => cb.value);
+
+      if (editingGroupTargetId === 'new') {
+        const newId = 'g_' + Date.now();
+        state.groups.push({
+          id: newId,
+          name,
+          memberCount,
+          memberIds: checkedIds,
+          avatar: tempGroupAvatar
+        });
+        state.rooms.unshift({
+          id: 'room_' + Date.now(),
+          type: 'group',
+          targetId: newId,
+          title: name,
+          memberCount,
+          unreadCount: 3,
+          lastMessageText: 'グループを作成しました',
+          lastMessageTime: state.clock,
+          bgColor: 'default',
+          noMember: false,
+          messages: [{ id: 'm_' + Date.now(), type: 'date', text: '今日' }]
+        });
+      } else {
+        const g = getGroupById(editingGroupTargetId);
+        if (g) {
+          g.name = name;
+          g.memberCount = memberCount;
+          g.memberIds = checkedIds;
+          g.avatar = tempGroupAvatar;
+          state.rooms.forEach(r => {
+            if (r.type === 'group' && r.targetId === g.id) {
+              r.title = name;
+              r.memberCount = memberCount;
+            }
+          });
+        }
+      }
+
+      closeGroupModal();
+      renderAll();
+    }
+
+    function deleteCurrentGroup() {
+      if (typeof LINE_READER !== "undefined" && LINE_READER) return;
+      state.groups = state.groups.filter(g => g.id !== editingGroupTargetId);
+      state.rooms = state.rooms.filter(r => !(r.type === 'group' && r.targetId === editingGroupTargetId));
+      closeGroupModal();
+      renderAll();
+    }
+
+    // ============================================================================
+    // トーク一覧のバッジ数（①・③）＆最新テキスト編集モーダル
+    // ============================================================================
+    function openChatListItemModal(roomId) {
+      if (typeof LINE_READER !== "undefined" && LINE_READER) return;
+      editingChatRoomId = roomId;
+      const room = state.rooms.find(r => r.id === roomId);
+      if (!room) return;
+
+      document.getElementById('editChatPreviewText').value = room.lastMessageText || '';
+      document.getElementById('editChatUnreadCount').value = room.unreadCount || 0;
+      document.getElementById('editChatPreviewTime').value = room.lastMessageTime || state.clock;
+      document.getElementById('chatListItemModal').classList.remove('hidden');
+    }
+
+    function closeChatListItemModal() {
+      document.getElementById('chatListItemModal').classList.add('hidden');
+      editingChatRoomId = null;
+    }
+
+    function saveChatListItemModal() {
+      if (typeof LINE_READER !== "undefined" && LINE_READER) return;
+      const room = state.rooms.find(r => r.id === editingChatRoomId);
+      if (room) {
+        room.lastMessageText = document.getElementById('editChatPreviewText').value;
+        room.unreadCount = parseInt(document.getElementById('editChatUnreadCount').value, 10) || 0;
+        room.lastMessageTime = document.getElementById('editChatPreviewTime').value;
+      }
+      closeChatListItemModal();
+      renderAll();
+    }
+
+    function openNewChatPickerModal() {
+      if (typeof LINE_READER !== "undefined" && LINE_READER) return;
+      openUserModal('new_friend');
+    }
+
+    // ============================================================================
+    // ルーム設定・背景変更・メンバー不在設定モーダル
+    // ============================================================================
+    function openRoomSettingsModal() {
+      if (typeof LINE_READER !== "undefined" && LINE_READER) return;
+      const room = getActiveRoom();
+      document.getElementById('roomSettingTitleInput').value = room.title || '';
+      document.getElementById('roomNoMemberToggle').checked = !!room.noMember;
+      document.getElementById('roomSettingsModal').classList.remove('hidden');
+    }
+
+    function closeRoomSettingsModal() {
+      document.getElementById('roomSettingsModal').classList.add('hidden');
+    }
+
+    function setRoomBackground(bgVal) {
+      if (typeof LINE_READER !== "undefined" && LINE_READER) return;
+      const room = getActiveRoom();
+      room.bgColor = bgVal;
+      renderRoomView();
+    }
+
+    function insertLeftSystemMessage() {
+      if (typeof LINE_READER !== "undefined" && LINE_READER) return;
+      const room = getActiveRoom();
+      const targetUser = room.type === 'direct' ? getUserById(room.targetId) : null;
+      const name = targetUser ? targetUser.name : 'メンバー';
+      room.messages.push({
+        id: 'm_' + Date.now(),
+        type: 'system',
+        text: `${name}が退出しました。`
+      });
+      room.noMember = true;
+      document.getElementById('roomNoMemberToggle').checked = true;
+      closeRoomSettingsModal();
+      renderRoomView();
+      scrollToBottom();
+    }
+
+    function saveRoomSettingsModal() {
+      if (typeof LINE_READER !== "undefined" && LINE_READER) return;
+      const room = getActiveRoom();
+      room.title = document.getElementById('roomSettingTitleInput').value.trim() || room.title;
+      room.noMember = document.getElementById('roomNoMemberToggle').checked;
+      closeRoomSettingsModal();
+      renderAll();
+    }
+
+    // ============================================================================
+    // 画像アップロード共通処理（アイコン・背景・ルーム背景）
+    // ============================================================================
+    function handleImageUpload(event, targetType) {
+      if (typeof LINE_READER !== "undefined" && LINE_READER) return;
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        const dataUrl = reader.result;
+        if (targetType === 'userAvatar') {
+          tempUserAvatar = dataUrl;
+          document.getElementById('editUserAvatarPreview').src = dataUrl;
+        } else if (targetType === 'userBg') {
+          tempUserBg = dataUrl;
+          document.getElementById('editUserBgPreview').style.backgroundImage = `url('${dataUrl}')`;
+        } else if (targetType === 'groupAvatar') {
+          tempGroupAvatar = dataUrl;
+          document.getElementById('editGroupAvatarPreview').src = dataUrl;
+        } else if (targetType === 'roomBg') {
+          const room = getActiveRoom();
+          room.bgColor = dataUrl;
+          renderRoomView();
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+
+    // ============================================================================
+    // 画面上部の通知バナー演出（ピロンと降りてくる通知）
+    // ============================================================================
+    function openBannerConfigModal() {
+      const sel = document.getElementById('bannerSenderSelect');
+      sel.innerHTML = '';
+      state.users.forEach(u => {
+        const opt = document.createElement('option');
+        opt.value = u.id;
+        opt.textContent = u.name;
+        sel.appendChild(opt);
+      });
+      document.getElementById('bannerConfigModal').classList.remove('hidden');
+    }
+
+    function closeBannerConfigModal() {
+      document.getElementById('bannerConfigModal').classList.add('hidden');
+    }
+
+    function triggerTopBanner() {
+      const senderId = document.getElementById('bannerSenderSelect').value;
+      const text = document.getElementById('bannerMessageInput').value.trim() || '今どこ？';
+      const u = getUserById(senderId);
+
+      document.getElementById('bannerAvatar').src = u.avatar;
+      document.getElementById('bannerSender').textContent = u.name;
+      document.getElementById('bannerText').textContent = text;
+      document.getElementById('bannerAppLabel').textContent = state.theme === 'line' ? 'LINE • 今' : 'カカオトーク • 今';
+
+      // 対応するルームがあれば記録
+      const room = state.rooms.find(r => r.type === 'direct' && r.targetId === senderId);
+      lastBannerRoomId = room ? room.id : null;
+
+      closeBannerConfigModal();
+
+      const banner = document.getElementById('topNotificationBanner');
+      banner.classList.remove('hidden');
+      banner.classList.remove('banner-anim');
+      void banner.offsetWidth; // リフローでアニメーション再実行
+      banner.classList.add('banner-anim');
+    }
+
+    function hideBanner() {
+      document.getElementById('topNotificationBanner').classList.add('hidden');
+    }
+
+    function onBannerClick() {
+      hideBanner();
+      if (lastBannerRoomId) {
+        state.activeRoomId = lastBannerRoomId;
+        const bannerRoom = state.rooms.find(r => r.id === lastBannerRoomId);
+        if (bannerRoom) bannerRoom.unreadCount = 0;
+        switchMainTab('room');
+      }
+    }
+
+    // ============================================================================
+    // JSONデータ出力・読み込み（リーダーアプリ等への組み込み用）
+    // ============================================================================
+    function openDataModal() {
+      document.getElementById('jsonDataTextarea').value = JSON.stringify(state, null, 2);
+      document.getElementById('copyFeedback').classList.add('hidden');
+      document.getElementById('dataModal').classList.remove('hidden');
+    }
+
+    function closeDataModal() {
+      document.getElementById('dataModal').classList.add('hidden');
+    }
+
+    function copyJsonData() {
+      const ta = document.getElementById('jsonDataTextarea');
+      ta.select();
+      document.execCommand('copy');
+      const fb = document.getElementById('copyFeedback');
+      fb.textContent = 'クリップボードにJSONをコピーしました！';
+      fb.classList.remove('hidden');
+    }
+
+    function importJsonData() {
+      if (typeof LINE_READER !== "undefined" && LINE_READER) return;
+      try {
+        const raw = document.getElementById('jsonDataTextarea').value;
+        const parsed = JSON.parse(raw);
+        if (parsed && parsed.rooms && parsed.users) {
+          state = parsed;
+          closeDataModal();
+          renderAll();
+        }
+      } catch (err) {
+        const fb = document.getElementById('copyFeedback');
+        fb.textContent = 'JSONの形式が正しくありません';
+        fb.classList.remove('hidden');
+      }
+    }
+
+    function resetToSampleData() {
+      if (typeof LINE_READER !== "undefined" && LINE_READER) return;
+      if (!confirm('いま作っているものを消して、初期サンプルに戻しますか？')) return;
+      try { localStorage.removeItem(SAVE_KEY); } catch (e) {}
+      state = getInitialState();
+      closeDataModal();
+      renderAll();
+    }
+
+    function escapeHtml(str) {
+      return String(str ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    // ============================================================================
+    // 通話（ヘッダーの受話器 → 音声通話／ビデオ通話 → 通話画面 → 終了で、トークに履歴が残る）
+    // ============================================================================
+    let callKind = 'voice', callOn = false, callStart = 0, callTimer = null;
+
+    function toggleCallPanel() {
+      document.getElementById('callPanel').classList.toggle('hidden');
+    }
+
+    let callIsGroup = false, callG = [], callTotal = 0;
+
+    function startCall(kind) {
+      const room = getActiveRoom();
+      const isGroup = room.type === 'group';
+      const target = isGroup ? getGroupById(room.targetId) : getUserById(room.targetId);
+      callKind = kind;
+      callIsGroup = isGroup;
+      document.getElementById('callPanel').classList.add('hidden');
+      document.getElementById('callName').textContent = (room.title || (target && target.name) || '');
+      const av = (target && target.avatar) || createGradientAvatarSvg('pastelBlue');
+      document.getElementById('callAvatar').src = av;
+      document.getElementById('callBg').style.backgroundImage = "url('" + av + "')";
+      const scr = document.getElementById('callScreen');
+      scr.style.background = isGroup ? '#121212' : '';
+      document.getElementById('callBg').classList.toggle('hidden', isGroup);
+      document.getElementById('callOne').classList.toggle('hidden', isGroup);
+      document.getElementById('callCtl').classList.toggle('hidden', isGroup);
+      document.getElementById('callG').classList.toggle('hidden', !isGroup);
+      if (isGroup) {
+        const ids = (target && target.memberIds && target.memberIds.length) ? target.memberIds : state.users.map(u => u.id);
+        callG = [{ name: state.me.name || 'わたし', avatar: state.me.avatar, state: 'idle' }, ...ids.map(id => { const u = getUserById(id); return { name: u.name, avatar: u.avatar, state: 'idle' }; })];
+        callTotal = room.memberCount || (target && target.memberCount) || callG.length;
+        document.getElementById('callGTitle').textContent = (room.title || 'グループ') + ' (' + callTotal + ')';
+        renderCallGroup();
+      }
+      scr.classList.remove('hidden');
+      setCallState('ring');
+    }
+
+    // グループ通話：丸い写真を並べる。人をタップすると「話している（緑の輪）→ ミュート → 参加していない」と変わる
+    function renderCallGroup() {
+      const grid = document.getElementById('callGGrid');
+      grid.innerHTML = '';
+      callG.forEach(m => {
+        const d = document.createElement('button');
+        d.type = 'button';
+        d.className = 'flex flex-col items-center gap-2';
+        d.onclick = () => {
+          const order = ['idle', 'talk', 'mute', 'absent'];
+          m.state = order[(order.indexOf(m.state) + 1) % order.length];
+          renderCallGroup();
+          paintCallStatus();
+        };
+        const ring = m.state === 'talk' ? 'ring-[3px] ring-teal-400' : '';
+        const dim = (m.state === 'mute' || m.state === 'absent') ? 'opacity-60' : '';
+        d.innerHTML = '<span class="relative block w-24 h-24 rounded-full overflow-hidden ' + ring + ' ' + dim + '"><img src="' + m.avatar + '" class="w-full h-full object-cover" alt="">'
+          + (m.state === 'mute' ? '<span class="absolute inset-0 flex items-center justify-center bg-black/35"><i class="fa-solid fa-microphone-slash text-xl"></i></span>' : '')
+          + (m.state === 'absent' ? '<span class="absolute inset-0 bg-black/45"></span>' : '') + '</span>'
+          + '<span class="text-xs ' + (m.state === 'absent' ? 'text-white/40' : 'text-white/85') + ' flex items-center gap-1">' + escapeHtml(m.name)
+          + (callKind === 'video' && m.state !== 'absent' ? '<i class="fa-solid fa-video text-[10px] opacity-70"></i>' : '') + '</span>';
+        grid.appendChild(d);
+      });
+      const sp = callG.filter(m => m.state === 'talk').map(m => m.name);
+      document.getElementById('callGWave').innerHTML = sp.length
+        ? '<div class="flex items-end justify-center gap-1 h-9">' + Array.from({ length: 11 }, (_, i) => '<i class="w-1 rounded-full bg-teal-400 animate-pulse" style="height:' + (14 + ((i * 7) % 22)) + 'px;animation-delay:' + (i * 70) + 'ms"></i>').join('') + '</div><p class="mt-2 text-xs text-white/60">' + escapeHtml(sp.join(', ')) + '</p>'
+        : '<div class="flex justify-center gap-1.5">' + '<i class="w-1 h-1 rounded-full bg-teal-400"></i>'.repeat(9) + '</div>';
+    }
+
+    function callTimeText() {
+      if (!callOn) return '呼び出し中…';
+      const s2 = Math.floor((Date.now() - callStart) / 1000);
+      return String(Math.floor(s2 / 60)).padStart(2, '0') + ':' + String(s2 % 60).padStart(2, '0');
+    }
+
+    function paintCallStatus() {
+      document.getElementById('callStatus').textContent = callTimeText();
+      if (callIsGroup) {
+        const joined = callG.filter(m => m.state !== 'absent').length;
+        document.getElementById('callGSub').textContent = callOn ? '👤 ' + joined + '/' + callTotal + ' · ' + callTimeText() : '呼び出し中…';
+      }
+    }
+
+    function setCallState(s) {
+      clearInterval(callTimer);
+      callOn = (s === 'on');
+      document.getElementById('callStateRing').className = 'px-2.5 py-1 rounded-full ' + (callOn ? 'bg-white/10' : 'bg-white/30 font-bold');
+      document.getElementById('callStateOn').className = 'px-2.5 py-1 rounded-full ' + (callOn ? 'bg-white/30 font-bold' : 'bg-white/10');
+      paintCallStatus();
+      if (!callOn) return;
+      callStart = Date.now();
+      paintCallStatus();
+      callTimer = setInterval(paintCallStatus, 1000);
+    }
+
+    function toggleCallMic() {
+      const off = document.getElementById('callMicIcon').classList.toggle('fa-microphone-slash');
+      document.getElementById('callMicIcon').classList.toggle('fa-microphone', !off);
+      document.getElementById('callMicLabel').innerHTML = off ? 'マイクを<br>オン' : 'マイクを<br>オフ';
+    }
+
+    function toggleCallSpeaker() {
+      const off = document.getElementById('callSpkIcon').classList.toggle('fa-volume-xmark');
+      document.getElementById('callSpkIcon').classList.toggle('fa-volume-high', !off);
+      document.getElementById('callSpkLabel').innerHTML = off ? 'スピーカーを<br>オフ' : 'スピーカーを<br>オン';
+    }
+
+    // 画面シェア：だれがシェアしているか（0 は自分）と、シェアしている画面の画像
+    let shareState = { owner: 0, img: '' };
+    function shareMembersList() {
+      return (callIsGroup && callG.length) ? callG : [{ name: state.me.name || 'わたし', avatar: state.me.avatar, state: 'talk' }];
+    }
+    function startScreenShare() {
+      shareState.owner = 0;
+      document.getElementById('shareView').classList.remove('hidden');
+      renderShare();
+    }
+    function stopScreenShare() {
+      document.getElementById('shareView').classList.add('hidden');
+    }
+    function cycleShareOwner() {
+      const n = shareMembersList().length;
+      shareState.owner = (shareState.owner + 1) % n;
+      renderShare();
+    }
+    function pickShareImage(e) {
+      const f = e.target.files[0];
+      if (!f) return;
+      const r = new FileReader();
+      r.onload = () => { shareState.img = r.result; renderShare(); };
+      r.readAsDataURL(f);
+      e.target.value = '';
+    }
+    function renderShare() {
+      const ms = shareMembersList(), owner = ms[shareState.owner] || ms[0];
+      document.getElementById('shareTitle').textContent = (shareState.owner === 0 ? 'あなた' : owner.name) + 'が画面をシェア中';
+      document.getElementById('shareSub').textContent = callOn ? callTimeText() : '呼び出し中…';
+      const img = document.getElementById('shareImg');
+      img.classList.toggle('hidden', !shareState.img);
+      document.getElementById('shareEmpty').classList.toggle('hidden', !!shareState.img);
+      if (shareState.img) img.src = shareState.img;
+      document.getElementById('shareMembers').innerHTML = ms.map((m, i) =>
+        '<div class="shrink-0 flex flex-col items-center gap-1 w-12">'
+        + '<span class="block w-11 h-11 rounded-full overflow-hidden ' + (i === shareState.owner ? 'ring-2 ring-rose-400' : (m.state === 'talk' ? 'ring-2 ring-teal-400' : '')) + (m.state === 'absent' ? ' opacity-50' : '') + '"><img src="' + m.avatar + '" class="w-full h-full object-cover" alt=""></span>'
+        + '<span class="text-[10px] text-white/70 truncate w-full text-center">' + escapeHtml(i === 0 ? 'あなた' : m.name) + '</span></div>').join('');
+    }
+
+    function endCall() {
+      document.getElementById('shareView')?.classList.add('hidden');
+      clearInterval(callTimer);
+      const secs = callOn ? Math.max(1, Math.floor((Date.now() - callStart) / 1000)) : 0;
+      document.getElementById('callScreen').classList.add('hidden');
+      const dur = String(Math.floor(secs / 60)).padStart(2, '0') + ':' + String(secs % 60).padStart(2, '0');
+      const prefix = callKind === 'video' ? 'ビデオ ' : '';
+      insertSpecialMessage(callOn
+        ? { type: 'call', callType: 'normal', text: prefix + dur }
+        : { type: 'call', callType: 'missed', text: callKind === 'video' ? 'ビデオ不在着信' : '不在着信' });
+      callOn = false;
+    }
+
+    // ============================================================================
+    // カタログの「書き方」の中で開くときの、つなぎ（?embed=1）
+    //   カタログ → メーカー：本文のトーク（相手・見た目・人数など＋1行ずつの発言）で、トークルームを作る
+    //   メーカー → カタログ：直したら、そのトークルームを本文の形（1行ずつ）に直して返す
+    // ============================================================================
+    const EMBED = new URLSearchParams(location.search).has('embed');
+    if (EMBED) document.documentElement.classList.add('embed');
+    if (new URLSearchParams(location.search).has('inline')) document.documentElement.classList.add('inline');
+    const STAMP_MAP = { ok: 5, thanks: 9, sorry: 6, cry: 2, wait: 1, goodnight: 7 };
+    const STAMP_BACK = { 5: 'ok', 9: 'thanks', 6: 'sorry', 2: 'cry', 1: 'wait', 7: 'goodnight' };
+
+    function photoSvgUrl(label) {
+      const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="320" height="220" viewBox="0 0 320 220"><defs><linearGradient id="p" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#64748b"/><stop offset="100%" stop-color="#1e293b"/></linearGradient></defs><rect width="320" height="220" fill="url(#p)"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#ffffff" font-family="sans-serif" font-weight="bold" font-size="22">🖼 ' + label + '</text></svg>';
+      return 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
+    }
+
+    function loadFromRows(attrs, rows) {
+      const presets = ['pastelBlue', 'pastelGreen', 'pastelAmber', 'groupPurple'];
+      const base = getInitialState();
+      const theme = attrs['見た目'] === 'カカオ' ? 'kakao' : 'line';
+      const who = attrs['相手'] || '相手';
+      const cnt = parseInt(attrs['人数'], 10) || 0;
+      const grp = cnt > 0;
+      const kindName = k => (k === '相手' ? (grp ? 'メンバー' : who) : k);
+      const names = [];
+      const addName = n => { if (n && n !== '自分' && !names.includes(n)) names.push(n); };
+      if (!grp) addName(who);
+      String(attrs['メンバー'] || '').split(/[、,，]/).map(s => s.trim()).filter(Boolean).forEach(addName);
+      rows.forEach(r => { if (!['自分', '日付', 'システム'].includes(r[0])) addName(kindName(r[0])); });
+      const users = names.map((n, i) => ({
+        id: 'u_' + i, name: n,
+        status: (!grp && n === who) ? (attrs['ひとこと'] || '') : '',
+        avatar: createGradientAvatarSvg(presets[i % presets.length]),
+        bg: createDefaultBgSvg()
+      }));
+      const idOf = n => (users.find(u => u.name === n) || users[0] || { id: 'u_x' }).id;
+      let autoN = 0;
+      const msgs = rows.map((r, i) => {
+        const k = r[0], text = String(r[1] ?? ''), time = r[2] || '', read = r[3] || '';
+        const id = 'm_' + i;
+        if (k === '日付') return { id, type: 'date', text };
+        if (k === 'システム') return { id, type: /取り消しました$/.test(text) ? 'unsent' : 'system', text };
+        const me = k === '自分';
+        const t0 = time || '23:' + String(40 + autoN++).padStart(2, '0');
+        const b = {
+          id, senderId: me ? 'me' : idOf(kindName(k)), time: t0, auto: !time, t0,
+          readText: me ? (read === '未読' ? '' : (read || (attrs['既読'] !== 'なし' ? '既読' : ''))) : ''
+        };
+        let m;
+        if ((m = text.match(/^\{画像[:：](.+)\}$/))) return { ...b, type: 'photo', text: '', imageUrl: 'a/ph_' + encodeURIComponent(m[1]) + '.jpg', key: m[1] };
+        if ((m = text.match(/^\{スタンプ[:：](\d+)\}$/))) {
+          const sid = STAMP_BACK[+m[1]] || 'ok';
+          return { ...b, type: 'stamp', stampId: sid, text: BUILTIN_STAMPS.find(s => s.id === sid).label, n: +m[1] };
+        }
+        if (/^\{不在着信\}$/.test(text)) return { ...b, type: 'call', callType: 'missed', text: '不在着信' };
+        if ((m = text.match(/^\{通話[:：](.+)\}$/))) return { ...b, type: 'call', callType: 'normal', text: m[1] };
+        return { ...b, type: 'text', text };
+      });
+      const last = msgs.filter(m => m.type === 'text').slice(-1)[0];
+      const room = {
+        id: 'room_main', type: grp ? 'group' : 'direct', targetId: grp ? 'g_main' : (users[0] || {}).id,
+        title: who, memberCount: cnt || undefined, unreadCount: 0,
+        lastMessageText: last ? last.text : '', lastMessageTime: last ? last.time : (attrs['時計'] || '23:40'),
+        bgColor: /^#/.test(attrs['背景'] || '') ? attrs['背景'] : 'default',
+        noMember: !!attrs['不在'], messages: msgs
+      };
+      state = {
+        ...base, theme, clock: attrs['時計'] || '23:40', users,
+        groups: grp ? [{ id: 'g_main', name: who, memberCount: cnt, memberIds: users.map(u => u.id), avatar: createGradientAvatarSvg('groupPurple', '♪') }] : [],
+        rooms: [room], activeRoomId: 'room_main', boundRoomId: 'room_main', currentTab: 'room', activeSenderId: 'me',
+        me: { ...base.me, name: 'わたし' }
+      };
+    }
+
+    function stateToRows() {
+      const room = state.rooms.find(r => r.id === state.boundRoomId) || getActiveRoom() || state.rooms[0];
+      if (!room) return null;
+      const grp = room.type === 'group';
+      const partner = !grp ? getUserById(room.targetId) : null;
+      const clean = s => String(s ?? '').replace(/｜/g, '／').replace(/\n/g, '／');
+      const rows = room.messages.map(m => {
+        if (m.type === 'date') return ['日付', clean(m.text), '', ''];
+        if (m.type === 'system' || m.type === 'unsent') return ['システム', clean(m.text), '', ''];
+        const me = m.senderId === 'me';
+        const sender = getUserById(m.senderId);
+        const kind = me ? '自分' : (partner && sender.id === partner.id ? '相手' : sender.name);
+        let text = m.text || '';
+        if (m.type === 'photo') text = '{画像:' + (m.key || 'street') + '}';
+        else if (m.type === 'stamp') text = '{スタンプ:' + (m.n || STAMP_MAP[m.stampId] || 1) + '}';
+        else if (m.type === 'call') text = m.callType === 'missed' ? '{不在着信}' : '{通話:' + (m.text || '12:34') + '}';
+        let time = m.time || '';
+        if (m.auto && time === m.t0) time = '';
+        return [kind, clean(text), time, me ? (m.readText || '未読') : ''];
+      });
+      const memberNames = grp ? state.users.filter(u => (getGroupById(room.targetId)?.memberIds || []).includes(u.id)).map(u => u.name) : [];
+      const attrs = {
+        '相手': room.title || '',
+        '見た目': state.theme === 'kakao' ? 'カカオ' : '',
+        '人数': grp ? String(room.memberCount || memberNames.length || 2) : '',
+        'メンバー': memberNames.join('、'),
+        'ひとこと': partner ? (partner.status || '') : '',
+        '時計': state.clock || '',
+        '不在': room.noMember ? '1' : '',
+        '背景': /^#/.test(room.bgColor || '') ? room.bgColor : ''
+      };
+      return { rows, attrs };
+    }
+
+    function notifyParent() {
+      if (!EMBED || LINE_READER || !window.__lineInitialized || Date.now() < (window.__skipUntil || 0)) return;
+      const r = window.lineMakerSnapshot();
+      parent.postMessage({ type: 'state', ...r }, location.origin);
+    }
+
+    function updateEmbedNote() {
+      const n = document.getElementById('embedNote');
+      if (!n) return;
+      n.classList.toggle('hidden', !(EMBED && state.currentTab === 'room' && state.boundRoomId && state.activeRoomId !== state.boundRoomId));
+    }
+
+    // Lossless state remains alongside the ordinary text representation.
+    const LINE_READER = new URLSearchParams(location.search).has('reader');
+    window.lineMakerSnapshot = () => {
+      if (!window.__lineInitialized) throw new Error('トークメーカーを読み込み中です。少し待ってから保存してください。');
+      const r = stateToRows() || {rows:[],attrs:{}};
+      return {...r, fullState:JSON.parse(JSON.stringify({...state, _lineMakerExtras:{...state._lineMakerExtras, screenShare:shareState}}))};
+    };
+    // 初期起動
+    window.onload = () => {
+      const toolbar = document.querySelector('body > .bg-slate-800');
+      if (toolbar && typeof ResizeObserver !== 'undefined') new ResizeObserver(() => document.documentElement.style.setProperty('--line-toolbar-height', toolbar.getBoundingClientRect().height + 'px')).observe(toolbar);
+      if (!EMBED) loadSavedState();
+      renderAll();
+      // 画面が変わるたびに保存する（どの操作のあとでも）。カタログの中では、本文へ返す
+      new MutationObserver(() => {
+        clearTimeout(window.__saveT);
+        window.__saveT = setTimeout(() => { saveState(); notifyParent(); }, 300);
+      }).observe(document.getElementById('phoneFrame'), { childList: true, subtree: true, characterData: true });
+      if (EMBED) {
+        window.addEventListener('message', e => {
+          if (e.source !== parent || e.origin !== location.origin) return;
+          const m = e.data || {};
+          if (m.type === 'kb') { document.documentElement.style.setProperty('--kbpad', (m.pad || 0) + 'px'); document.body.style.background = m.pad ? '#fff' : ''; document.documentElement.style.background = m.pad ? '#fff' : ''; }
+          if (m.type === 'view') { document.documentElement.classList.toggle('view', !!m.on); state.cleanMode = !!m.on; applyCleanModeVisibility(); }
+          if (m.type === 'full') { document.getElementById('exitFullBtn').classList.toggle('hidden', !m.on); }
+          if (m.type === 'init') {
+            window.__skipUntil = 0;
+            if (m.fullState) {
+              if (!Array.isArray(m.fullState.rooms) || !Array.isArray(m.fullState.users)) throw new Error('チャットの保存データが不正です');
+              state = { ...getInitialState(), ...JSON.parse(JSON.stringify(m.fullState)) };
+              if (state._lineMakerExtras?.screenShare) shareState = JSON.parse(JSON.stringify(state._lineMakerExtras.screenShare));
+              state.cleanMode = LINE_READER;
+              if (!state.rooms.some(r => r.id === state.activeRoomId)) state.activeRoomId = state.rooms[0]?.id || null;
+              if (!state.rooms.some(r => r.id === state.boundRoomId)) state.boundRoomId = state.activeRoomId;
+              switchMainTab(state.currentTab || 'room');
+            } else { loadFromRows(m.attrs || {}, m.rows || []); switchMainTab('room'); }
+            state.cleanMode = LINE_READER;
+            document.documentElement.classList.toggle('reader', LINE_READER);
+            document.documentElement.classList.toggle('view', LINE_READER);
+            applyCleanModeVisibility();
+            window.__lineInitialized = true;
+            parent.postMessage({type:'initialized'}, location.origin);
+          }
+        });
+        parent.postMessage({ type: 'ready' }, '*');
+      }
+    };
+  </script>
+</body>
+</html>

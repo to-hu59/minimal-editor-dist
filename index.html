@@ -268,6 +268,10 @@
         .wiki-sheet .wk-chip { font-size: 12px; background: #e9e0cc; border-radius: 999px; padding: 2px 10px; white-space: nowrap; }
         .wiki-sheet input[type=text], .wiki-sheet select, .wiki-sheet textarea { width: 100%; box-sizing: border-box; border: 1px solid #cdbf9f; border-radius: 10px; padding: 8px 10px; font-size: 15px; background: #fff; margin-top: 6px; }
         .wiki-sheet textarea { min-height: 84px; }
+        .wiki-sheet .wk-note-tools { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 12px; }
+        .wiki-sheet .wk-note-tools label { font-size: 13px; font-weight: 700; color: #7a6a52; }
+        .wiki-sheet textarea.wk-note-input { display: block; min-height: 220px; max-height: clamp(220px, 55vh, 640px); max-height: clamp(220px, 55dvh, 640px); padding: 12px; font-size: 16px; line-height: 1.75; resize: none; overflow-y: auto; }
+        .wiki-sheet .wk-note-editor.wk-note-wide textarea.wk-note-input { min-height: clamp(220px, 75vh, 900px); min-height: clamp(220px, 75dvh, 900px); max-height: clamp(220px, 75vh, 900px); max-height: clamp(220px, 75dvh, 900px); }
         .wiki-sheet .wk-label { display: block; margin-top: 14px; font-weight: 700; font-size: 13px; color: #7a6a52; }
         .wiki-sheet .wk-note { margin-top: 8px; padding: 8px 10px; border-left: 3px solid #b8923f; background: #fff; border-radius: 6px; white-space: pre-wrap; }
         .wiki-sheet .wk-lock { display: block; width: 100%; margin-top: 8px; padding: 12px; border: 1px dashed #b3a07a; background: repeating-linear-gradient(45deg,#f4efe6,#f4efe6 8px,#efe8dc 8px,#efe8dc 16px); border-radius: 8px; color: #7a6a52; text-align: center; }
@@ -843,6 +847,8 @@
   #reader-progress::-moz-range-thumb { width:14px; height:14px; background:#567567; border:3px solid #faf6ee; box-shadow:0 0 0 1px #567567; cursor:grab; }
 }
 </style>
+<link rel="stylesheet" href="fx/document-style.css">
+<script src="fx/document-core.js"></script>
 </head>
 <body class="flex justify-center min-h-screen hide-reading-tools">
 
@@ -1885,6 +1891,7 @@
                     <div class="pt-3 border-t border-woodBorder">
                         <span class="font-bold text-softMuted block mb-1">更新履歴</span>
                         <div id="changelog" class="text-[11px] text-softMuted leading-relaxed">
+<div class="mb-1.5"><b class="text-softText">Version 10.15（2026-11-07）</b><br>Wikiの追記欄を広げ、長文に合わせた自動拡大と大きく開くボタンを追加しました。特殊演出から手紙・調査票・LINE／カカオ風メーカーを開けます。手紙は文字の位置を保った書き込み演出にし、LINEは写真・プロフィール・返信・複数のトークも保存します。</div>
 <div class="mb-1.5"><b class="text-softText">Version 10.14（2026-11-07）</b><br>見開き表示で右ページの右端が切れる不具合を修正しました。ページごとの余白と幅の計算をそろえ、画面幅に合わせて本文・掲示板が収まるようにしました。</div>
 <div class="mb-1.5"><b class="text-softText">Version 10.13（2026-11-07）</b><br>用語カードの「Wikiを開く」を右上に固定しました。Wikiページの上部に新しい項目を登録する＋ボタンを追加しました。</div>
 <div class="mb-1.5"><b class="text-softText">Version 10.12（2026-11-07）</b><br>1ページに収まる掲示板は途中で切らずに表示します。読む画面の文字・余白と共通の演出再生を整え、特殊演出の説明書を更新しました。</div>
@@ -6211,6 +6218,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             };
             return paragraphs.map((para, li) => {
                 const providedFrame=frameOf(li);
+                if(providedFrame?.kind==='provided-document') {if(para.trim())globalSentenceIndex+=splitSentencesSafe(para).length;return li===providedFrame.from?'<div class="ymdoc">'+ProvidedDocument.rendered(providedFrame.documentHtml)+'</div>':'';}
                 if(providedFrame?.kind==='bbs'&&providedFrame.boardModel?.presentation&&typeof AzBoardEditor!=='undefined'){
                     // Render the supplied presentation once, without legacy per-row BBS chrome.
                     const rendered=li===providedFrame.from?providedReaderHtml(providedFrame,globalSentenceIndex):'';
@@ -6702,6 +6710,11 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                   if (om) { pendingTx = oriKind(om[1], om[2]); continue; }
                   if (pendingTx && line.trim()) { if (frames && !/^［/.test(line.trim())) { frames.txe = frames.txe || []; frames.txe[out.length] = pendingTx; } pendingTx = null; } }
                 if (line.indexOf('［') < 0) { out.push(line); continue; }
+                if(window.ProvidedDocument?.isSource(line.trim())){
+                    const dm=line.trim().match(/^［(手紙|書類)/);let end=li+1;
+                    while(end<L.length&&L[end].trim()!=='［／'+dm[1]+'］')end++;
+                    if(end<L.length){try{const html=ProvidedDocument.parse(L.slice(li,end+1).join('\n')),rows=ProvidedDocument.plain(html).split('\n'),from=out.length;out.push(...rows);if(frames)frames.push({from,to:out.length-1,kind:'provided-document',documentHtml:html});li=end;continue}catch(e){}}
+                }
                 const lt = line.trim(); let fm;
                 const km = lt.match(/^［招待状([\s　][^］\n]*)］$/);
                 if (km && /(見た目=カカオ|[\s　]カカオ[\s　]|[\s　]カカオ$)/.test(km[1])) {
@@ -7184,12 +7197,21 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             const m = document.createElement('div'); m.id = 'modal-frame-menu';
             const has = sel.end > sel.start;
             m.innerHTML = '<div><h4>' + (only ? '特殊な文字' : '特殊演出') + '</h4><small>' + (only ? (has ? '選んだ文字に、かけます。' : '文字を選んでいないので、いまの行の、次の1行にかけます。') : (has ? '選んだ文を、枠で囲みます。' : '文字を選んでいないので、空の枠を入れます。（あとで、中に打ち込めます）')) + '</small>'
+                + (only ? '' : '<details class="fg" data-g="メーカー" open><summary>メーカー<span class="fgn">手紙・調査票・LINE／カカオを画面で作る</span></summary><button type="button" class="fm" data-maker="letter">手紙を作る<span>便箋の見た目のまま編集し、書いているように再生</span></button><button type="button" class="fm" data-maker="report">調査票を作る<span>項目・本文・印を編集</span></button><button type="button" class="fm" data-maker="line">LINE／カカオ風メーカー<span>写真・プロフィール・返信・複数のトークを編集</span></button></details>')
                 + (() => { const op = frameGroupsOpen(); return FRAME_GROUPS.filter(gr => only ? only.includes(gr.g) : gr.g !== '文字の向き').map(gr => '<details class="fg" data-g="' + escapeHtml(gr.g) + '"' + ((op[gr.g] || only) ? ' open' : '') + '><summary>' + escapeHtml(gr.g) + '<span class="fgn">' + escapeHtml(gr.note) + '</span></summary>' + gr.ids.map(id => FRAME_KINDS.find(k => k.id === id)).filter(Boolean).map(k => '<button type="button" class="fm" data-k="' + k.id + '">' + escapeHtml(k.name) + '<span>' + escapeHtml(k.note) + '</span></button>').join('') + '</details>').join(''); })()
                 + '<button type="button" class="fm" data-k="" style="text-align:center;color:#8a7a68">やめる</button></div>';
             document.body.appendChild(m);
             m.addEventListener('toggle', e => { const d = e.target; if (!d.matches || !d.matches('details.fg')) return; const op = frameGroupsOpen(); op[d.dataset.g] = d.open; try { KV.setItem('yomimono_frame_groups', JSON.stringify(op)); } catch (er) {} }, true);
             m.addEventListener('click', e => {
                 if (e.target === m) { m.remove(); return; }
+                const maker = e.target.closest('button[data-maker]');
+                if (maker) {
+                    m.remove(); fxPickCtx = {start:sel.start,end:sel.end,block:fxBlockAt(draftSource(),sel.start)};
+                    const kind=maker.dataset.maker, tag=kind==='letter'?'手紙':kind==='report'?'書類':'トーク';
+                    const old=fxPickCtx.block, reuse=old && old.text.startsWith('［'+tag+' ') && (kind==='line'||old.text.includes('見た目=提供版'));
+                    fxOpenMaker({src:reuse?old.text:'［'+tag+(kind==='line'?' 見た目=LINE 相手=友だち 履歴':' 見た目=提供版')+'］\n'+(kind==='line'?'相手：こんにちは\n':'')+'［／'+tag+'］',title:kind==='letter'?'手紙':kind==='report'?'調査票':'LINE／カカオ風メーカー',edit:kind==='line',replace:reuse?{start:old.start,end:old.end}:null});
+                    return;
+                }
                 const b = e.target.closest('button[data-k]'); if (!b) return;
                 m.remove(); const kk = FRAME_KINDS.find(x => x.id === b.dataset.k);
                 if (kk && kk.bbs) { openBbsLook(kk.id); return; }
@@ -7314,7 +7336,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         function fxStyles(book) { return Array.isArray(book && book.fx && book.fx.styles) ? book.fx.styles : []; }
         function renderFxPicker() {
             const body = document.getElementById('fx-pick-body'), book = ttsBook();
-            let h = '';
+            let h = '<div class="sp-card"><div class="sp-h">手紙・調査票</div><button type="button" class="sp-link" data-fp-act="document-letter">手紙を作る</button> <button type="button" class="sp-link" data-fp-act="document-report">調査票を作る</button></div>';
             if (fxPickCtx && fxPickCtx.block) h += '<div class="sp-card"><div class="sp-h">この場所の演出</div><div class="sp-note">' + escapeHtml(fxPickCtx.block.text.slice(0, 60).replace(/\n/g, ' ')) + '…</div><button type="button" class="sp-link" style="margin-top:6px" data-fp-act="edit-block">この演出を、画面で直す</button></div>';
             const styles = fxStyles(book);
             if (styles.length) {
@@ -7337,13 +7359,13 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         function fxOpenMaker(opts) {
             if (fxMaker) fxMaker.close();
             const wrap = document.createElement('div'); wrap.className = 'fx-viewer'; wrap.id = 'fx-maker';
-            const frame = document.createElement('iframe'); frame.src = 'fx/maker.html'; frame.setAttribute('title', '演出をつくる');
+            const frame = document.createElement('iframe'); frame.src = /^［(?:手紙|書類)\s[^］\n]*見た目=提供版(?:[\s］])/m.test(String(opts.src || '').trim()) ? 'fx/document-maker.html' : 'fx/maker.html'; frame.setAttribute('title', '演出をつくる');
             wrap.append(frame); document.body.append(wrap);
             const close = () => { window.removeEventListener('message', onMsg); wrap.remove(); if (fxMaker && fxMaker.close === close) fxMaker = null; };
             const onMsg = e => {
                 if (e.source !== frame.contentWindow) return;
                 const d = e.data || {};
-                if (d.type === 'fx-ready') frame.contentWindow.postMessage({ type: 'fx-make', src: opts.src, title: opts.title || '' }, '*');
+                if (d.type === 'fx-ready') frame.contentWindow.postMessage({ type: 'fx-make', src: opts.src, title: opts.title || '', edit: !!opts.edit }, '*');
                 else if (d.type === 'fx-insert') { fxInsertIntoEditor(d.src, opts.replace); close(); closeFxPicker(); }
                 else if (d.type === 'fx-save') fxSaveStyle(d.src, opts.title);
                 else if (d.type === 'fx-close') close();
@@ -7375,7 +7397,8 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             body.addEventListener('click', e => {
                 const b = e.target.closest('[data-fp-act]'); if (!b) return;
                 const act = b.dataset.fpAct, book = ttsBook(), i = Number(b.dataset.i);
-                if (act === 'sample') fxLoadSamples().then(list => { const s = list[i]; if (s) fxOpenMaker({ src: s.src, title: s.name }); });
+                if (act === 'document-letter' || act === 'document-report') { const k=act === 'document-letter'?'手紙':'書類'; fxOpenMaker({src:'［'+k+' 見た目=提供版］\n［／'+k+'］',title:act === 'document-letter'?'手紙':'調査票'}); }
+                else if (act === 'sample') fxLoadSamples().then(list => { const s = list[i]; if (s) fxOpenMaker({ src: s.src, title: s.name }); });
                 else if (act === 'edit-block') fxOpenMaker({ src: fxPickCtx.block.text, title: 'この演出', replace: { start: fxPickCtx.block.start, end: fxPickCtx.block.end } });
                 else if (act === 'use-style') { const s = fxStyles(book)[i]; if (s) { fxInsertIntoEditor(s.src); closeFxPicker(); } }
                 else if (act === 'open-style') { const s = fxStyles(book)[i]; if (s) fxOpenMaker({ src: s.src, title: s.name }); }
@@ -8569,10 +8592,24 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             if (wikiShelfPrev) { state.currentBookId = wikiShelfPrev.id; wikiShelfPrev = null; }
             try { assistBadgeRefresh(); } catch (e) {}
         }
+        function wikiNoteEditorHtml(text, noteId) {
+            const id = noteId ? 'wk-note-edit-' + noteId : 'wk-note';
+            return '<div class="wk-note-editor"><div class="wk-note-tools"><label for="' + wEsc(id) + '">' + (noteId ? '追記の編集' : '追記する内容') + '</label><button type="button" class="wk-mini" data-w="note-size" aria-controls="' + wEsc(id) + '" aria-pressed="false">もっと広げる</button></div><textarea id="' + wEsc(id) + '" class="wk-note-input' + (noteId ? ' wk-nt' : '') + '"' + (noteId ? ' data-n="' + wEsc(noteId) + '"' : '') + ' rows="7" placeholder="追記する内容（話数ごとに、わかったこと）">' + wEsc(text || '') + '</textarea></div>';
+        }
+        function wikiSizeNoteInput(el) {
+            if (!el || !el.isConnected || !el.clientWidth) return;
+            const scroll = el.scrollTop, body = document.getElementById('wiki-body'), top = body ? body.scrollTop : 0;
+            el.style.height = 'auto';
+            el.style.height = Math.ceil(el.scrollHeight + 2) + 'px';
+            el.scrollTop = scroll;
+            if (body) body.scrollTop = top;
+        }
+        function wikiSizeNoteInputs() { document.querySelectorAll('#wiki-body .wk-note-input').forEach(wikiSizeNoteInput); }
         function wikiReadDraft() {
             const d = wikiState.draft; if (!d) return;
             const n = document.getElementById('wk-name'), c = document.getElementById('wk-cat'), b = document.getElementById('wk-basic');
             if (n) d.name = n.value; if (c) d.category = c.value; if (b) d.basic = b.value;
+            { const nt = document.getElementById('wk-note'), ep = document.getElementById('wk-ep'); if (nt) d.pendingNote = { text: nt.value, ep: ep ? ep.value : '' }; }
             { const yy = document.getElementById('wk-year'), mm = document.getElementById('wk-month'); if (yy) d.year = yy.value; if (mm) d.month = mm.value; }
             { const al = document.getElementById('wk-alias'); if (al) d.aliases = wikiSplitAliases(al.value); }
             for (const el of document.querySelectorAll('#wiki-body .wk-ey, #wiki-body .wk-em, #wiki-body .wk-et, #wiki-body .wk-ee')) { const ev = (d.events || [])[Number(el.dataset.v)]; if (!ev) continue; if (el.classList.contains('wk-ey')) ev.year = el.value; else if (el.classList.contains('wk-em')) ev.month = el.value; else if (el.classList.contains('wk-et')) ev.text = el.value; else ev.ep = Math.floor(Number(el.value)) || null; }
@@ -8855,16 +8892,19 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                     h += `<div class="wk-ep${future ? ' wk-ep-future' : ''}"><div class="wk-ep-label" style="display:flex;align-items:center;justify-content:space-between"><span>${wEsc(label)}</span>${locked || editing ? '' : `<button type="button" class="wk-pen" data-w="note-edit" data-nid="${wEsc(n.id)}" aria-label="この追記を直す" title="直す" style="background:none;border:0;padding:4px 6px;cursor:pointer;color:inherit;opacity:.7"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4l10.5-10.5-4-4L4 16z"/><path d="m13.5 6.5 4 4"/></svg></button>`}</div>`;
                     if (locked) h += `<button class="wk-lock" data-w="reveal" data-nid="${wEsc(n.id)}">🔒 ${n.ep ? `現在の進捗(${cur}話)より先の設定です。` : 'ネタバレとして保存された追記です。'}<br>タップでネタバレを表示</button>`;
                     else if (!editing) h += `<div class="wk-note">${wEsc(n.text)}</div>`;
-                    else h += `<textarea class="wk-nt" data-n="${wEsc(n.id)}" rows="4" style="margin-top:4px">${wEsc(n.text)}</textarea><div class="wk-row"><label>判明した話数</label><input type="number" class="wk-ne" data-n="${wEsc(n.id)}" min="1" value="${n.ep || ''}" placeholder="話数" style="margin-top:0;width:90px"></div><div class="wk-row"><button type="button" class="wk-mini wk-danger" data-w="note-del" data-nid="${wEsc(n.id)}">この追記を消す</button><button type="button" class="wk-mini" data-w="note-done">直し終わり</button></div>`;
+                    else h += wikiNoteEditorHtml(n.text, n.id) + `<div class="wk-row"><label>判明した話数</label><input type="number" class="wk-ne" data-n="${wEsc(n.id)}" min="1" value="${n.ep || ''}" placeholder="話数" style="margin-top:0;width:90px"></div><div class="wk-row"><button type="button" class="wk-mini wk-danger" data-w="note-del" data-nid="${wEsc(n.id)}">この追記を消す</button><button type="button" class="wk-mini" data-w="note-done">直し終わり</button></div>`;
                     h += '</div>';
                 }
-                h += '<textarea id="wk-note" placeholder="追記する内容（話数ごとに、わかったこと）"></textarea>';
-                h += `<div class="wk-row"><label for="wk-ep">判明した話数</label><input type="number" id="wk-ep" min="1" value="${cur || ''}" placeholder="話数" style="margin-top:0;width:90px"></div>`;
+                const pendingNote = d.pendingNote || (d.pendingNote = { text: '', ep: String(cur || '') });
+                h += wikiNoteEditorHtml(pendingNote.text);
+                h += '<div class="wk-muted" style="font-size:12px">文章に合わせて入力欄が広がります。長文は欄の中でスクロールできます。</div>';
+                h += `<div class="wk-row"><label for="wk-ep">判明した話数</label><input type="number" id="wk-ep" min="1" value="${wEsc(pendingNote.ep)}" placeholder="話数" style="margin-top:0;width:90px"></div>`;
                 h += '<button class="wk-btn" data-w="addnote" style="background:#b8923f;color:#fff;border-color:#b8923f;font-weight:700">＋ この内容を、追記に入れる</button><div class="wk-muted" style="margin-top:4px">書いたら、このボタンで追記に入ります（押さずに保存しても、いっしょに入ります）</div>';
                 h += '<button class="wk-btn wk-accent" data-w="save">保存して閉じる</button>';
                 if (wikiState.editId) h += `<button class="wk-btn wk-danger" data-w="del">${wikiState.confirmDel ? 'もう一度押すと削除します' : '削除'}</button>`;
             }
             body.innerHTML = h;
+            wikiSizeNoteInputs();
             { const nw = document.getElementById('wiki-new'); if (nw) nw.hidden = !book || !['list', 'page'].includes(wikiState.view); const sv = document.getElementById('wiki-save'); if (sv) sv.hidden = wikiState.view !== 'detail' || !wikiState.draft; const ed = document.getElementById('wiki-edit'); if (ed) ed.hidden = wikiState.view !== 'page'; if (wikiState.view === 'page') { const bd = document.getElementById('wiki-body'); if (bd && wikiState.pageScroll !== wikiState.pageId) { bd.scrollTop = 0; wikiState.pageScroll = wikiState.pageId; } } else wikiState.pageScroll = null; }
             if (wikiState.view === 'detail' && wikiState.draft && wikiState.snapFor !== wikiState.draft) { wikiState.snapFor = wikiState.draft; wikiState.snap = JSON.stringify(wikiState.draft); }
         }
@@ -8988,6 +9028,11 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                 const gs = wikiGroups(bookId); if (!gs.includes(v)) wikiSetGroups(bookId, gs.concat(v));
                 wikiState.draft.groups = (wikiState.draft.groups || []).filter(x => x !== v).concat(v); wikiRender(); return;
             }
+            if (act === 'note-size') {
+                const wrap = el.closest('.wk-note-editor'), input = wrap && wrap.querySelector('textarea'); if (!input) return;
+                const expanded = wrap.classList.toggle('wk-note-wide'); el.setAttribute('aria-pressed', String(expanded)); el.textContent = expanded ? '元の広さに戻す' : 'もっと広げる';
+                wikiSizeNoteInput(input); return;
+            }
             if (act === 'note-edit') { wikiReadDraft(); wikiState.editNote = el.dataset.nid; wikiRender(); return; }
             if (act === 'note-done') { wikiReadDraft(); wikiState.editNote = null; wikiRender(); return; }
             if (act === 'ev-add') { wikiReadDraft(); wikiState.draft.events = (wikiState.draft.events || []).concat({ id: 'v_' + Date.now() + Math.random().toString(36).slice(2, 5), year: '', month: '', text: '', ep: null }); wikiRender(); return; }
@@ -9011,18 +9056,19 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                 if (!t) { toast('追記の内容を入れてください'); return; }
                 const ep = Math.floor(Number(document.getElementById('wk-ep').value)) || null;
                 const note = { id: 'n_' + Date.now(), text: t, ep, at: Date.now() };
-                wikiState.draft.notes.push(note); wikiState.revealed[note.id] = true; wikiRender(); return;
+                wikiState.draft.notes.push(note); wikiState.draft.pendingNote = { text: '', ep: String(ep || '') }; wikiState.revealed[note.id] = true; wikiRender(); return;
             }
             if (act === 'save') {
                 wikiReadDraft(); const d = wikiState.draft;
                 // 「追記を追加」を押さずに書いたままの追記も、いっしょに入れる（書いた文が消えないように）
-                { const nt = document.getElementById('wk-note'), tx = nt ? nt.value.trim() : ''; if (tx) { const ep = Math.floor(Number((document.getElementById('wk-ep') || {}).value)) || null; d.notes = (d.notes || []).concat({ id: 'n_' + Date.now(), text: tx, ep, at: Date.now() }); toast('書きかけの追記も、いっしょに入れました'); } }
+                const pendingText = d.pendingNote ? d.pendingNote.text.trim() : '';
+                const notes = pendingText ? (d.notes || []).concat({ id: 'n_' + Date.now(), text: pendingText, ep: Math.floor(Number(d.pendingNote.ep)) || null, at: Date.now() }) : d.notes;
                 if (!d.name.trim()) { toast('名前を入れてください'); return; }
                 const entries = wikiEntries(bookId).slice();
                 const aliases = (d.aliases || []).filter(x => x !== d.name.trim());
                 { const others = entries.filter(e => e.id !== wikiState.editId), used = new Map(); others.forEach(e => [e.name].concat(e.aliases || []).forEach(x => used.set(String(x).trim(), e.name)));
                   const dup = [d.name.trim()].concat(aliases).filter(x => used.has(x)); if (dup.length && !confirm('「' + dup[0] + '」は、「' + used.get(dup[0]) + '」でも使われています。\nそのまま保存しますか？\n（本文の色づけは、先に登録した項目のほうになります）')) return; }
-                const rec = { name: d.name.trim(), aliases, category: d.category, groups: d.groups || [], sections: (d.sections || []).map(x => ({ ...x, title: (x.title || '').trim() || '欄', rows: x.rows.filter(r => (r.k || '').trim() || (r.v || '').trim()) })).filter(x => x.rows.length), basic: d.basic, year: (Math.floor(Number(d.year)) > 0 ? Math.floor(Number(d.year)) : null), month: (Math.floor(Number(d.year)) > 0 && Math.floor(Number(d.month)) >= 1 && Math.floor(Number(d.month)) <= 12 ? Math.floor(Number(d.month)) : null), notes: d.notes, events: (d.events || []).filter(ev => String(ev.text || '').trim()).map(ev => ({ id: ev.id, year: Math.floor(Number(ev.year)) > 0 ? Math.floor(Number(ev.year)) : null, month: (Math.floor(Number(ev.year)) > 0 && Math.floor(Number(ev.month)) >= 1 && Math.floor(Number(ev.month)) <= 12) ? Math.floor(Number(ev.month)) : null, text: String(ev.text).trim(), ep: Math.floor(Number(ev.ep)) || null })), rels: (d.rels || []).filter(r => r && r.to && r.to !== wikiState.editId && wikiEntries(bookId).some(x => x.id === r.to)).map(r => ({ id: r.id, to: r.to, label: String(r.label || '').trim(), back: String(r.back || '').trim(), note: String(r.note || '').trim(), shared: r.shared === true, ep: Math.floor(Number(r.ep)) || null, fy: Math.floor(Number(r.fy)) > 0 ? Math.floor(Number(r.fy)) : null, fm: (Math.floor(Number(r.fy)) > 0 && Math.floor(Number(r.fm)) >= 1 && Math.floor(Number(r.fm)) <= 12) ? Math.floor(Number(r.fm)) : null, ty: Math.floor(Number(r.ty)) > 0 ? Math.floor(Number(r.ty)) : null, tm: (Math.floor(Number(r.ty)) > 0 && Math.floor(Number(r.tm)) >= 1 && Math.floor(Number(r.tm)) <= 12) ? Math.floor(Number(r.tm)) : null, attrs: (r.attrs || []).filter(a => String(a.k || '').trim() || String(a.v || '').trim()).map(a => ({ id: a.id, k: String(a.k || '').trim(), v: String(a.v || '').trim(), ep: Math.floor(Number(a.ep)) || null })) })) };
+                const rec = { name: d.name.trim(), aliases, category: d.category, groups: d.groups || [], sections: (d.sections || []).map(x => ({ ...x, title: (x.title || '').trim() || '欄', rows: x.rows.filter(r => (r.k || '').trim() || (r.v || '').trim()) })).filter(x => x.rows.length), basic: d.basic, year: (Math.floor(Number(d.year)) > 0 ? Math.floor(Number(d.year)) : null), month: (Math.floor(Number(d.year)) > 0 && Math.floor(Number(d.month)) >= 1 && Math.floor(Number(d.month)) <= 12 ? Math.floor(Number(d.month)) : null), notes, events: (d.events || []).filter(ev => String(ev.text || '').trim()).map(ev => ({ id: ev.id, year: Math.floor(Number(ev.year)) > 0 ? Math.floor(Number(ev.year)) : null, month: (Math.floor(Number(ev.year)) > 0 && Math.floor(Number(ev.month)) >= 1 && Math.floor(Number(ev.month)) <= 12) ? Math.floor(Number(ev.month)) : null, text: String(ev.text).trim(), ep: Math.floor(Number(ev.ep)) || null })), rels: (d.rels || []).filter(r => r && r.to && r.to !== wikiState.editId && wikiEntries(bookId).some(x => x.id === r.to)).map(r => ({ id: r.id, to: r.to, label: String(r.label || '').trim(), back: String(r.back || '').trim(), note: String(r.note || '').trim(), shared: r.shared === true, ep: Math.floor(Number(r.ep)) || null, fy: Math.floor(Number(r.fy)) > 0 ? Math.floor(Number(r.fy)) : null, fm: (Math.floor(Number(r.fy)) > 0 && Math.floor(Number(r.fm)) >= 1 && Math.floor(Number(r.fm)) <= 12) ? Math.floor(Number(r.fm)) : null, ty: Math.floor(Number(r.ty)) > 0 ? Math.floor(Number(r.ty)) : null, tm: (Math.floor(Number(r.ty)) > 0 && Math.floor(Number(r.tm)) >= 1 && Math.floor(Number(r.tm)) <= 12) ? Math.floor(Number(r.tm)) : null, attrs: (r.attrs || []).filter(a => String(a.k || '').trim() || String(a.v || '').trim()).map(a => ({ id: a.id, k: String(a.k || '').trim(), v: String(a.v || '').trim(), ep: Math.floor(Number(a.ep)) || null })) })) };
                 if (wikiState.editId) { const i = entries.findIndex(e => e.id === wikiState.editId); if (i >= 0) entries[i] = { ...entries[i], ...rec }; }
                 else entries.push({ id: 'w_' + Date.now(), at: Date.now(), ...rec });
                 if (!wikiSetEntries(bookId, entries)) return;
@@ -9272,6 +9318,8 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             panel.onclick = e => { const b = e.target.closest('[data-act]'); if (b) assistAct(b.dataset.act); };
             panel.onkeydown = e => { if (e.key === 'Enter' && e.target.id === 'assist-q') assistAct('ask-go'); };
             document.getElementById('wiki-proto-sheet').onclick = e => { const b = e.target.closest('[data-w]'); if (b) wikiAct(b.dataset.w, b); };
+            document.getElementById('wiki-body').addEventListener('input', e => { if (e.target.matches('.wk-note-input')) wikiSizeNoteInput(e.target); });
+            window.addEventListener('resize', wikiSizeNoteInputs);
             const wikiDirty = () => {
                 if (wikiState.view !== 'detail' || !wikiState.draft) return false;
                 wikiReadDraft(); const nt = document.getElementById('wk-note');
@@ -9329,8 +9377,8 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         // 話の終わり・戻る・本の終わりで、読み終えた話から言葉を拾い、件数を小さく知らせる。読書は止めない
         // ===== 更新の確認：新しい版があれば、魚に青い点とメニュー（版の番号は version.json。公開のたびに、番号が変わる。番号が入っていない開発中は、確かめない） =====
         // 表示用の版。更新の検出は引き続き APP_BUILD の日時番号を使う。
-        const APP_VERSION = '10.14';
-        const APP_BUILD = '20261107211500';
+        const APP_VERSION = '10.15';
+        const APP_BUILD = '20261107225252';
         let updateCheckAt = 0;
         function paintBuild() {
             const el = document.getElementById('app-build-info'); if (!el) return;
@@ -9417,6 +9465,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             if (node.nodeType !== Node.ELEMENT_NODE && node.nodeType !== Node.DOCUMENT_FRAGMENT_NODE) return '';
             if (node.nodeType === Node.ELEMENT_NODE) {
                 if (node.hasAttribute('data-editor-placeholder') || node.hasAttribute('data-board-controls')) return '';
+                if (node.hasAttribute('data-document-source')) return node.dataset.documentSource;
                 if (node.hasAttribute('data-board-source')) return typeof window!=='undefined' && window.AzBoardEditor && node.querySelectorAll ? visualBoardInfo(node).source : node.dataset.boardSource;
                 if (node.matches('ruby[data-source], span[data-stair][data-source]')) return node.dataset.source;
                 if (node.tagName === 'BR') return '\n';
@@ -9524,8 +9573,19 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                 }
             };
             const appendText=text=>text.split(/(\r\n|\r|\n)/).forEach(piece=>appendMarked(piece,fragment));
-            const boards=/^［掲示板(?:[\s　][^］\r\n]*)?］\r?\n[\s\S]*?^［／掲示板］/gm;let cursor=0;
+            const boards=/^［(掲示板|手紙|書類)(?:[\s　][^］\r\n]*)?］\r?\n[\s\S]*?^［／\1］/gm;let cursor=0;
             if(window.AzBoardEditor)for(const match of source.matchAll(boards)){
+                if(window.ProvidedDocument?.isSource(match[0])){
+                    let html;try{html=ProvidedDocument.parse(match[0])}catch(e){continue}
+                    appendText(source.slice(cursor,match.index));
+                    const atom=document.createElement('span');atom.contentEditable='false';atom.dataset.documentSource=match[0];atom.className='ymdoc';atom.style.cssText='display:block;white-space:normal;margin:8px 0';atom.innerHTML=ProvidedDocument.rendered(html);
+                    const controls=document.createElement('div');controls.dataset.documentControls='true';controls.style.cssText='display:flex;gap:8px';
+                    const where=()=>{const r=document.createRange();r.selectNodeContents(visualRoot());r.setEndBefore(atom);const start=serializeVisual(r.cloneContents()).length;return{start,end:start+atom.dataset.documentSource.length}};
+                    const edit=document.createElement('button');edit.type='button';edit.textContent='この文書を編集';edit.onmousedown=e=>e.preventDefault();edit.onclick=()=>fxOpenMaker({src:atom.dataset.documentSource,title:'手紙・調査票',replace:where()});controls.append(edit);
+                    const remove=document.createElement('button');remove.type='button';remove.textContent='×';remove.setAttribute('aria-label','この文書を削除');remove.onmousedown=e=>e.preventDefault();remove.onclick=()=>{if(visualDraft.composing)return;const pos=where().start;atom.remove();ensureVisualTail();setVisualSelection(pos);syncVisualDraft(true)};controls.append(remove);atom.append(controls);
+                    fragment.append(atom);cursor=match.index+match[0].length;continue;
+                }
+                if(match[1]!=='掲示板')continue;
                 let board;try{board=AzBoardEditor.parse(match[0]);}catch(e){continue;}
                 appendText(source.slice(cursor,match.index));
                 const atom=document.createElement('span');atom.dataset.boardSource=match[0];atom.style.cssText='display:block;white-space:normal;margin:8px 0';
@@ -9681,6 +9741,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                     if(result)return;
                     if(node.nodeType===3){if(wanted<=cursor+node.length){result=[node,Math.max(0,wanted-cursor)];return;}cursor+=node.length;return;}
                     if(node.nodeType===1 && node.dataset.mark){cursor+=markOpenOf(node).length;for(const child of node.childNodes)walk(child);cursor+=markCloseOf(node).length;return;}
+                    if(node.nodeType===1 && node.hasAttribute('data-document-source')) {const len=node.dataset.documentSource.length;if(wanted<=cursor+len){const i=[...node.parentNode.childNodes].indexOf(node);result=[node.parentNode,i+(wanted>cursor?1:0)];return}cursor+=len;return}
                     if(node.nodeType===1 && node.hasAttribute('data-board-source')) {const len=serializeVisual(node).length;if(wanted>=cursor&&wanted<=cursor+len){const point=visualBoardPoint(node,wanted-cursor);if(point){result=point;return}}if(wanted<=cursor+len){const index=[...node.parentNode.childNodes].indexOf(node);result=[node.parentNode,index+(wanted>cursor?1:0)];return}cursor+=len;return;}
                     if(node.nodeType===1 && (node.matches('ruby[data-source], span[data-stair][data-source]') || node.tagName==='BR')) {
                         const len=serializeVisual(node).length;
