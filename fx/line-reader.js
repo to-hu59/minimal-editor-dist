@@ -16,7 +16,7 @@ function attach(frame,{editable=false,onChange,onHistory,enabled=false}={}){
  const style=doc.createElement('style');style.textContent=`html,body{height:auto!important;overflow:hidden!important}.reader .chat-message-text{line-height:1.5}.reader #phoneFrame{height:auto!important;min-height:0!important;overflow:visible!important}.reader #phoneFrame>.flex-1,.reader #viewRoom,.reader #viewFriends,.reader #viewChats{flex:none!important;overflow:visible!important}.reader #statusBar{height:22px}.reader #roomHeader{height:40px}.reader #roomMessageArea{flex:none!important;min-height:0;overflow:visible!important;padding-top:8px;padding-bottom:8px}.reader #roomMessageArea>:not([hidden])~:not([hidden]){margin-top:8px}.reader .msg-row{min-width:0;max-width:100%}.reader .msg-row>img+div{flex:1;min-width:0}.reader .msg-row>img+div>div{min-width:0;max-width:100%}.reader .msg-row>img+div>div>:first-child{min-width:0}.reader .line-text-bubble{min-width:0;max-width:100%;padding-top:6px;padding-bottom:6px}.reader #viewFriends>.overflow-y-auto,.reader #chatRoomList{overflow:visible!important}.reader [data-line-edit]{cursor:text!important;white-space:pre-wrap!important;overflow-wrap:anywhere;min-width:.4em;display:inline-block;outline:none}.reader [data-line-edit]:focus{box-shadow:0 1px 0 currentColor}.reader #roomHeaderTitle[data-line-edit]{text-overflow:clip;overflow:visible}.reader .chat-message-text[data-line-edit]:empty:before{content:' ';white-space:pre}`;
  // Keep mobile text at 14px/21px; reclaim decorative chrome and spacing only.
  // Six bottom pixels also contain the message entrance animation.
- style.textContent+="@media(max-width:399px){.reader #statusBar{height:18px}.reader #roomHeader{height:32px}.reader #roomMessageArea{padding:2px 4px 6px}.reader #roomMessageArea>:not([hidden])~:not([hidden]){margin-top:4px}.reader .msg-row{gap:2px}.reader .msg-row>img{width:24px;height:24px}.reader .msg-row>img+div>div{gap:2px}.reader .line-text-bubble{padding:4px 6px}.reader .bubble-left-line::before{left:-2px;border-right-width:4px}.reader .bubble-right-line::before,.reader .bubble-right-kakao::before{right:-2px;border-left-width:4px}}";doc.head.append(style);
+ style.textContent+="@media(max-width:399px){.reader #statusBar{height:18px}.reader #roomHeader{height:32px}.reader #roomMessageArea{padding:2px 4px 6px}.reader #roomMessageArea>:not([hidden])~:not([hidden]){margin-top:4px}.reader .msg-row{gap:2px}.reader .msg-row>img{width:24px;height:24px}.reader .msg-row>img+div>div{gap:2px}.reader .line-text-bubble{padding:4px 6px}.reader .bubble-left-line::before{left:-2px;border-right-width:4px}.reader .bubble-right-line::before,.reader .bubble-right-kakao::before{right:-2px;border-left-width:4px}}";style.textContent+='@media(max-width:399px){.reader[data-line-spacing="1"] #roomMessageArea{padding-top:4px;padding-bottom:8px}.reader[data-line-spacing="1"] #roomMessageArea>:not([hidden])~:not([hidden]){margin-top:6px}.reader[data-line-spacing="1"] .line-text-bubble{padding-top:5px;padding-bottom:5px}.reader[data-line-spacing="2"] #roomMessageArea{padding-top:6px;padding-bottom:10px}.reader[data-line-spacing="2"] #roomMessageArea>:not([hidden])~:not([hidden]){margin-top:8px}.reader[data-line-spacing="2"] .line-text-bubble{padding-top:6px;padding-bottom:6px}}';doc.documentElement.dataset.lineSpacing=frame.parentElement.dataset.lineSpacing||'0';doc.head.append(style);
  function finish(){playing.forEach(a=>a.cancel());playing=[];}
  function play(){finish();if(editable||!enabled||matchMedia('(prefers-reduced-motion: reduce)').matches)return;const range=frame.parentElement.dataset.lineSlice?.split(',').map(Number),rows=[...doc.querySelectorAll('#roomMessageArea>div')].filter(row=>{const r=row.getBoundingClientRect();return !range||(r.bottom>range[0]&&r.top<range[1])});rows.forEach((row,i)=>playing.push(row.animate([{opacity:0,transform:'translateY(6px)'},{opacity:1,transform:'translateY(0)'}],{duration:220,delay:Math.min(i,18)*140,fill:'backwards',easing:'ease-out'})));played=true;frame.dataset.linePlayed='1';}
  function resize(){if(!frame.isConnected){dispose();return;}const phone=doc.getElementById('phoneFrame');if(!phone)return;const h=Math.ceil(phone.getBoundingClientRect().height);if(h>0&&Math.abs(frame.getBoundingClientRect().height-h)>1){frame.style.height=h+'px';frame.style.maxHeight='none';frame.dispatchEvent(new CustomEvent('line-reader-resize',{bubbles:true}));}}
@@ -36,6 +36,9 @@ function attach(frame,{editable=false,onChange,onHistory,enabled=false}={}){
 }
 function scan(root,{enabled=true}={}){cleanup();enabled=enabled&&!root?.classList.contains('editing');root?.querySelectorAll('.ym-line-view iframe:not([data-line-inline])').forEach(frame=>{frame.dataset.lineAnimate=String(enabled);attached.get(frame)?.setEnabled(enabled)});}
 function replay(root){const frames=[...(root?.querySelectorAll('.ym-line-view iframe:not([data-line-inline])')||[])];frames.forEach(frame=>attached.get(frame)?.replay());return frames.length;}
+// srcdoc readers contain no executable code. Initialize them from the parent
+// after their styles/images load, with the same readiness and animation adapter.
+document.addEventListener('load',event=>{const frame=event.target;if(frame?.tagName==='IFRAME'&&frame.hasAttribute('data-line-snapshot')&&frame.closest('.ym-line-view'))attach(frame,{enabled:frame.dataset.lineAnimate==='true'});},true);
 window.LineMakerReader={attach,scan,replay};
 })();
 
@@ -43,9 +46,9 @@ window.LineMakerReader={attach,scan,replay};
  * The saved source is never changed. Turn sheets use a frozen DOM, not new iframes. */
 (() => {
 'use strict';
-const cache=new Map();
+const cache=new Map(),snapshots=new Map();let nextSnapshot=0;
 const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
-async function measured(source,width){
+async function measured(source,width,height){
  const host=document.createElement('div');host.style.cssText='position:fixed;left:-100000px;top:0;visibility:hidden;pointer-events:none;writing-mode:horizontal-tb;width:'+width+'px';
  host.innerHTML=source;document.body.append(host);
  try{
@@ -54,20 +57,43 @@ async function measured(source,width){
   const doc=frame.contentDocument;
   // Wait two paints so ResizeObserver, loaded images, and font metrics have settled.
   await new Promise(requestAnimationFrame);await new Promise(requestAnimationFrame);
-  const phone=doc.getElementById('phoneFrame'),total=Math.ceil(phone.getBoundingClientRect().height);
+  const phone=doc.getElementById('phoneFrame');
+  // Restore breathing room only if the entire card, including its outer margins,
+  // still fits one page. Font/image readiness above remains mandatory.
+  let spacing='0';
+  if(width<=399)for(const level of ['2','1']){
+   doc.documentElement.dataset.lineSpacing=level;
+   if(Math.ceil(phone.getBoundingClientRect().height)+16<=height){spacing=level;break;}
+  }
+  doc.documentElement.dataset.lineSpacing=spacing;
+  const total=Math.ceil(phone.getBoundingClientRect().height);
   if(!total||!doc.getElementById('roomMessageArea'))throw Error('LINE layout missing');
   const rows=[...doc.querySelectorAll('#roomMessageArea>div')],breaks=rows.map((row,i)=>i+1<rows.length?(row.getBoundingClientRect().bottom+rows[i+1].getBoundingClientRect().top)/2:row.getBoundingClientRect().bottom);
   const lines=[],walker=doc.createTreeWalker(phone,NodeFilter.SHOW_TEXT);
   while(walker.nextNode()){const n=walker.currentNode;if(!n.data.trim())continue;const range=doc.createRange();range.selectNodeContents(n);for(const r of range.getClientRects())if(r.height&&r.width)lines.push({top:r.top,bottom:r.bottom});}
   for(const img of phone.querySelectorAll('img')){const r=img.getBoundingClientRect();if(r.height&&r.width)lines.push({top:r.top,bottom:r.bottom});}
-  return {total,breaks,lines};
+  // Cache only a presentation copy. The maker state and editable path stay intact.
+  // Reuse its generated CSS instead of rerunning the whole editor/Tailwind runtime.
+  const snapshot=doc.implementation.createHTMLDocument('LINE');
+  const base=snapshot.createElement('base');base.href=doc.baseURI;snapshot.head.append(base);
+  for(const node of doc.head.querySelectorAll('style,link[rel="stylesheet"]'))snapshot.head.append(node.cloneNode(true));
+  snapshot.documentElement.className=doc.documentElement.className;
+  snapshot.documentElement.dataset.lineSpacing=spacing;
+  snapshot.documentElement.lang=doc.documentElement.lang||'ja';
+  snapshot.body.className=doc.body.className;snapshot.body.style.cssText=doc.body.style.cssText;
+  snapshot.body.append(phone.cloneNode(true));
+  snapshot.querySelectorAll('script,iframe,object,embed').forEach(node=>node.remove());
+  for(const node of snapshot.querySelectorAll('*'))for(const attr of [...node.attributes])if(attr.name.startsWith('on')||attr.name==='contenteditable')node.removeAttribute(attr.name);
+  return {total,breaks,lines,spacing,snapshot:'<!doctype html>'+snapshot.documentElement.outerHTML};
  }finally{host.remove();}
 }
 async function split(shell,width,height){
  const source=shell.outerHTML,key=width+'x'+height+':'+source;
  if(cache.has(key))return cache.get(key);
  const promise=(async()=>{
-  const {total,breaks,lines}=await measured(source,width);
+  const {total,breaks,lines,spacing,snapshot}=await measured(source,width,height);
+  const snapshotId=String(++nextSnapshot);snapshots.set(snapshotId,snapshot);
+  if(snapshots.size>12)snapshots.delete(snapshots.keys().next().value);
   const result=[];let start=0;
   while(start<total-.1){
    const limit=Math.min(total,start+height);let end=limit;
@@ -82,7 +108,8 @@ async function split(shell,width,height){
    }
    if(end<=start+.1)end=limit;
    const part=shell.cloneNode(true),frame=part.querySelector('iframe');
-   part.dataset.lineSlice=start+','+end;part.dataset.lineWeight=String((end-start)/total);
+   frame.dataset.lineFallbackSrc=frame.getAttribute('src');frame.removeAttribute('src');frame.setAttribute('sandbox','allow-same-origin');frame.dataset.lineSnapshot=snapshotId;
+   part.dataset.lineSpacing=spacing;part.dataset.lineSlice=start+','+end;part.dataset.lineWeight=String((end-start)/total);
    part.style.height=(end-start)+'px';part.style.overflow='hidden';part.style.position='relative';part.style.boxSizing='content-box';part.style.borderRadius=(start===0?'12px 12px':'0 0')+' '+(end===total?'12px 12px':'0 0');
    frame.style.height=total+'px';frame.style.transform='translateY(-'+start+'px)';frame.style.transformOrigin='top left';frame.style.visibility='hidden';frame.removeAttribute('data-line-ready');frame.removeAttribute('data-line-played');
    frame.setAttribute('aria-label',start===0?'トーク':'トークの続き');
@@ -101,6 +128,21 @@ async function prepare(html,{width,height}){
   shell.outerHTML=replacement;
  }
  return holder.innerHTML;
+}
+// Keep one snapshot per measured card, not a full HTML document in every slice.
+// Attach it only to visible pages; fit probes stay inert and lightweight.
+function hydrate(fragment){
+ for(const frame of fragment.querySelectorAll('iframe[data-line-snapshot]')){
+  const snapshot=snapshots.get(frame.dataset.lineSnapshot);
+  if(snapshot)frame.srcdoc=snapshot;
+  else{
+   // A model can outlive the bounded cache. The original read-only maker remains
+   // a compatible fallback, with its own image/font readiness and spacing rules.
+   frame.removeAttribute('data-line-snapshot');frame.removeAttribute('sandbox');
+   frame.src=frame.dataset.lineFallbackSrc;
+  }
+ }
+ return fragment;
 }
 function freeze(source,copy){
  const originals=[...source.querySelectorAll('.ym-line-view iframe')],clones=[...copy.querySelectorAll('.ym-line-view iframe')];
@@ -135,5 +177,5 @@ function freeze(source,copy){
   const body=snapshot(phone);if(body)outer.append(body);target.replaceWith(outer);
  }
 }
-window.LineMakerPagination={prepare,freeze};
+window.LineMakerPagination={prepare,freeze,hydrate};
 })();

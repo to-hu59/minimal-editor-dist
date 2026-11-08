@@ -5724,13 +5724,17 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
 
             const contentTextEl = document.getElementById('reader-content-text');
             const frames = [], dispText = fxDisplayText(localizeText(chapter.content || '', book), frames);
-            contentTextEl.innerHTML = buildInteractiveSentencesHtml(dispText, frames);
+            const contentHtml = buildInteractiveSentencesHtml(dispText, frames);
+            // Page preparation creates the authoritative LINE measurement. Do not
+            // launch a throwaway reader iframe before that preparation finishes.
+            if(pagingActive()&&contentHtml.includes('ym-line-view'))contentTextEl.replaceChildren();
+            else contentTextEl.innerHTML = contentHtml;
 
             document.getElementById('reader-content-text').classList.remove('hidden');
             document.getElementById('reader-editor-box').classList.add('hidden');
 
             buildTtsQueue(book, chapter, vol);
-            setPagingChapter(contentTextEl.innerHTML);
+            setPagingChapter(contentHtml);
         }
 
         // 文の区切り（。！？）で分ける。ただし「｜」付きのルビの中と、書式の印の内側では分けない
@@ -9415,8 +9419,8 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         // 話の終わり・戻る・本の終わりで、読み終えた話から言葉を拾い、件数を小さく知らせる。読書は止めない
         // ===== 更新の確認：新しい版があれば、魚に青い点とメニュー（版の番号は version.json。公開のたびに、番号が変わる。番号が入っていない開発中は、確かめない） =====
         // 表示用の版。更新の検出は引き続き APP_BUILD の日時番号を使う。
-        const APP_VERSION = '12.2';
-        const APP_BUILD = '20261108123454';
+        const APP_VERSION = '12.3';
+        const APP_BUILD = '20261108161821';
         let updateCheckAt = 0;
         function paintBuild() {
             const el = document.getElementById('app-build-info'); if (!el) return;
@@ -10830,7 +10834,11 @@ class ReaderPaginator {
   while(wrapper.firstChild)fragment.append(wrapper.firstChild);return fragment;
  }
  fits(start,end){
-  this.measure.replaceChildren(this.fragment(start,end));
+  const fragment=this.fragment(start,end);
+  // LINE slice dimensions are already measured with loaded fonts and images.
+  // Fit probes need only the shell, not another running maker iframe.
+  fragment.querySelectorAll('.ym-line-view[data-line-slice] iframe').forEach(frame=>frame.remove());
+  this.measure.replaceChildren(fragment);
   return this.measure.scrollWidth<=this.measure.clientWidth+1&&this.measure.scrollHeight<=this.measure.clientHeight+1;
  }
  async build(){
@@ -10854,10 +10862,10 @@ class ReaderPaginator {
  }
  pageAt(offset){let i=this.pages.findIndex((p,n)=>n===this.pages.length-1||this.pages[n+1].offset>offset);return Math.max(0,i);}
  render(index,target){
-   if(!this.spread){const p=this.pages[index];target.replaceChildren(this.fragment(p.start,p.end));return;}
+   if(!this.spread){const p=this.pages[index];target.replaceChildren(window.LineMakerPagination.hydrate(this.fragment(p.start,p.end)));return;}
    // 見開き：左（縦書きは右）から順に、偶数ページと次のページを並べる
    const left=index-index%2,wrap=document.createElement('div');wrap.className='rp-spread';wrap.style.direction=this.vertical?'rtl':'ltr';
-   const leaf=i=>{const d=document.createElement('div');d.className='rp-leaf';d.style.width=this.pageW+'px';d.style.writingMode=this.vertical?'vertical-rl':'horizontal-tb';d.style.direction='ltr';const p=this.pages[i];if(p)d.append(this.fragment(p.start,p.end));return d;};
+   const leaf=i=>{const d=document.createElement('div');d.className='rp-leaf';d.style.width=this.pageW+'px';d.style.writingMode=this.vertical?'vertical-rl':'horizontal-tb';d.style.direction='ltr';const p=this.pages[i];if(p)d.append(window.LineMakerPagination.hydrate(this.fragment(p.start,p.end)));return d;};
    const gutter=document.createElement('div');gutter.className='rp-gutter';
    wrap.append(leaf(left),gutter,leaf(left+1));target.replaceChildren(wrap);
   }
