@@ -1898,6 +1898,7 @@
                     <div class="pt-3 border-t border-woodBorder">
                         <span class="font-bold text-softMuted block mb-1">更新履歴</span>
                         <div id="changelog" class="text-[11px] text-softMuted leading-relaxed">
+<div class="mb-1.5"><b class="text-softText">Version 12.6（2026-11-08）</b><br>ページ表示で、演出（掲示板・LINEなど）が、途中で切れないようにした。1ページに入るときは、少し縮めて入れ、入らないときは、次のページの先頭から始める。</div>
 <div class="mb-1.5"><b class="text-softText">Version 12.5（2026-11-08）</b><br>文字数を、見える文字だけで数えるようにした（［ ］の印や、画像・演出のデータは数えない）。</div>
 <div class="mb-1.5"><b class="text-softText">Version 12.1（2026-11-08）</b><br>LINEの吹き出しを使える幅に広げ、上部と上下の余白を調整しました。文字サイズと行間を保ち、短いトークがページをまたぎにくくなりました。</div>
 <div class="mb-1.5"><b class="text-softText">Version 12（2026-11-08）</b><br>LINEをページ内に収まる高さで分け、長い吹き出し・末尾・後続本文の見切れを直しました。不要な画面が一瞬開く動きをなくしました。手紙は短いものを次ページへまとめて送り、書く速度を速めました。提供版メールを本文への挿入・直接編集・保存・読書演出に組み込みました。</div>
@@ -9425,8 +9426,8 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         // 話の終わり・戻る・本の終わりで、読み終えた話から言葉を拾い、件数を小さく知らせる。読書は止めない
         // ===== 更新の確認：新しい版があれば、魚に青い点とメニュー（版の番号は version.json。公開のたびに、番号が変わる。番号が入っていない開発中は、確かめない） =====
         // 表示用の版。更新の検出は引き続き APP_BUILD の日時番号を使う。
-        const APP_VERSION = '12.5';
-        const APP_BUILD = '20261108200000';
+        const APP_VERSION = '12.6';
+        const APP_BUILD = '20261108220000';
         let updateCheckAt = 0;
         function paintBuild() {
             const el = document.getElementById('app-build-info'); if (!el) return;
@@ -10826,7 +10827,11 @@ class ReaderPaginator {
    [...node.childNodes].forEach(visit);
   };visit(this.root);this.length=offset;
   // 枠（fx〜のdiv）の中の文字には、一番外の枠の目印をつける。ページの切れ目が枠の途中にならないように使う
-  for(const u of this.units){let e=u.node.nodeType===3?u.node.parentElement:u.node,fr=null;while(e&&e!==this.root){if((e.tagName==='DIV'&&/(^|\s)fx/.test(e.className||''))||(e.classList&&(e.classList.contains('tx')||e.classList.contains('az-board-view')||e.classList.contains('letter-container')||e.classList.contains('report-container')||e.classList.contains('email-container'))))fr=e;e=e.parentElement;}u.frame=fr;}
+  for(const u of this.units){let e=u.node.nodeType===3?u.node.parentElement:u.node,fr=null;while(e&&e!==this.root){if((e.tagName==='DIV'&&/(^|\s)fx/.test(e.className||''))||(e.classList&&(e.classList.contains('tx')||e.classList.contains('az-board-view')||e.classList.contains('letter-container')||e.classList.contains('report-container')||e.classList.contains('email-container'))))fr=e;e=e.parentElement;}if(!fr&&u.atomic&&u.node.nodeType===1&&u.node.matches&&u.node.matches('.ym-line-view'))fr=u.node;u.frame=fr;}
+  // 演出ごとに、番号を付ける（縮めるときに使う）
+  this.frameIds=new Map();let frameN=0;
+  for(const u of this.units){if(u.frame&&!this.frameIds.has(u.frame)){this.frameIds.set(u.frame,++frameN);u.frame.setAttribute('data-fxpg',String(frameN));}}
+  this.frameZoom=new Map();
  }
  fragment(start,end){
   const fragment=document.createDocumentFragment();if(start>=end)return fragment;
@@ -10837,7 +10842,9 @@ class ReaderPaginator {
   const wrapper=this.root.cloneNode(false);wrapper.append(range.cloneContents());
   let ancestor=range.commonAncestorContainer;if(ancestor.nodeType===3)ancestor=ancestor.parentNode;
   while(ancestor&&ancestor!==this.root){const parent=ancestor.cloneNode(false);while(wrapper.firstChild)parent.append(wrapper.firstChild);wrapper.append(parent);ancestor=ancestor.parentNode;}
-  while(wrapper.firstChild)fragment.append(wrapper.firstChild);return fragment;
+  while(wrapper.firstChild)fragment.append(wrapper.firstChild);
+  fragment.querySelectorAll('[data-fxpg]').forEach(el=>{const z=this.frameZoom.get(Number(el.getAttribute('data-fxpg')));if(z&&z<1)el.style.zoom=String(z);});
+  return fragment;
  }
  fits(start,end){
   const fragment=this.fragment(start,end);
@@ -10847,7 +10854,22 @@ class ReaderPaginator {
   this.measure.replaceChildren(fragment);
   return this.measure.scrollWidth<=this.measure.clientWidth+1&&this.measure.scrollHeight<=this.measure.clientHeight+1;
  }
+ // 演出ごとに、1ページに入るかを確かめる。入らなければ、入るまで縮める（下限 0.4）
+ computeZoom(){
+  const groups=new Map();
+  this.units.forEach((u,i)=>{if(!u.frame)return;const id=this.frameIds.get(u.frame);if(!groups.has(id))groups.set(id,[i,i+1]);else groups.get(id)[1]=i+1;});
+  for(const [id,[a,b]] of groups){
+   this.frameZoom.set(id,1);
+   if(this.fits(a,b))continue;
+   this.frameZoom.set(id,0.4);
+   if(!this.fits(a,b))continue;
+   let lo=0.4,hi=1;
+   for(let k=0;k<7;k++){const mid=(lo+hi)/2;this.frameZoom.set(id,mid);if(this.fits(a,b))lo=mid;else hi=mid;}
+   this.frameZoom.set(id,lo);
+  }
+ }
  async build(){
+  this.computeZoom();
   let start=0;
   while(start<this.units.length){
    if(this.cancelled)throw new Error('cancelled');
