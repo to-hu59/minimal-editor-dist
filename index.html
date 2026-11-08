@@ -1898,6 +1898,7 @@
                     <div class="pt-3 border-t border-woodBorder">
                         <span class="font-bold text-softMuted block mb-1">更新履歴</span>
                         <div id="changelog" class="text-[11px] text-softMuted leading-relaxed">
+<div class="mb-1.5"><b class="text-softText">Version 12.5（2026-11-08）</b><br>文字数を、見える文字だけで数えるようにした（［ ］の印や、画像・演出のデータは数えない）。</div>
 <div class="mb-1.5"><b class="text-softText">Version 12.1（2026-11-08）</b><br>LINEの吹き出しを使える幅に広げ、上部と上下の余白を調整しました。文字サイズと行間を保ち、短いトークがページをまたぎにくくなりました。</div>
 <div class="mb-1.5"><b class="text-softText">Version 12（2026-11-08）</b><br>LINEをページ内に収まる高さで分け、長い吹き出し・末尾・後続本文の見切れを直しました。不要な画面が一瞬開く動きをなくしました。手紙は短いものを次ページへまとめて送り、書く速度を速めました。提供版メールを本文への挿入・直接編集・保存・読書演出に組み込みました。</div>
 <div class="mb-1.5"><b class="text-softText">Version 11（2026-11-08）</b><br>LINEの送信者切替と入力欄の自動拡大、読書中の左寄せ・見切れ・演出を直しました。手紙・LINE・掲示板は挿入後も本文の中で直接編集できます。手紙は読書画面で書き込み演出が動き、内容量と文字サイズに合わせて大きさが変わります。</div>
@@ -3246,6 +3247,11 @@ MP 22/22
         }
 
         let saveWarnAt = 0;
+        // 文字数：見える文字だけを数える（［ ］の印や、画像・演出のデータは数えない）
+        function chapVisibleLen(c) {
+            const t = String((c && c.content) || '');
+            return t.replace(/［[^］\n]*］/g, '').replace(/data:[^\s)）］]+/g, '').length;
+        }
         function save() {
             try {
                 KV.setItem('yomimono_books_v11', JSON.stringify(state.books));
@@ -4354,14 +4360,14 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                         p.volumes.forEach(v => {
                             if (v.chapters) {
                                 totalChapters += v.chapters.length;
-                                v.chapters.forEach(c => totalChars += (c.content ? c.content.length : 0));
+                                v.chapters.forEach(c => totalChars += chapVisibleLen(c));
                             }
                         });
                     }
                 } else {
                     if (p.chapters) {
                         totalChapters += p.chapters.length;
-                        p.chapters.forEach(c => totalChars += (c.content ? c.content.length : 0));
+                        p.chapters.forEach(c => totalChars += chapVisibleLen(c));
                     }
                 }
             });
@@ -4429,7 +4435,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                         <span class="toc-title truncate">${escapeHtml(localizeText(chap.title, tocRenderCtx.book))}</span>
                     </div>
                     <div class="flex items-center space-x-1 text-[10px] text-softMuted flex-shrink-0 pointer-events-auto">
-                        <span>${chap.content ? chap.content.length : 0}字</span>
+                        <span>${chapVisibleLen(chap)}字</span>
                         ${fxHasEffects(chap) ? '<span title="演出あり" aria-label="演出あり">🎬</span>' : ''}
                         ${commentBadgeHtml(chap)}
                         <button type="button" class="w-8 h-8 flex items-center justify-center text-woodBorderDark hover:text-woodAccent" onclick="event.stopPropagation(); toggleChapterFavorite('${chap.id}')">
@@ -9419,8 +9425,8 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         // 話の終わり・戻る・本の終わりで、読み終えた話から言葉を拾い、件数を小さく知らせる。読書は止めない
         // ===== 更新の確認：新しい版があれば、魚に青い点とメニュー（版の番号は version.json。公開のたびに、番号が変わる。番号が入っていない開発中は、確かめない） =====
         // 表示用の版。更新の検出は引き続き APP_BUILD の日時番号を使う。
-        const APP_VERSION = '12.4';
-        const APP_BUILD = '20261108175237';
+        const APP_VERSION = '12.5';
+        const APP_BUILD = '20261108200000';
         let updateCheckAt = 0;
         function paintBuild() {
             const el = document.getElementById('app-build-info'); if (!el) return;
@@ -11648,9 +11654,9 @@ function setupPaging(){
             statBooks().forEach(b => {
                 if (statusCounts[b.status] !== undefined) statusCounts[b.status]++;
                 b.parts?.forEach(p => {
-                    p.chapters?.forEach(c => totalChars += (c.content ? c.content.length : 0));
+                    p.chapters?.forEach(c => totalChars += chapVisibleLen(c));
                     p.volumes?.forEach(v => {
-                        v.chapters?.forEach(c => totalChars += (c.content ? c.content.length : 0));
+                        v.chapters?.forEach(c => totalChars += chapVisibleLen(c));
                     });
                 });
             });
