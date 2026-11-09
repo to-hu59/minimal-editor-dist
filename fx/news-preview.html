@@ -3,49 +3,29 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#14110f" id="themeColor">
 <title>報道メーカーの見え方</title>
-<link rel="stylesheet" href="fx.css">
+<link rel="stylesheet" href="news-style.css">
 <style>
-  .hd, .nav, .endnav, #cover { display: none !important; }
-  .stage { padding-bottom: 0 !important; }
-  /* ホラー演出用の背景・影・人影・ふちの暗がりは出さない。読む画面と同じ、明るい紙の色にする */
-  .bg, .shade, .silw, .vig, .fx { display: none !important; }
-  html, body, .app, .stage { background: #f3ece0 !important; }
-  .app { max-width: none; }
-  .page { color: #3b332b; text-shadow: none !important; animation: none !important; }
+  html, body { margin: 0; background: #f3ece0; }
+  body { padding: 12px; font-family: "Shippori Mincho", "Yu Mincho", serif; color: #3b332b; }
+  .fxnews { margin: 0; }
 </style>
+<script src="news-reader.js"></script>
 </head>
 <body>
-<!-- 報道メーカー（news-maker.html）の中で、読む画面と同じ表示を出すだけの画面。
-   親 → ここ  { type:'fx-make', src }　／　ここ → 親  { type:'fx-ready' } -->
-<div class="app" id="app">
-  <header class="hd"><button class="hbtn" id="fxBack" type="button">‹</button><div class="ttl"></div><button class="hbtn" id="srcBtn" type="button">書き方</button><button class="hbtn" id="againBtn" type="button">もう一度</button><label class="sw"><input type="checkbox" id="fxSw" checked><span class="tr" aria-hidden="true"></span><span>演出</span></label></header>
-  <main class="stage" id="stage">
-    <div class="bg" id="bg"></div>
-    <div class="shade" id="shade"></div>
-    <div class="silw" id="silw"><div class="sil"></div></div>
-    <article class="page" id="page"></article>
-    <div class="vig" id="vig"></div>
-  </main>
-  <nav class="nav"><button type="button" id="prev">‹</button><div class="mid"></div><button type="button" id="next">›</button></nav>
-</div>
-<div class="fx" id="fx"></div>
-<div class="cover" id="cover"><div class="cv"><div class="card"><div class="btns"><button class="yes" id="yes" type="button">はい</button><button class="no" id="no" type="button">いいえ</button></div></div></div></div>
-<div class="sheet" id="sheet" role="dialog" aria-label="書き方"><div class="in"><div class="sh"><b>書き方</b><button class="hbtn" id="sheetClose" type="button">閉じる</button></div><p class="ex"></p><pre id="srcView"></pre></div></div>
-<svg width="0" height="0" style="position:absolute" aria-hidden="true"><filter id="warp" x="-5%" y="-5%" width="110%" height="110%"><feTurbulence id="turb" type="fractalNoise" baseFrequency="0.012 0.035" numOctaves="2" seed="3"/><feDisplacementMap id="disp" in="SourceGraphic" scale="0" xChannelSelector="R" yChannelSelector="G"/></filter></svg>
+<!-- 報道メーカー（news-maker.html）の中で、読む画面と同じ表示（news-reader.js）を出す画面。
+   親 → ここ  { type:'fx-make', src, sound }　／　ここ → 親  { type:'fx-ready' } -->
+<div class="fxnews" id="box"></div>
 <script>
 (function () {
   const post = m => { try { parent.postMessage(m, '*'); } catch (e) {} };
-  let loaded = false;
+  let run = null;
   window.addEventListener('message', e => {
-    const d = e.data; if (!d || d.type !== 'fx-make' || loaded) return;
-    loaded = true;
-    window.BOOK = { start: 1, silDefault: false, showTitle: false, pages: [d.src || ''] };
-    try { Object.defineProperty(navigator, 'vibrate', { value: () => false, configurable: true }); } catch (x) {}
-    const s = document.createElement('script'); s.src = 'fx.js';
-    s.onload = () => { try { if (typeof S !== 'undefined') S.pvMute = true; document.getElementById('yes').click(); } catch (x) {} };
-    document.body.appendChild(s);
+    const d = e.data; if (!d || d.type !== 'fx-make') return;
+    run?.cancel();
+    const box = document.getElementById('box');
+    box.innerHTML = NewsReader.html(d.src || '', { base: '' }) || '<p style="color:#8a7a68;font:13px sans-serif">（まだ何も入っていません）</p>';
+    run = NewsReader.play(box, { sound: !!d.sound });
   });
   post({ type: 'fx-ready' });
 })();
