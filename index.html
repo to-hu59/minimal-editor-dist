@@ -1926,6 +1926,7 @@
                     <div class="pt-3 border-t border-woodBorder">
                         <span class="font-bold text-softMuted block mb-1">更新履歴</span>
                         <div id="changelog" class="text-[11px] text-softMuted leading-relaxed">
+<div class="mb-1.5"><b class="text-softText">Version 12.16（2026-11-09）</b><br>「報道メーカー」を足しました。編集画面の動く人のボタン（特殊演出）を押して、「メーカー」の「トレンド（SNS）を作る」「ニュース記事を作る」を選ぶと、入力欄で作れます。LINEや掲示板と同じように、見え方を確かめながら作って、本文に入れられます。入れたトレンドやニュースの中で同じボタンを押すと、直せます。</div>
 <div class="mb-1.5"><b class="text-softText">Version 12.14（2026-11-09）</b><br>読書画面で、話の番号を入れて移れるようにしました。画面の真ん中を押すと出る下のバーの「10 / 360話」を押して、番号を入れます（ページ表示のときは、ページ数のところを押します）。いちばん下の棒を動かしているあいだは、行き先の話を出します。</div>
 <div class="mb-1.5"><b class="text-softText">Version 12.13（2026-11-09）</b><br>Driveの同期を直しました。作品を開いて読んだだけでは「直した」に数えず、別の端末で足した話を上書きしないようにしました。2つの端末で本文を直していたときは、話の数を見せて、どちらを使うか聞きます。作品ページや読書画面で☁を押したときも、開いている作品を同期します。</div>
 <div class="mb-1.5"><b class="text-softText">Version 12.12（2026-11-09）</b><br>更新履歴に、12.2〜12.11の内容を足しました。</div>
@@ -7294,7 +7295,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             const m = document.createElement('div'); m.id = 'modal-frame-menu';
             const has = sel.end > sel.start;
             m.innerHTML = '<div><h4>' + (only ? '特殊な文字' : '特殊演出') + '</h4><small>' + (only ? (has ? '選んだ文字に、かけます。' : '文字を選んでいないので、いまの行の、次の1行にかけます。') : (has ? '選んだ文を、枠で囲みます。' : '文字を選んでいないので、空の枠を入れます。（あとで、中に打ち込めます）')) + '</small>'
-                + (only ? '' : '<details class="fg" data-g="メーカー" open><summary>メーカー<span class="fgn">手紙・調査票・メール・LINE／カカオを画面で作る</span></summary><button type="button" class="fm" data-maker="letter">手紙を作る<span>便箋の見た目のまま編集し、書いているように再生</span></button><button type="button" class="fm" data-maker="report">調査票を作る<span>項目・本文・印を編集</span></button><button type="button" class="fm" data-maker="email">メールを作る<span>PC・スマホ表示や件名・宛先・本文を編集</span></button><button type="button" class="fm" data-maker="line">LINE／カカオ風メーカー<span>写真・プロフィール・返信・複数のトークを編集</span></button></details>')
+                + (only ? '' : '<details class="fg" data-g="メーカー" open><summary>メーカー<span class="fgn">手紙・調査票・メール・LINE／カカオ・ニュース・トレンドを画面で作る</span></summary><button type="button" class="fm" data-maker="letter">手紙を作る<span>便箋の見た目のまま編集し、書いているように再生</span></button><button type="button" class="fm" data-maker="report">調査票を作る<span>項目・本文・印を編集</span></button><button type="button" class="fm" data-maker="email">メールを作る<span>PC・スマホ表示や件名・宛先・本文を編集</span></button><button type="button" class="fm" data-maker="line">LINE／カカオ風メーカー<span>写真・プロフィール・返信・複数のトークを編集</span></button><button type="button" class="fm" data-maker="news-trend">トレンド（SNS）を作る<span>トレンドの順位と、SNSの投稿が並ぶ画面</span></button><button type="button" class="fm" data-maker="news-article">ニュース記事を作る<span>芸能ニュースの見出し・写真・本文・コメント</span></button></details>')
                 + (() => { const op = frameGroupsOpen(); return FRAME_GROUPS.filter(gr => only ? only.includes(gr.g) : gr.g !== '文字の向き').map(gr => '<details class="fg" data-g="' + escapeHtml(gr.g) + '"' + ((op[gr.g] || only) ? ' open' : '') + '><summary>' + escapeHtml(gr.g) + '<span class="fgn">' + escapeHtml(gr.note) + '</span></summary>' + gr.ids.map(id => FRAME_KINDS.find(k => k.id === id)).filter(Boolean).map(k => '<button type="button" class="fm" data-k="' + k.id + '">' + escapeHtml(k.name) + '<span>' + escapeHtml(k.note) + '</span></button>').join('') + '</details>').join(''); })()
                 + '<button type="button" class="fm" data-k="" style="text-align:center;color:#8a7a68">やめる</button></div>';
             document.body.appendChild(m);
@@ -7306,6 +7307,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                     m.remove(); fxPickCtx = {start:sel.start,end:sel.end,block:fxBlockAt(draftSource(),sel.start)};
                     const kind=maker.dataset.maker;
                     if(kind==='line'){openLineEditor();return;}
+                    if(kind==='news-trend'||kind==='news-article'){const old=fxPickCtx.block,reuse=old&&NEWS_MAKER_RE.test(old.text);fxOpenMaker({src:reuse?old.text:NEWS_MAKER_SRC[kind],title:kind==='news-trend'?'トレンド':'ニュース記事',replace:reuse?{start:old.start,end:old.end}:undefined});return;}
                     const tag=kind==='letter'?'手紙':kind==='report'?'書類':kind==='email'?'メール':'トーク';
                     const old=fxPickCtx.block, reuse=old && old.text.startsWith('［'+tag+' ') && (kind==='line'||old.text.includes('見た目=提供版'));
                     fxOpenMaker({src:reuse?old.text:'［'+tag+(kind==='line'?' 見た目=LINE 相手=友だち 履歴':' 見た目=提供版')+'］\n'+(kind==='line'?'相手：こんにちは\n':'')+'［／'+tag+'］',title:kind==='letter'?'手紙':kind==='report'?'調査票':kind==='email'?'メール':'LINE／カカオ風メーカー',edit:kind==='line',replace:reuse?{start:old.start,end:old.end}:null});
@@ -7467,12 +7469,18 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                 const next=before+pre+text+post+after;storeDraftSource(next);renderVisualSource(next);setVisualSelection(before.length+pre.length+text.length);syncVisualDraft(true);fxPickCtx=null;framePickCtx=null;closeFxPicker();toast('トークを下書きに反映しました。本文の保存で確定します');
             }});}catch(e){toast(e.message);}
         }
+        // 報道メーカー（トレンド・ニュース記事）で開く印と、はじめの見本
+        const NEWS_MAKER_RE = /^［報道[ \t][^］\n]*形=(?:炎上|ニュース)(?:[ \t]|］)/;
+        const NEWS_MAKER_SRC = {
+            'news-trend': '［報道 形=炎上 タグ=#話題 件数=12.4K 開始=8 順位=1］\nトレンド：#関連の話題｜4.2K posts\n@news_now｜ここにニュースの投稿が入ります。｜いいね=3.2K｜RP=1.1K｜種類=ニュース\n@someone｜ここに反応の投稿が入ります。｜いいね=820｜RP=96\n［／報道］',
+            'news-article': '［報道 形=ニュース 媒体=STAR　NEWS 分類=ENTERTAINMENT 印=速報 見出し=ここに見出しが入ります 日時=2026.11.09　18:00 記者=芸能担当記者 閲覧=12,480］\n写真：md_stage｜写真の説明\nここに本文が入ります。\n関連：関連記事の見出し\nコメント：名無し｜コメントが入ります｜共感=120｜反対=8\n［／報道］'
+        };
         // 演出をつくる画面（iframe）
         function fxOpenMaker(opts) {
             if(window.LineMaker?.isSource(opts.src||'')){openLineEditor(opts);return;}
             if (fxMaker) fxMaker.close();
             const wrap = document.createElement('div'); wrap.className = 'fx-viewer'; wrap.id = 'fx-maker';
-            const frame = document.createElement('iframe'); frame.src = /^［報道[ \t][^］\n]*形=(?:炎上|ニュース)(?:[ \t]|］)/.test(String(opts.src || '').trim()) ? 'fx/news-maker.html' : window.ProvidedEmail?.isSource(opts.src||'') ? 'fx/email-maker.html' : /^［(?:手紙|書類|メール)\s[^］\n]*見た目=提供版(?:[\s］])/m.test(String(opts.src || '').trim()) ? 'fx/document-maker.html' : 'fx/maker.html'; frame.setAttribute('title', '演出をつくる');
+            const frame = document.createElement('iframe'); frame.src = NEWS_MAKER_RE.test(String(opts.src || '').trim()) ? 'fx/news-maker.html' : window.ProvidedEmail?.isSource(opts.src||'') ? 'fx/email-maker.html' : /^［(?:手紙|書類|メール)\s[^］\n]*見た目=提供版(?:[\s］])/m.test(String(opts.src || '').trim()) ? 'fx/document-maker.html' : 'fx/maker.html'; frame.setAttribute('title', '演出をつくる');
             wrap.append(frame); document.body.append(wrap);
             const close = () => { window.removeEventListener('message', onMsg); wrap.remove(); if (fxMaker && fxMaker.close === close) fxMaker = null; };
             const onMsg = e => {
@@ -7510,8 +7518,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             body.addEventListener('click', e => {
                 const b = e.target.closest('[data-fp-act]'); if (!b) return;
                 const act = b.dataset.fpAct, book = ttsBook(), i = Number(b.dataset.i);
-                if(act === 'news-trend'){fxOpenMaker({src:'［報道 形=炎上 タグ=#話題 件数=12.4K 開始=8 順位=1］\nトレンド：#関連の話題｜4.2K posts\n@news_now｜ここにニュースの投稿が入ります。｜いいね=3.2K｜RP=1.1K｜種類=ニュース\n@someone｜ここに反応の投稿が入ります。｜いいね=820｜RP=96\n［／報道］',title:'トレンド'});}
-                else if(act === 'news-article'){fxOpenMaker({src:'［報道 形=ニュース 媒体=STAR　NEWS 分類=ENTERTAINMENT 印=速報 見出し=ここに見出しが入ります 日時=2026.11.09　18:00 記者=芸能担当記者 閲覧=12,480］\n写真：md_stage｜写真の説明\nここに本文が入ります。\n関連：関連記事の見出し\nコメント：名無し｜コメントが入ります｜共感=120｜反対=8\n［／報道］',title:'ニュース記事'});}
+                if(act === 'news-trend' || act === 'news-article'){fxOpenMaker({src:NEWS_MAKER_SRC[act],title:act === 'news-trend'?'トレンド':'ニュース記事'});}
                 else if(act === 'document-email'){fxOpenMaker({src:'［メール 見た目=提供版］\n［／メール］',title:'メール'});}
                 else if (act === 'document-letter' || act === 'document-report') { const k=act === 'document-letter'?'手紙':'書類'; fxOpenMaker({src:'［'+k+' 見た目=提供版］\n［／'+k+'］',title:act === 'document-letter'?'手紙':'調査票'}); }
                 else if (act === 'sample') fxLoadSamples().then(list => { const s = list[i]; if (s) fxOpenMaker({ src: s.src, title: s.name }); });
@@ -9509,8 +9516,8 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         // 話の終わり・戻る・本の終わりで、読み終えた話から言葉を拾い、件数を小さく知らせる。読書は止めない
         // ===== 更新の確認：新しい版があれば、魚に青い点とメニュー（版の番号は version.json。公開のたびに、番号が変わる。番号が入っていない開発中は、確かめない） =====
         // 表示用の版。更新の検出は引き続き APP_BUILD の日時番号を使う。
-        const APP_VERSION = '12.15';
-        const APP_BUILD = '20261109214055';
+        const APP_VERSION = '12.16';
+        const APP_BUILD = '20261109214642';
         let updateCheckAt = 0;
         function paintBuild() {
             const el = document.getElementById('app-build-info'); if (!el) return;

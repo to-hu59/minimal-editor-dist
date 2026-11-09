@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>報道メーカー</title>
+<!-- 報道メーカー：［報道 形=炎上］（トレンド）と［報道 形=ニュース］（芸能ニュース）を、入力欄で作る。
+   親 → ここ  { type:'fx-make', src, title, edit }
+   ここ → 親  { type:'fx-ready' } / { type:'fx-insert', src } / { type:'fx-save', src } / { type:'fx-close' }
+   見た目の確認は、中に「演出をつくる」画面（maker.html）を開いて、本物の表示で見る。 -->
+<style>
+:root{--bg:#f3eee4;--card:#fffdf8;--line:#dccfb8;--ink:#3b332b;--mute:#857761;--acc:#b8923f;--acc2:#23594e;--red:#c0392b}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.6 "Hiragino Sans","Yu Gothic","Noto Sans JP",sans-serif}
+header{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:8px;padding:10px 12px;background:#23352c;color:#f1e8d6}
+header h1{flex:1;margin:0;font-size:15px}
+header button{min-height:36px;padding:0 12px;border-radius:10px;border:1px solid #b8923f;background:transparent;color:#f1e8d6;font-weight:700}
+.wrap{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;padding:12px 12px 90px;max-width:1200px;margin:0 auto}
+@media(min-width:900px){.wrap{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.pv{position:sticky;top:64px;align-self:start}#btnToPv{display:none}}
+.pv{scroll-margin-top:64px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px;margin-bottom:12px}
+.card h2{margin:0 0 8px;font-size:14px}
+.kind{display:flex;gap:8px}
+.kind button{flex:1;min-height:44px;border-radius:12px;border:1px solid var(--line);background:#fff;font-weight:700;color:var(--ink)}
+.kind button[aria-pressed="true"]{background:var(--acc2);border-color:var(--acc2);color:#fff}
+label.f{display:block;margin:6px 0}
+label.f span{display:block;font-size:12px;color:var(--mute);margin-bottom:2px}
+input,textarea,select{width:100%;min-height:38px;padding:7px 9px;border:1px solid var(--line);border-radius:9px;background:#fff;color:var(--ink);font:inherit}
+textarea{min-height:84px;resize:vertical}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.item{border:1px solid var(--line);border-radius:12px;padding:8px 10px;margin:8px 0;background:#fffaf0}
+.item .ih{display:flex;align-items:center;gap:6px;margin-bottom:2px;font-size:12px;color:var(--mute)}
+.item .ih b{flex:1;color:var(--ink)}
+.item .ih button{min-width:34px;min-height:32px;border-radius:8px;border:1px solid var(--line);background:#fff;color:var(--ink)}
+.item .ih button.del{color:var(--red)}
+.add{width:100%;min-height:42px;border-radius:12px;border:1px dashed var(--acc);background:#fff;color:#7a5c1e;font-weight:700}
+.chk{display:flex;align-items:center;gap:6px;font-size:13px}
+.chk input{width:auto;min-height:0}
+.note{font-size:12px;color:var(--mute);margin:4px 0 0}
+.pv .bar{display:flex;gap:8px;align-items:center;margin-bottom:8px}
+.pv .bar b{flex:1}
+.pv .bar button{min-height:34px;padding:0 12px;border-radius:10px;border:1px solid var(--line);background:#fff;font-weight:700;color:var(--ink)}
+#pvBox{height:min(70vh,640px);border:1px solid var(--line);border-radius:14px;overflow:hidden;background:#14110f}
+#pvBox iframe{width:100%;height:100%;border:0;display:block}
+footer{position:fixed;left:0;right:0;bottom:0;z-index:6;display:flex;gap:8px;padding:10px 12px calc(10px + env(safe-area-inset-bottom));background:#23352cf2}
+footer button{flex:1;min-height:46px;border-radius:12px;border:1px solid #ffffff44;background:#2a241f;color:#f1e8d6;font-weight:700}
+footer button.main{background:var(--acc);border-color:var(--acc);color:#1b140c}
+details summary{cursor:pointer;color:var(--mute);font-size:13px}
+</style>
+</head>
+<body>
+<header><h1>報道メーカー</h1><button type="button" id="btnToPv">見え方へ</button><button type="button" id="btnBack">もどる</button></header>
+<div class="wrap">
+  <div>
+    <div class="card">
+      <h2>画面の種類</h2>
+      <div class="kind"><button type="button" data-kind="炎上" aria-pressed="true">トレンド（SNS）</button><button type="button" data-kind="ニュース" aria-pressed="false">ニュース記事</button></div>
+      <p class="note" id="kindNote"></p>
+    </div>
+    <div id="form"></div>
+  </div>
+  <div class="pv">
+    <div class="card">
+      <div class="bar"><b>見え方（読む画面と同じ表示）</b><button type="button" id="btnReplay">▶ もう一度</button></div>
+      <div id="pvBox"></div>
+      <p class="note">入力を止めると、少しして見え方が新しくなります。</p>
+    </div>
+  </div>
+</div>
+<footer><button type="button" id="btnSave">この作品に保存</button><button type="button" id="btnInsert" class="main">本文に入れる</button></footer>
+<script>
+(function () {
+'use strict';
+const post = m => { try { parent.postMessage(m, '*'); } catch (e) {} };
+const $ = s => document.querySelector(s);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const PHOTOS = [['', '（写真なし）'], ['md_stage', 'ステージ'], ['md_studio', 'スタジオ'], ['md_airport', '空港'], ['md_entrance', '雨の入口'], ['md_car', '車'], ['md_mansion', '豪邸'], ['md_street', '夜の路地']];
+const TYPES = [['', 'ふつう'], ['ファン', 'ファン 💙'], ['アンチ', 'アンチ ⚡'], ['ニュース', 'ニュース 📰'], ['海外', '海外 🌏']];
+
+// ---------- 中身（両方の画面の分を持つ。切り替えても消えない） ----------
+const S = {
+  kind: '炎上', extra: {}, extraRows: { 炎上: [], ニュース: [] },
+  trend: { タグ: '#ユ・スルホ', 件数: '125K', 開始: '8', 順位: '1',
+    trends: [{ tag: '#君と私の空間', count: '48.2K posts' }, { tag: '#制作発表会', count: '21.0K posts' }],
+    posts: [
+      { id: '@star_news', name: '', text: 'ユ・スルホ俳優「どうすれば悪口をあまり言われないか悩んだ」ネポベイビー論争に初めて心境を明かす……。', like: '32.1K', rp: '15.8K', type: 'ニュース', tr: '', del: false },
+      { id: '@drama_fan', name: '', text: '制作発表会の映像見た？', like: '8,204', rp: '1,120', type: '', tr: '', del: false }] },
+  news: { 媒体: 'STAR NEWS', 分類: 'ENTERTAINMENT', 印: '速報', 見出し: '見出しを入れます', 副題: '', 日時: '2026.11.09 18:00', 記者: '芸能担当記者', 閲覧: '342,118',
+    photo: { name: 'md_stage', cap: '制作発表会の会場' }, body: '本文を1行ずつ入れます。',
+    related: ['関連記事の見出し'], comments: [{ name: 'bluehour', text: 'コメントの本文', agree: '1,204', disagree: '88' }], fixes: [] }
+};
+
+// ---------- 印 → 中身 ----------
+function parseAttrs(s) { const a = {}; s.trim().split(/[ \t]+/).filter(Boolean).forEach(t => { const i = t.indexOf('='); if (i > 0) a[t.slice(0, i)] = t.slice(i + 1); }); return a; }
+function rowsOf(lines) {   // fx.js の mdL と同じ読み方
+  return lines.filter(l => l.trim()).map(l => { let i = l.indexOf('：'); if (i > 8 || l.slice(0, i).includes('｜')) i = -1; const ps = l.slice(i + 1).split('｜').map(x => x.trim()), o = {}, v = []; ps.forEach(p => { const j = p.indexOf('='); if (j > 0 && j < 6) o[p.slice(0, j)] = p.slice(j + 1); else v.push(p); }); return { k: i < 0 ? '' : l.slice(0, i).trim(), v, o, raw: l }; });
+}
+const unA = s => String(s || '').replace(/／/g, '\n');
+function load(src) {
+  const m = String(src || '').trim().match(/^［報道([^］]*)］\n?([\s\S]*?)\n?［／報道］\s*$/);
+  if (!m) return;
+  const a = parseAttrs(m[1]), kind = a.形 === 'ニュース' ? 'ニュース' : '炎上', R = rowsOf(m[2].split('\n'));
+  S.kind = kind; S.extra = {};
+  const known = kind === '炎上' ? ['形', 'タグ', '件数', '開始', '順位'] : ['形', '媒体', '分類', '印', '見出し', '副題', '日時', '記者', '閲覧'];
+  for (const k in a) if (!known.includes(k)) S.extra[k] = a[k];
+  S.extraRows[kind] = [];
+  if (kind === '炎上') {
+    const t = S.trend; t.タグ = a.タグ || ''; t.件数 = a.件数 || ''; t.開始 = a.開始 || ''; t.順位 = a.順位 || ''; t.trends = []; t.posts = [];
+    for (const r of R) {
+      if (r.k === 'トレンド') t.trends.push({ tag: r.v[0] || '', count: r.v[1] || '' });
+      else if (r.k === '削除済み') t.posts.push({ id: '', name: '', text: unA(r.v.join('｜')), like: '', rp: '', type: '', tr: '', del: true });
+      else if (!r.k && r.v.length >= 2) t.posts.push({ id: r.v[0], name: r.o.名前 || '', text: unA(r.v[1]), like: r.o.いいね || '', rp: r.o.RP || '', type: r.o.種類 || '', tr: r.o.訳 || '', del: false, quote: r.o.引用 || '' });
+      else S.extraRows.炎上.push(r.raw);
+    }
+  } else {
+    const n = S.news; ['媒体', '分類', '印', '見出し', '副題', '日時', '記者', '閲覧'].forEach(k => n[k] = unA(a[k] || ''));
+    n.photo = { name: '', cap: '' }; n.related = []; n.comments = []; n.fixes = []; const body = [];
+    for (const r of R) {
+      if (r.k === '写真' && !n.photo.name) n.photo = { name: r.v[0] || '', cap: r.v[1] || '' };
+      else if (r.k === '関連') n.related.push(r.v.join('｜'));
+      else if (r.k === 'コメント') n.comments.push({ name: r.v[0] || '', text: unA(r.v[1] || ''), agree: r.o.共感 || '', disagree: r.o.反対 || '' });
+      else if (r.k === '修正') n.fixes.push({ date: r.v[0] || '', text: r.v[1] || '' });
+      else if (!r.k) body.push(r.raw);
+      else S.extraRows.ニュース.push(r.raw);
+    }
+    n.body = body.join('\n');
+  }
+}
+
+// ---------- 中身 → 印 ----------
+const A = s => String(s || '').trim().replace(/\r?\n/g, '／').replace(/[ \t]+/g, '　').replace(/］/g, ']').replace(/［/g, '[');
+const V = s => String(s || '').trim().replace(/\r?\n/g, '／').replace(/｜/g, '|').replace(/［/g, '[').replace(/］/g, ']');
+const bodyLine = s => { s = V(s); const i = s.indexOf('：'); return i >= 0 && i <= 8 ? s.slice(0, i) + ':' + s.slice(i + 1) : s; };   // 先頭近くの「：」は、項目の印と見まちがえるので、半角にする
+const optVal = s => String(s || '').trim().replace(/[｜\s]/g, '');
+function attrs(list) { return list.filter(([, v]) => String(v || '').trim()).map(([k, v]) => k + '=' + A(v)).join(' '); }
+function build() {
+  const ex = Object.entries(S.extra), rows = [];
+  let head;
+  if (S.kind === '炎上') {
+    const t = S.trend;
+    head = attrs([['形', '炎上'], ['タグ', t.タグ], ['件数', t.件数], ['開始', t.開始], ['順位', t.順位], ...ex]);
+    t.trends.filter(x => x.tag.trim()).forEach(x => rows.push('トレンド：' + V(x.tag) + (x.count.trim() ? '｜' + V(x.count) : '')));
+    t.posts.forEach(p => {
+      if (!p.text.trim()) return;
+      if (p.del) { rows.push('削除済み：' + V(p.text)); return; }
+      let id = optVal(p.id) || 'user'; if (!id.startsWith('@')) id = '@' + id;
+      let l = id + '｜' + V(p.text);
+      if (p.name.trim()) l += '｜名前=' + optVal(p.name);
+      l += '｜いいね=' + (optVal(p.like) || '0') + '｜RP=' + (optVal(p.rp) || '0');
+      if (p.type) l += '｜種類=' + p.type;
+      if (p.tr && p.tr.trim()) l += '｜訳=' + V(p.tr);
+      if (p.quote && p.quote.trim()) l += '｜引用=' + V(p.quote);
+      rows.push(l);
+    });
+  } else {
+    const n = S.news;
+    head = attrs([['形', 'ニュース'], ['媒体', n.媒体], ['分類', n.分類], ['印', n.印], ['見出し', n.見出し], ['副題', n.副題], ['日時', n.日時], ['記者', n.記者], ['閲覧', n.閲覧], ...ex]);
+    if (n.photo.name) rows.push('写真：' + n.photo.name + (n.photo.cap.trim() ? '｜' + V(n.photo.cap) : ''));
+    n.body.split(/\r?\n/).filter(l => l.trim()).forEach(l => rows.push(bodyLine(l)));
+    n.fixes.filter(x => x.text.trim()).forEach(x => rows.push('修正：' + V(x.date) + '｜' + V(x.text)));
+    n.related.filter(x => x.trim()).forEach(x => rows.push('関連：' + V(x)));
+    n.comments.filter(c => c.text.trim()).forEach(c => rows.push('コメント：' + (optVal(c.name) || '名無し') + '｜' + V(c.text) + '｜共感=' + (optVal(c.agree) || '0') + '｜反対=' + (optVal(c.disagree) || '0')));
+  }
+  rows.push(...S.extraRows[S.kind]);
+  return '［報道 ' + head + '］\n' + rows.join('\n') + '\n［／報道］';
+}
+
+// ---------- 入力欄 ----------
+const fld = (label, path, val, opt = {}) => opt.area ? `<label class="f"><span>${label}</span><textarea data-p="${path}" placeholder="${esc(opt.ph || '')}">${esc(val)}</textarea></label>` : opt.sel ? `<label class="f"><span>${label}</span><select data-p="${path}">${opt.sel.map(([v, t]) => `<option value="${esc(v)}"${v === val ? ' selected' : ''}>${esc(t)}</option>`).join('')}</select></label>` : `<label class="f"><span>${label}</span><input data-p="${path}" value="${esc(val)}" placeholder="${esc(opt.ph || '')}"${opt.num ? ' inputmode="decimal"' : ''}></label>`;
+const itemHead = (title, list, i, n) => `<div class="ih"><b>${title}</b><button type="button" data-mv="${list}" data-i="${i}" data-d="-1"${i === 0 ? ' disabled' : ''} aria-label="上へ">↑</button><button type="button" data-mv="${list}" data-i="${i}" data-d="1"${i === n - 1 ? ' disabled' : ''} aria-label="下へ">↓</button><button type="button" class="del" data-rm="${list}" data-i="${i}" aria-label="消す">×</button></div>`;
+function render() {
+  document.querySelectorAll('.kind button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.kind === S.kind)));
+  $('#kindNote').textContent = S.kind === '炎上' ? 'トレンドの順位と、SNSの投稿が並ぶ画面です。順位の数字が上がっていき、件数が増えていきます。' : '芸能ニュースの記事の画面です。見出し・写真・本文・関連記事・コメントが並びます。';
+  let h = '';
+  if (S.kind === '炎上') {
+    const t = S.trend;
+    h += `<div class="card"><h2>トレンド</h2>${fld('タグ（いちばん上に大きく出る）', 'trend.タグ', t.タグ, { ph: '#ユ・スルホ' })}<div class="row3">${fld('件数', 'trend.件数', t.件数, { ph: '125K' })}${fld('はじめの順位', 'trend.開始', t.開始, { ph: '8', num: 1 })}${fld('最後の順位', 'trend.順位', t.順位, { ph: '1', num: 1 })}</div><p class="note">順位は「はじめ」から「最後」へ、数字が動きます。同じにすると動きません。</p>`;
+    h += t.trends.map((x, i) => `<div class="item">${itemHead('ほかのトレンド ' + (i + 2) + '位', 'trends', i, t.trends.length)}<div class="row2">${fld('タグ', 'trends.' + i + '.tag', x.tag)}${fld('件数', 'trends.' + i + '.count', x.count, { ph: '48.2K posts' })}</div></div>`).join('');
+    h += `<button type="button" class="add" data-add="trends">＋ ほかのトレンドを足す</button></div>`;
+    h += `<div class="card"><h2>投稿</h2>` + t.posts.map((p, i) => `<div class="item">${itemHead('投稿 ' + (i + 1), 'posts', i, t.posts.length)}<label class="chk"><input type="checkbox" data-p="posts.${i}.del"${p.del ? ' checked' : ''}> 削除された投稿にする</label>${p.del ? fld('消された投稿の文（スクショで出回っている文）', 'posts.' + i + '.text', p.text, { area: 1 }) : `<div class="row2">${fld('ID', 'posts.' + i + '.id', p.id, { ph: '@star_news' })}${fld('表示名（なければIDのまま）', 'posts.' + i + '.name', p.name)}</div>${fld('本文', 'posts.' + i + '.text', p.text, { area: 1 })}<div class="row3">${fld('いいね', 'posts.' + i + '.like', p.like, { ph: '32.1K' })}${fld('RP', 'posts.' + i + '.rp', p.rp, { ph: '15.8K' })}${fld('種類', 'posts.' + i + '.type', p.type, { sel: TYPES })}</div>${p.type === '海外' || p.tr ? fld('翻訳（「翻訳」を押すと出る）', 'posts.' + i + '.tr', p.tr) : ''}`}</div>`).join('') + `<button type="button" class="add" data-add="posts">＋ 投稿を足す</button></div>`;
+  } else {
+    const n = S.news;
+    h += `<div class="card"><h2>記事</h2>${fld('見出し', 'news.見出し', n.見出し, { area: 1 })}${fld('副題（なくてもよい）', 'news.副題', n.副題)}<div class="row2">${fld('媒体', 'news.媒体', n.媒体, { ph: 'STAR NEWS' })}${fld('印（速報・独占など）', 'news.印', n.印)}</div><div class="row2">${fld('日時', 'news.日時', n.日時)}${fld('閲覧数', 'news.閲覧', n.閲覧, { ph: '342,118' })}</div><details><summary>そのほか（分類・記者）</summary><div class="row2">${fld('分類', 'news.分類', n.分類, { ph: 'ENTERTAINMENT' })}${fld('記者', 'news.記者', n.記者)}</div></details></div>`;
+    h += `<div class="card"><h2>写真と本文</h2><div class="row2">${fld('写真', 'news.photo.name', n.photo.name, { sel: PHOTOS })}${fld('写真の説明', 'news.photo.cap', n.photo.cap)}</div>${fld('本文（1行ずつ。改行で段落が分かれます）', 'news.body', n.body, { area: 1 })}</div>`;
+    h += `<div class="card"><h2>関連記事</h2>` + n.related.map((x, i) => `<div class="item">${itemHead('関連 ' + (i + 1), 'related', i, n.related.length)}${fld('見出し', 'related.' + i, x)}</div>`).join('') + `<button type="button" class="add" data-add="related">＋ 関連記事を足す</button></div>`;
+    h += `<div class="card"><h2>コメント</h2>` + n.comments.map((c, i) => `<div class="item">${itemHead('コメント ' + (i + 1), 'comments', i, n.comments.length)}${fld('名前', 'comments.' + i + '.name', c.name)}${fld('本文', 'comments.' + i + '.text', c.text, { area: 1 })}<div class="row2">${fld('共感', 'comments.' + i + '.agree', c.agree)}${fld('反対', 'comments.' + i + '.disagree', c.disagree)}</div></div>`).join('') + `<button type="button" class="add" data-add="comments">＋ コメントを足す</button></div>`;
+    h += `<div class="card"><h2>記事の修正のお知らせ（なくてもよい）</h2>` + n.fixes.map((x, i) => `<div class="item">${itemHead('修正 ' + (i + 1), 'fixes', i, n.fixes.length)}<div class="row2">${fld('日時', 'fixes.' + i + '.date', x.date)}${fld('内容', 'fixes.' + i + '.text', x.text)}</div></div>`).join('') + `<button type="button" class="add" data-add="fixes">＋ 修正のお知らせを足す</button></div>`;
+  }
+  $('#form').innerHTML = h;
+}
+const listOf = name => ({ trends: S.trend.trends, posts: S.trend.posts, related: S.news.related, comments: S.news.comments, fixes: S.news.fixes }[name]);
+const blank = { trends: () => ({ tag: '', count: '' }), posts: () => ({ id: '', name: '', text: '', like: '', rp: '', type: '', tr: '', del: false }), related: () => '', comments: () => ({ name: '', text: '', agree: '', disagree: '' }), fixes: () => ({ date: '', text: '' }) };
+function setPath(path, val) {
+  const ps = path.split('.');
+  if (ps[0] === 'trend') { S.trend[ps[1]] = val; return; }
+  if (ps[0] === 'news') { if (ps[1] === 'photo') S.news.photo[ps[2]] = val; else S.news[ps[1]] = val; return; }
+  const list = listOf(ps[0]); if (!list) return;
+  if (ps.length === 2) list[+ps[1]] = val; else list[+ps[1]][ps[2]] = val;
+}
+document.addEventListener('input', e => { const p = e.target.dataset && e.target.dataset.p; if (!p) return; setPath(p, e.target.type === 'checkbox' ? e.target.checked : e.target.value); if (e.target.type === 'checkbox' || e.target.tagName === 'SELECT') render(); soon(); });
+document.addEventListener('change', e => { if (e.target.tagName === 'SELECT' && e.target.dataset.p) { setPath(e.target.dataset.p, e.target.value); render(); soon(); } });
+document.addEventListener('click', e => {
+  const k = e.target.closest('[data-kind]'); if (k) { S.kind = k.dataset.kind; render(); soon(0); return; }
+  const add = e.target.closest('[data-add]'); if (add) { listOf(add.dataset.add).push(blank[add.dataset.add]()); render(); soon(); const f = [...document.querySelectorAll('.item')].pop(); f?.querySelector('input,textarea')?.focus(); return; }
+  const rm = e.target.closest('[data-rm]'); if (rm) { const l = listOf(rm.dataset.rm); l.splice(+rm.dataset.i, 1); render(); soon(); return; }
+  const mv = e.target.closest('[data-mv]'); if (mv) { const l = listOf(mv.dataset.mv), i = +mv.dataset.i, j = i + +mv.dataset.d; if (j < 0 || j >= l.length) return; [l[i], l[j]] = [l[j], l[i]]; render(); soon(); }
+});
+
+// ---------- 見え方（maker.html を中に開いて、本物の表示で見る） ----------
+let pvTimer = null, pvFrame = null, pvSrc = '';
+function soon(ms = 600) { clearTimeout(pvTimer); pvTimer = setTimeout(preview, ms); }
+function preview() {
+  pvSrc = build();
+  const box = $('#pvBox'); if (pvFrame) pvFrame.remove();
+  const f = document.createElement('iframe'); f.title = '見え方'; f.src = 'news-preview.html#pv' + Date.now(); pvFrame = f; box.append(f);
+}
+window.addEventListener('message', e => {
+  const d = e.data || {};
+  if (pvFrame && e.source === pvFrame.contentWindow) { if (d.type === 'fx-ready') pvFrame.contentWindow.postMessage({ type: 'fx-make', src: pvSrc, title: '' }, '*'); return; }
+  if (e.source !== parent || d.type !== 'fx-make' || loaded) return;
+  loaded = true; try { load(d.src); } catch (x) {} render(); preview();
+});
+let loaded = false;
+$('#btnReplay').onclick = () => preview();
+$('#btnToPv').onclick = () => { $('.pv').scrollIntoView({ behavior: 'smooth' }); preview(); };
+$('#btnBack').onclick = () => post({ type: 'fx-close' });
+$('#btnInsert').onclick = () => post({ type: 'fx-insert', src: build() });
+$('#btnSave').onclick = () => post({ type: 'fx-save', src: build() });
+window.NewsMaker = { build, load: src => { load(src); render(); }, state: S };
+if (parent !== window) post({ type: 'fx-ready' }); else { render(); preview(); }
+})();
+</script>
+</body>
+</html>
