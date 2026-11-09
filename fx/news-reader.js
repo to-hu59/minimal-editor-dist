@@ -41,7 +41,7 @@ function news(a, R, base) {
   return `<div class="nr nr-news"><div class="nr-nh"><b>${esc(a.媒体 || 'STAR NEWS')}</b><small>${esc(a.分類 || 'ENTERTAINMENT')}</small></div>
   <div class="nr-art">${a.印 ? `<span class="nr-flag nr-in">${esc(a.印)}</span>` : ''}<h3 class="nr-in">${tx(a.見出し || '')}</h3>${a.副題 ? `<h5 class="nr-in">${tx(a.副題)}</h5>` : ''}
   <div class="nr-by nr-in">${a.日時 ? `<span>${esc(a.日時)}</span>` : ''}<span>${esc(a.記者 || '芸能担当記者')}</span>${a.閲覧 ? `<span>閲覧 ${cnt(a.閲覧)}</span>` : ''}</div>
-  ${ph.map(r => { const u = img(r.v[0]); return `<figure class="nr-in">${u ? `<img src="${esc(u)}" alt="" loading="lazy">` : '<div class="nr-noimg">（写真）</div>'}${r.v[1] ? `<figcaption>${tx(r.v[1])}</figcaption>` : ''}</figure>`; }).join('')}
+  ${ph.length ? `<div class="nr-phs n${Math.min(3, ph.length)}">${ph.slice(0, 3).map((r, i, all) => { const u = img(r.v[0]), cap = r.v.slice(1).join('｜'), more = i === all.length - 1 ? parseInt(String(a.写真ほか || '').replace(/[^0-9]/g, ''), 10) || 0 : 0; return `<figure class="nr-in">${more ? `<span class="nr-more">＋${more}枚</span>` : ''}${u ? `<img src="${esc(u)}" alt="" loading="lazy">` : '<div class="nr-noimg"><span class="nr-cam">📷</span><span>写真</span></div>'}${cap ? `<figcaption>${tx(cap)}</figcaption>` : ''}</figure>`; }).join('')}</div>` : ''}
   ${body.map(r => `<p class="nr-in">${tx(r.v.join('｜'))}</p>`).join('')}
   ${fix.map(r => `<div class="nr-fix nr-in">修正 ${esc(r.v[0] || '')}　${tx(r.v[1] || '')}</div>`).join('')}</div>
   ${rel.length ? `<div class="nr-rel"><div class="nr-sh">関連記事</div>${rel.map(r => `<div class="nr-in">▸ ${tx(r.v.join('｜'))}</div>`).join('')}</div>` : ''}

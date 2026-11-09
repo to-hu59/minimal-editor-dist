@@ -1928,6 +1928,7 @@
                     <div class="pt-3 border-t border-woodBorder">
                         <span class="font-bold text-softMuted block mb-1">更新履歴</span>
                         <div id="changelog" class="text-[11px] text-softMuted leading-relaxed">
+<div class="mb-1.5"><b class="text-softText">Version 12.20（2026-11-10）</b><br>ニュース記事の写真を、なし・1〜3枚にできるようにしました。1枚ずつ「写真の枠（ここに写真が入る）」か、自分の画像を選べます。「ほかの写真の数」に数を入れると、最後の写真に「＋○枚」と出ます（その写真は入れなくてかまいません）。</div>
 <div class="mb-1.5"><b class="text-softText">Version 12.19（2026-11-10）</b><br>ニュース記事の写真を、自分の画像に変えられるようにしました。報道メーカーの「写真」で「自分の画像を選ぶ…」を選びます。画像は小さくしてから本文に入るので、同期やバックアップにもそのまま入ります。編集画面でも、報道がカードの見た目のまま出るようになりました。カードの下の「この報道を直す」で、報道メーカーが開きます。</div>
 <div class="mb-1.5"><b class="text-softText">Version 12.18（2026-11-09）</b><br>報道（トレンド・ニュース記事）が、LINEや掲示板と同じように、読む画面の本文の中に、絵のまま出るようになりました。🎬を開かなくても読めて、暗い背景や人影も出ません。見えると、上から順にポンポン出て、順位や数字が動きます。報道メーカーに「動画コメント」を足しました。返信のツリーや、0:47 のような時刻の青い字が出ます。本文のコメント欄（「――」と「└」の行）を貼り付けると、そのまま作れます。</div>
 <div class="mb-1.5"><b class="text-softText">Version 12.17（2026-11-09）</b><br>報道メーカーの「見え方」に、ホラー演出用の暗い背景や人影が出ていたのを消しました。読む画面と同じ、明るい紙の色で見られます。</div>
@@ -9529,8 +9530,8 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         // 話の終わり・戻る・本の終わりで、読み終えた話から言葉を拾い、件数を小さく知らせる。読書は止めない
         // ===== 更新の確認：新しい版があれば、魚に青い点とメニュー（版の番号は version.json。公開のたびに、番号が変わる。番号が入っていない開発中は、確かめない） =====
         // 表示用の版。更新の検出は引き続き APP_BUILD の日時番号を使う。
-        const APP_VERSION = '12.19';
-        const APP_BUILD = '20261110065255';
+        const APP_VERSION = '12.20';
+        const APP_BUILD = '20261110070206';
         let updateCheckAt = 0;
         function paintBuild() {
             const el = document.getElementById('app-build-info'); if (!el) return;

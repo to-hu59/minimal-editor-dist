@@ -77,7 +77,8 @@ details summary{cursor:pointer;color:var(--mute);font-size:13px}
 const post = m => { try { parent.postMessage(m, '*'); } catch (e) {} };
 const $ = s => document.querySelector(s);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-const PHOTOS = [['', '（写真なし）'], ['md_stage', 'ステージ'], ['md_studio', 'スタジオ'], ['md_airport', '空港'], ['md_entrance', '雨の入口'], ['md_car', '車'], ['md_mansion', '豪邸'], ['md_street', '夜の路地']];
+const PHOTOS = [['枠', '写真の枠（ここに写真が入る）'], ['__own', '自分の画像を選ぶ…'], ['md_stage', '見本：ステージ'], ['md_studio', '見本：スタジオ'], ['md_airport', '見本：空港'], ['md_entrance', '見本：雨の入口'], ['md_car', '見本：車'], ['md_mansion', '見本：豪邸'], ['md_street', '見本：夜の路地']];
+const isOwn = n => /^(data:image\/|https?:\/\/)/.test(n || '');
 const TYPES = [['', 'ふつう'], ['ファン', 'ファン 💙'], ['アンチ', 'アンチ ⚡'], ['ニュース', 'ニュース 📰'], ['海外', '海外 🌏']];
 
 // ---------- 中身（両方の画面の分を持つ。切り替えても消えない） ----------
@@ -89,7 +90,7 @@ const S = {
       { id: '@star_news', name: '', text: 'ユ・スルホ俳優「どうすれば悪口をあまり言われないか悩んだ」ネポベイビー論争に初めて心境を明かす……。', like: '32.1K', rp: '15.8K', type: 'ニュース', tr: '', del: false },
       { id: '@drama_fan', name: '', text: '制作発表会の映像見た？', like: '8,204', rp: '1,120', type: '', tr: '', del: false }] },
   news: { 媒体: 'STAR NEWS', 分類: 'ENTERTAINMENT', 印: '速報', 見出し: '見出しを入れます', 副題: '', 日時: '2026.11.09 18:00', 記者: '芸能担当記者', 閲覧: '342,118',
-    photo: { name: 'md_stage', cap: '制作発表会の会場' }, body: '本文を1行ずつ入れます。',
+    photos: [{ name: '枠', cap: '制作発表会の会場' }], body: '本文を1行ずつ入れます。',
     related: ['関連記事の見出し'], comments: [{ name: 'bluehour', text: 'コメントの本文', agree: '1,204', disagree: '88' }], fixes: [] },
   video: { 題: '急上昇動画 #1 クリップコメント欄', 件数: '1,842', 見た目: '',
     vc: [{ id: '@user-x9k', text: '記者の質問レベルが低い；下品だ', like: '', replies: [{ id: '@fan_less', text: 'マジでファンじゃないけど、映像を見ている間ずっと顔をしかめてた' }] },
@@ -108,7 +109,7 @@ function load(src) {
   if (!m) return;
   const a = parseAttrs(m[1]), kind = a.形 === 'ニュース' ? 'ニュース' : a.形 === '動画' ? '動画' : '炎上', R = rowsOf(m[2].split('\n'));
   S.kind = kind; S.extra = {};
-  const known = kind === '炎上' ? ['形', 'タグ', '件数', '開始', '順位'] : kind === '動画' ? ['形', '題', '件数', '見た目'] : ['形', '媒体', '分類', '印', '見出し', '副題', '日時', '記者', '閲覧'];
+  const known = kind === '炎上' ? ['形', 'タグ', '件数', '開始', '順位'] : kind === '動画' ? ['形', '題', '件数', '見た目'] : ['形', '媒体', '分類', '印', '見出し', '副題', '日時', '記者', '閲覧', '写真ほか'];
   for (const k in a) if (!known.includes(k)) S.extra[k] = a[k];
   S.extraRows[kind] = [];
   if (kind === '動画') {
@@ -128,10 +129,10 @@ function load(src) {
       else S.extraRows.炎上.push(r.raw);
     }
   } else {
-    const n = S.news; ['媒体', '分類', '印', '見出し', '副題', '日時', '記者', '閲覧'].forEach(k => n[k] = unA(a[k] || ''));
-    n.photo = { name: '', cap: '' }; n.related = []; n.comments = []; n.fixes = []; const body = [];
+    const n = S.news; ['媒体', '分類', '印', '見出し', '副題', '日時', '記者', '閲覧', '写真ほか'].forEach(k => n[k] = unA(a[k] || ''));
+    n.photos = []; n.related = []; n.comments = []; n.fixes = []; const body = [];
     for (const r of R) {
-      if (r.k === '写真' && !n.photo.name) n.photo = { name: r.v[0] || '', cap: r.v[1] || '' };
+      if (r.k === '写真') n.photos.push({ name: r.v[0] || '枠', cap: r.v.slice(1).join('｜') });
       else if (r.k === '関連') n.related.push(r.v.join('｜'));
       else if (r.k === 'コメント') n.comments.push({ name: r.v[0] || '', text: unA(r.v[1] || ''), agree: r.o.共感 || '', disagree: r.o.反対 || '' });
       else if (r.k === '修正') n.fixes.push({ date: r.v[0] || '', text: r.v[1] || '' });
@@ -178,8 +179,8 @@ function build() {
     });
   } else {
     const n = S.news;
-    head = attrs([['形', 'ニュース'], ['媒体', n.媒体], ['分類', n.分類], ['印', n.印], ['見出し', n.見出し], ['副題', n.副題], ['日時', n.日時], ['記者', n.記者], ['閲覧', n.閲覧], ...ex]);
-    if (n.photo.name) rows.push('写真：' + n.photo.name + (n.photo.cap.trim() ? '｜' + V(n.photo.cap) : ''));
+    head = attrs([['形', 'ニュース'], ['媒体', n.媒体], ['分類', n.分類], ['印', n.印], ['見出し', n.見出し], ['副題', n.副題], ['日時', n.日時], ['記者', n.記者], ['閲覧', n.閲覧], ['写真ほか', String(n.写真ほか || '').replace(/[^0-9]/g, '')], ...ex]);
+    n.photos.slice(0, 3).forEach(p => rows.push('写真：' + (p.name || '枠') + (p.cap.trim() ? '｜' + V(p.cap) : '')));
     n.body.split(/\r?\n/).filter(l => l.trim()).forEach(l => rows.push(bodyLine(l)));
     n.fixes.filter(x => x.text.trim()).forEach(x => rows.push('修正：' + V(x.date) + '｜' + V(x.text)));
     n.related.filter(x => x.trim()).forEach(x => rows.push('関連：' + V(x)));
@@ -210,17 +211,17 @@ function render() {
   } else {
     const n = S.news;
     h += `<div class="card"><h2>記事</h2>${fld('見出し', 'news.見出し', n.見出し, { area: 1 })}${fld('副題（なくてもよい）', 'news.副題', n.副題)}<div class="row2">${fld('媒体', 'news.媒体', n.媒体, { ph: 'STAR NEWS' })}${fld('印（速報・独占など）', 'news.印', n.印)}</div><div class="row2">${fld('日時', 'news.日時', n.日時)}${fld('閲覧数', 'news.閲覧', n.閲覧, { ph: '342,118' })}</div><details><summary>そのほか（分類・記者）</summary><div class="row2">${fld('分類', 'news.分類', n.分類, { ph: 'ENTERTAINMENT' })}${fld('記者', 'news.記者', n.記者)}</div></details></div>`;
-    const own = /^(data:image\/|https?:\/\/)/.test(n.photo.name);
-    h += `<div class="card"><h2>写真と本文</h2><div class="row2">${fld('写真', 'news.photo.name', own ? '__own' : n.photo.name, { sel: PHOTOS.concat([['__own', own ? '自分の画像（選んだもの）' : '自分の画像を選ぶ…']]) })}${fld('写真の説明', 'news.photo.cap', n.photo.cap)}</div>${own ? `<div class="ownph"><img src="${esc(n.photo.name)}" alt=""><button type="button" class="add" id="btnPhotoPick">別の画像にする</button></div>` : ''}<p class="note">自分の画像は、小さくしてから本文に入れます（横 720px まで）。</p>${fld('本文（1行ずつ。改行で段落が分かれます）', 'news.body', n.body, { area: 1 })}</div>`;
+    h += `<div class="card"><h2>写真（なし・1〜3枚）</h2><p class="note">「写真の枠」は、本当はここに写真がある、という見た目になります。自分の画像を入れることもできます（小さくしてから本文に入れます。横 720px まで）。</p>` + n.photos.map((p, i) => `<div class="item">${itemHead('写真 ' + (i + 1), 'photos', i, n.photos.length)}<div class="row2">${fld('写真', 'photos.' + i + '.name', isOwn(p.name) ? '__own' : p.name, { sel: isOwn(p.name) ? PHOTOS.map(([v, t]) => v === '__own' ? [v, '自分の画像（選んだもの）'] : [v, t]) : PHOTOS })}${fld('説明（なくてもよい）', 'photos.' + i + '.cap', p.cap)}</div>${isOwn(p.name) ? `<div class="ownph"><img src="${esc(p.name)}" alt=""><button type="button" class="add" data-pick="${i}">別の画像にする</button></div>` : ''}</div>`).join('') + (n.photos.length < 3 ? `<button type="button" class="add" data-add="photos">＋ 写真を足す（あと ${3 - n.photos.length} 枚）</button>` : '') + (n.photos.length ? fld('ほかの写真の数（数だけ。写真は入れなくてよい。最後の写真に「＋○枚」と出ます）', 'news.写真ほか', n.写真ほか || '', { ph: '例：3', num: 1 }) : '') + `</div>`;
+    h += `<div class="card"><h2>本文</h2>${fld('本文（1行ずつ。改行で段落が分かれます）', 'news.body', n.body, { area: 1 })}</div>`;
     h += `<div class="card"><h2>関連記事</h2>` + n.related.map((x, i) => `<div class="item">${itemHead('関連 ' + (i + 1), 'related', i, n.related.length)}${fld('見出し', 'related.' + i, x)}</div>`).join('') + `<button type="button" class="add" data-add="related">＋ 関連記事を足す</button></div>`;
     h += `<div class="card"><h2>コメント</h2>` + n.comments.map((c, i) => `<div class="item">${itemHead('コメント ' + (i + 1), 'comments', i, n.comments.length)}${fld('名前', 'comments.' + i + '.name', c.name)}${fld('本文', 'comments.' + i + '.text', c.text, { area: 1 })}<div class="row2">${fld('共感', 'comments.' + i + '.agree', c.agree)}${fld('反対', 'comments.' + i + '.disagree', c.disagree)}</div></div>`).join('') + `<button type="button" class="add" data-add="comments">＋ コメントを足す</button></div>`;
     h += `<div class="card"><h2>記事の修正のお知らせ（なくてもよい）</h2>` + n.fixes.map((x, i) => `<div class="item">${itemHead('修正 ' + (i + 1), 'fixes', i, n.fixes.length)}<div class="row2">${fld('日時', 'fixes.' + i + '.date', x.date)}${fld('内容', 'fixes.' + i + '.text', x.text)}</div></div>`).join('') + `<button type="button" class="add" data-add="fixes">＋ 修正のお知らせを足す</button></div>`;
   }
   $('#form').innerHTML = h;
 }
-const listOf = name => { if (name.startsWith('vr.')) return S.video.vc[+name.slice(3)]?.replies; return { trends: S.trend.trends, posts: S.trend.posts, related: S.news.related, comments: S.news.comments, fixes: S.news.fixes, vc: S.video.vc }[name]; };
+const listOf = name => { if (name.startsWith('vr.')) return S.video.vc[+name.slice(3)]?.replies; return { photos: S.news.photos, trends: S.trend.trends, posts: S.trend.posts, related: S.news.related, comments: S.news.comments, fixes: S.news.fixes, vc: S.video.vc }[name]; };
 const blankOf = name => name.startsWith('vr.') ? { id: '', text: '' } : blank[name]();
-const blank = { trends: () => ({ tag: '', count: '' }), posts: () => ({ id: '', name: '', text: '', like: '', rp: '', type: '', tr: '', del: false }), related: () => '', comments: () => ({ name: '', text: '', agree: '', disagree: '' }), fixes: () => ({ date: '', text: '' }), vc: () => ({ id: '', text: '', like: '', replies: [] }) };
+const blank = { photos: () => ({ name: '枠', cap: '' }), trends: () => ({ tag: '', count: '' }), posts: () => ({ id: '', name: '', text: '', like: '', rp: '', type: '', tr: '', del: false }), related: () => '', comments: () => ({ name: '', text: '', agree: '', disagree: '' }), fixes: () => ({ date: '', text: '' }), vc: () => ({ id: '', text: '', like: '', replies: [] }) };
 // 文章から作る：「――」「-」の行＝コメント、「└」の行＝すぐ上への返信。名前は自動
 function fromText(text) {
   const out = []; let n = 0; const name = () => '@user-' + (++n).toString(36) + Math.random().toString(36).slice(2, 5);
@@ -237,23 +238,24 @@ function setPath(path, val) {
   if (ps[0] === 'video') { S.video[ps[1]] = val; return; }
   if (ps[0] === 'vr') { S.video.vc[+ps[1]].replies[+ps[2]][ps[3]] = val; return; }
   if (ps[0] === 'trend') { S.trend[ps[1]] = val; return; }
-  if (ps[0] === 'news') { if (ps[1] === 'photo') S.news.photo[ps[2]] = val; else S.news[ps[1]] = val; return; }
+  if (ps[0] === 'news') { S.news[ps[1]] = val; return; }
   const list = listOf(ps[0]); if (!list) return;
   if (ps.length === 2) list[+ps[1]] = val; else list[+ps[1]][ps[2]] = val;
 }
-document.addEventListener('input', e => { const p = e.target.dataset && e.target.dataset.p; if (!p || (p === 'news.photo.name' && e.target.value === '__own')) return; setPath(p, e.target.type === 'checkbox' ? e.target.checked : e.target.value); if (e.target.type === 'checkbox' || e.target.tagName === 'SELECT') render(); soon(); });
+document.addEventListener('input', e => { const p = e.target.dataset && e.target.dataset.p; if (!p || (/^photos\.\d+\.name$/.test(p) && e.target.value === '__own')) return; setPath(p, e.target.type === 'checkbox' ? e.target.checked : e.target.value); if (e.target.type === 'checkbox' || e.target.tagName === 'SELECT') render(); soon(); });
 document.addEventListener('change', e => {
-  if (e.target.id === 'photoFile') { const file = e.target.files && e.target.files[0]; e.target.value = ''; if (file) shrinkPhoto(file).then(url => { S.news.photo.name = url; render(); soon(0); }).catch(() => alert('この画像は読み込めませんでした')); return; }
-  if (e.target.tagName === 'SELECT' && e.target.dataset.p === 'news.photo.name' && e.target.value === '__own') { $('#photoFile').click(); render(); return; }
+  if (e.target.id === 'photoFile') { const file = e.target.files && e.target.files[0], i = pickIndex; e.target.value = ''; if (file && S.news.photos[i]) shrinkPhoto(file).then(url => { S.news.photos[i].name = url; render(); soon(0); }).catch(() => alert('この画像は読み込めませんでした')); return; }
+  if (e.target.tagName === 'SELECT' && /^photos\.\d+\.name$/.test(e.target.dataset.p || '') && e.target.value === '__own') { pickIndex = +e.target.dataset.p.split('.')[1]; $('#photoFile').click(); render(); return; }
   if (e.target.tagName === 'SELECT' && e.target.dataset.p) { setPath(e.target.dataset.p, e.target.value); render(); soon(); }
 });
+let pickIndex = 0;
 // 画像を小さくする（横 720px まで、JPEG）。本文の印に入るので、大きいままにしない
 function shrinkPhoto(file) { return new Promise((ok, ng) => { const r = new FileReader(); r.onerror = ng; r.onload = () => { const im = new Image(); im.onerror = ng; im.onload = () => { const w = Math.min(720, im.naturalWidth), h = Math.round(im.naturalHeight * w / im.naturalWidth), c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, w, h); g.drawImage(im, 0, 0, w, h); ok(c.toDataURL('image/jpeg', 0.78)); }; im.src = r.result; }; r.readAsDataURL(file); }); }
 document.addEventListener('click', e => {
   const k = e.target.closest('[data-kind]'); if (k) { S.kind = k.dataset.kind; render(); soon(0); return; }
-  if (e.target.id === 'btnPhotoPick') { $('#photoFile').click(); return; }
+  const pk = e.target.closest('[data-pick]'); if (pk) { pickIndex = +pk.dataset.pick; $('#photoFile').click(); return; }
   if (e.target.id === 'btnPasteAdd' || e.target.id === 'btnPasteSet') { const list = fromText($('#pasteBox').value); if (!list.length) { alert('貼り付けた文がありません'); return; } if (e.target.id === 'btnPasteSet') { if (S.video.vc.length && !confirm('今のコメントを消して、貼り付けた文から作ります。よいですか？')) return; S.video.vc = list; } else S.video.vc.push(...list); render(); soon(0); return; }
-  const add = e.target.closest('[data-add]'); if (add) { const l = listOf(add.dataset.add); l.push(blankOf(add.dataset.add)); render(); soon(); const its = add.parentElement.querySelectorAll(':scope > .item'); its[its.length - 1]?.querySelector('input,textarea')?.focus(); return; }
+  const add = e.target.closest('[data-add]'); if (add) { const l = listOf(add.dataset.add); if (add.dataset.add === 'photos' && l.length >= 3) return; l.push(blankOf(add.dataset.add)); render(); soon(); const its = add.parentElement.querySelectorAll(':scope > .item'); its[its.length - 1]?.querySelector('input,textarea')?.focus(); return; }
   const rm = e.target.closest('[data-rm]'); if (rm) { const l = listOf(rm.dataset.rm); l.splice(+rm.dataset.i, 1); render(); soon(); return; }
   const mv = e.target.closest('[data-mv]'); if (mv) { const l = listOf(mv.dataset.mv), i = +mv.dataset.i, j = i + +mv.dataset.d; if (j < 0 || j >= l.length) return; [l[i], l[j]] = [l[j], l[i]]; render(); soon(); }
 });
