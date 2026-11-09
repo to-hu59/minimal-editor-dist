@@ -91,7 +91,7 @@ const S = {
       { id: '@drama_fan', name: '', text: '制作発表会の映像見た？', like: '8,204', rp: '1,120', type: '', tr: '', del: false }] },
   news: { 媒体: 'STAR NEWS', 分類: 'ENTERTAINMENT', 印: '速報', 見出し: '見出しを入れます', 副題: '', 日時: '2026.11.09 18:00', 記者: '芸能担当記者', 閲覧: '342,118',
     photos: [{ name: '枠', cap: '制作発表会の会場' }], body: '本文を1行ずつ入れます。',
-    related: ['関連記事の見出し'], comments: [{ name: 'bluehour', text: 'コメントの本文', agree: '1,204', disagree: '88' }], fixes: [] },
+    related: ['関連記事の見出し'], comments: [{ name: 'bluehour', time: '3分前', text: 'コメントの本文', agree: '1,204', nar: '88', hmm: '12', replies: [{ name: 'n7fan', time: '1分前', text: '返信の本文' }] }], fixes: [], 部分: '', 大きさ: '', コメント数: '' },
   video: { 題: '急上昇動画 #1 クリップコメント欄', 件数: '1,842', 見た目: '',
     vc: [{ id: '@user-x9k', text: '記者の質問レベルが低い；下品だ', like: '', replies: [{ id: '@fan_less', text: 'マジでファンじゃないけど、映像を見ている間ずっと顔をしかめてた' }] },
       { id: '@timestamp_watcher', text: '0:47 ここの表情で真心が溢れているのが感じられる。', like: '2.1K', replies: [] }] }
@@ -109,7 +109,7 @@ function load(src) {
   if (!m) return;
   const a = parseAttrs(m[1]), kind = a.形 === 'ニュース' ? 'ニュース' : a.形 === '動画' ? '動画' : '炎上', R = rowsOf(m[2].split('\n'));
   S.kind = kind; S.extra = {};
-  const known = kind === '炎上' ? ['形', 'タグ', '件数', '開始', '順位'] : kind === '動画' ? ['形', '題', '件数', '見た目'] : ['形', '媒体', '分類', '印', '見出し', '副題', '日時', '記者', '閲覧', '写真ほか'];
+  const known = kind === '炎上' ? ['形', 'タグ', '件数', '開始', '順位'] : kind === '動画' ? ['形', '題', '件数', '見た目'] : ['形', '媒体', '分類', '印', '見出し', '副題', '日時', '記者', '閲覧', '写真ほか', '部分', '大きさ', 'コメント数'];
   for (const k in a) if (!known.includes(k)) S.extra[k] = a[k];
   S.extraRows[kind] = [];
   if (kind === '動画') {
@@ -129,12 +129,13 @@ function load(src) {
       else S.extraRows.炎上.push(r.raw);
     }
   } else {
-    const n = S.news; ['媒体', '分類', '印', '見出し', '副題', '日時', '記者', '閲覧', '写真ほか'].forEach(k => n[k] = unA(a[k] || ''));
+    const n = S.news; ['媒体', '分類', '印', '見出し', '副題', '日時', '記者', '閲覧', '写真ほか', '部分', '大きさ', 'コメント数'].forEach(k => n[k] = unA(a[k] || ''));
     n.photos = []; n.related = []; n.comments = []; n.fixes = []; const body = [];
     for (const r of R) {
       if (r.k === '写真') n.photos.push({ name: r.v[0] || '枠', cap: r.v.slice(1).join('｜') });
       else if (r.k === '関連') n.related.push(r.v.join('｜'));
-      else if (r.k === 'コメント') n.comments.push({ name: r.v[0] || '', text: unA(r.v[1] || ''), agree: r.o.共感 || '', disagree: r.o.反対 || '' });
+      else if (r.k === 'コメント') n.comments.push({ name: r.v[0] || '', time: r.o.時間 || '', text: unA(r.v.slice(1).join('｜')), agree: r.o.共感 || '', nar: r.o.なるほど || '', hmm: r.o.うーん || r.o.反対 || '', replies: [] });
+      else if (r.k === '返信' && n.comments.length) n.comments[n.comments.length - 1].replies.push({ name: r.v[0] || '', time: r.o.時間 || '', text: unA(r.v.slice(1).join('｜')) });
       else if (r.k === '修正') n.fixes.push({ date: r.v[0] || '', text: r.v[1] || '' });
       else if (!r.k) body.push(r.raw);
       else S.extraRows.ニュース.push(r.raw);
@@ -179,12 +180,15 @@ function build() {
     });
   } else {
     const n = S.news;
-    head = attrs([['形', 'ニュース'], ['媒体', n.媒体], ['分類', n.分類], ['印', n.印], ['見出し', n.見出し], ['副題', n.副題], ['日時', n.日時], ['記者', n.記者], ['閲覧', n.閲覧], ['写真ほか', String(n.写真ほか || '').replace(/[^0-9]/g, '')], ...ex]);
+    head = attrs([['形', 'ニュース'], ['媒体', n.媒体], ['分類', n.分類], ['印', n.印], ['見出し', n.見出し], ['副題', n.副題], ['日時', n.日時], ['記者', n.記者], ['閲覧', n.閲覧], ['写真ほか', String(n.写真ほか || '').replace(/[^0-9]/g, '')], ['コメント数', n.コメント数], ['部分', n.部分], ['大きさ', n.大きさ], ...ex]);
     n.photos.slice(0, 3).forEach(p => rows.push('写真：' + (p.name || '枠') + (p.cap.trim() ? '｜' + V(p.cap) : '')));
     n.body.split(/\r?\n/).filter(l => l.trim()).forEach(l => rows.push(bodyLine(l)));
     n.fixes.filter(x => x.text.trim()).forEach(x => rows.push('修正：' + V(x.date) + '｜' + V(x.text)));
     n.related.filter(x => x.trim()).forEach(x => rows.push('関連：' + V(x)));
-    n.comments.filter(c => c.text.trim()).forEach(c => rows.push('コメント：' + (optVal(c.name) || '名無し') + '｜' + V(c.text) + '｜共感=' + (optVal(c.agree) || '0') + '｜反対=' + (optVal(c.disagree) || '0')));
+    n.comments.filter(c => c.text.trim()).forEach(c => {
+      rows.push('コメント：' + (optVal(c.name) || '名無し') + '｜' + V(c.text) + '｜共感=' + (optVal(c.agree) || '0') + '｜なるほど=' + (optVal(c.nar) || '0') + '｜うーん=' + (optVal(c.hmm) || '0') + (optVal(c.time) ? '｜時間=' + optVal(c.time) : ''));
+      (c.replies || []).filter(r => r.text.trim()).forEach(r => rows.push('返信：' + (optVal(r.name) || '名無し') + '｜' + V(r.text) + (optVal(r.time) ? '｜時間=' + optVal(r.time) : '')));
+    });
   }
   rows.push(...S.extraRows[S.kind]);
   return '［報道 ' + head + '］\n' + rows.join('\n') + '\n［／報道］';
@@ -210,18 +214,19 @@ function render() {
     h += `<div class="card"><h2>投稿</h2>` + t.posts.map((p, i) => `<div class="item">${itemHead('投稿 ' + (i + 1), 'posts', i, t.posts.length)}<label class="chk"><input type="checkbox" data-p="posts.${i}.del"${p.del ? ' checked' : ''}> 削除された投稿にする</label>${p.del ? fld('消された投稿の文（スクショで出回っている文）', 'posts.' + i + '.text', p.text, { area: 1 }) : `<div class="row2">${fld('ID', 'posts.' + i + '.id', p.id, { ph: '@star_news' })}${fld('表示名（なければIDのまま）', 'posts.' + i + '.name', p.name)}</div>${fld('本文', 'posts.' + i + '.text', p.text, { area: 1 })}<div class="row3">${fld('いいね', 'posts.' + i + '.like', p.like, { ph: '32.1K' })}${fld('RP', 'posts.' + i + '.rp', p.rp, { ph: '15.8K' })}${fld('種類', 'posts.' + i + '.type', p.type, { sel: TYPES })}</div>${p.type === '海外' || p.tr ? fld('翻訳（「翻訳」を押すと出る）', 'posts.' + i + '.tr', p.tr) : ''}`}</div>`).join('') + `<button type="button" class="add" data-add="posts">＋ 投稿を足す</button></div>`;
   } else {
     const n = S.news;
+    h += `<div class="card"><h2>出す部分と大きさ</h2><p class="note">小説で地の文をはさむときは、「記事だけ」と「コメントだけ」を、別々に本文へ入れられます（同じ記事を2回作って、出す部分を変えます）。</p><div class="row2">${fld('出す部分', 'news.部分', n.部分, { sel: [['', '全部（記事とコメント）'], ['記事', '記事だけ'], ['コメント', 'コメントだけ']] })}${fld('大きさ', 'news.大きさ', n.大きさ, { sel: [['', 'ふつう'], ['小', '小さめ']] })}</div></div>`;
     h += `<div class="card"><h2>記事</h2>${fld('見出し', 'news.見出し', n.見出し, { area: 1 })}${fld('副題（なくてもよい）', 'news.副題', n.副題)}<div class="row2">${fld('媒体', 'news.媒体', n.媒体, { ph: 'STAR NEWS' })}${fld('印（速報・独占など）', 'news.印', n.印)}</div><div class="row2">${fld('日時', 'news.日時', n.日時)}${fld('閲覧数', 'news.閲覧', n.閲覧, { ph: '342,118' })}</div><details><summary>そのほか（分類・記者）</summary><div class="row2">${fld('分類', 'news.分類', n.分類, { ph: 'ENTERTAINMENT' })}${fld('記者', 'news.記者', n.記者)}</div></details></div>`;
     h += `<div class="card"><h2>写真（なし・1〜3枚）</h2><p class="note">「写真の枠」は、本当はここに写真がある、という見た目になります。自分の画像を入れることもできます（小さくしてから本文に入れます。横 720px まで）。</p>` + n.photos.map((p, i) => `<div class="item">${itemHead('写真 ' + (i + 1), 'photos', i, n.photos.length)}<div class="row2">${fld('写真', 'photos.' + i + '.name', isOwn(p.name) ? '__own' : p.name, { sel: isOwn(p.name) ? PHOTOS.map(([v, t]) => v === '__own' ? [v, '自分の画像（選んだもの）'] : [v, t]) : PHOTOS })}${fld('説明（なくてもよい）', 'photos.' + i + '.cap', p.cap)}</div>${isOwn(p.name) ? `<div class="ownph"><img src="${esc(p.name)}" alt=""><button type="button" class="add" data-pick="${i}">別の画像にする</button></div>` : ''}</div>`).join('') + (n.photos.length < 3 ? `<button type="button" class="add" data-add="photos">＋ 写真を足す（あと ${3 - n.photos.length} 枚）</button>` : '') + (n.photos.length ? fld('ほかの写真の数（数だけ。写真は入れなくてよい。最後の写真に「＋○枚」と出ます）', 'news.写真ほか', n.写真ほか || '', { ph: '例：3', num: 1 }) : '') + `</div>`;
     h += `<div class="card"><h2>本文</h2>${fld('本文（1行ずつ。改行で段落が分かれます）', 'news.body', n.body, { area: 1 })}</div>`;
     h += `<div class="card"><h2>関連記事</h2>` + n.related.map((x, i) => `<div class="item">${itemHead('関連 ' + (i + 1), 'related', i, n.related.length)}${fld('見出し', 'related.' + i, x)}</div>`).join('') + `<button type="button" class="add" data-add="related">＋ 関連記事を足す</button></div>`;
-    h += `<div class="card"><h2>コメント</h2>` + n.comments.map((c, i) => `<div class="item">${itemHead('コメント ' + (i + 1), 'comments', i, n.comments.length)}${fld('名前', 'comments.' + i + '.name', c.name)}${fld('本文', 'comments.' + i + '.text', c.text, { area: 1 })}<div class="row2">${fld('共感', 'comments.' + i + '.agree', c.agree)}${fld('反対', 'comments.' + i + '.disagree', c.disagree)}</div></div>`).join('') + `<button type="button" class="add" data-add="comments">＋ コメントを足す</button></div>`;
+    h += `<div class="card"><h2>コメント（ネットニュースのコメント欄）</h2>${fld('コメント数（なくてもよい。上に「○件」と出ます）', 'news.コメント数', n.コメント数, { ph: '例：1,204' })}<details><summary>文章から作る（「――」がコメント、「└」が返信）</summary><textarea id="newsPaste" placeholder="――説明を待ちたい&#10;└同意"></textarea><div class="row2" style="margin-top:6px"><button type="button" class="add" id="btnNewsPasteAdd">うしろに足す</button><button type="button" class="add" id="btnNewsPasteSet">今のを消して作る</button></div></details>` + n.comments.map((c, i) => `<div class="item">${itemHead('コメント ' + (i + 1), 'comments', i, n.comments.length)}<div class="row2">${fld('名前', 'comments.' + i + '.name', c.name)}${fld('時間（なくてもよい）', 'comments.' + i + '.time', c.time, { ph: '3分前' })}</div>${fld('本文', 'comments.' + i + '.text', c.text, { area: 1 })}<div class="row3">${fld('👍 共感した', 'comments.' + i + '.agree', c.agree)}${fld('💡 なるほど', 'comments.' + i + '.nar', c.nar)}${fld('🤔 うーん', 'comments.' + i + '.hmm', c.hmm)}</div>` + (c.replies || []).map((r, j) => `<div class="item" style="margin-left:14px;background:#f5f9ff">${itemHead('└ 返信 ' + (j + 1), 'cr.' + i, j, c.replies.length)}<div class="row2">${fld('名前', 'cr.' + i + '.' + j + '.name', r.name)}${fld('時間', 'cr.' + i + '.' + j + '.time', r.time, { ph: '1分前' })}</div>${fld('本文', 'cr.' + i + '.' + j + '.text', r.text, { area: 1 })}</div>`).join('') + `<button type="button" class="add" data-add="cr.${i}" style="margin-top:4px">＋ 返信を足す</button></div>`).join('') + `<button type="button" class="add" data-add="comments">＋ コメントを足す</button></div>`;
     h += `<div class="card"><h2>記事の修正のお知らせ（なくてもよい）</h2>` + n.fixes.map((x, i) => `<div class="item">${itemHead('修正 ' + (i + 1), 'fixes', i, n.fixes.length)}<div class="row2">${fld('日時', 'fixes.' + i + '.date', x.date)}${fld('内容', 'fixes.' + i + '.text', x.text)}</div></div>`).join('') + `<button type="button" class="add" data-add="fixes">＋ 修正のお知らせを足す</button></div>`;
   }
   $('#form').innerHTML = h;
 }
-const listOf = name => { if (name.startsWith('vr.')) return S.video.vc[+name.slice(3)]?.replies; return { photos: S.news.photos, trends: S.trend.trends, posts: S.trend.posts, related: S.news.related, comments: S.news.comments, fixes: S.news.fixes, vc: S.video.vc }[name]; };
-const blankOf = name => name.startsWith('vr.') ? { id: '', text: '' } : blank[name]();
-const blank = { photos: () => ({ name: '枠', cap: '' }), trends: () => ({ tag: '', count: '' }), posts: () => ({ id: '', name: '', text: '', like: '', rp: '', type: '', tr: '', del: false }), related: () => '', comments: () => ({ name: '', text: '', agree: '', disagree: '' }), fixes: () => ({ date: '', text: '' }), vc: () => ({ id: '', text: '', like: '', replies: [] }) };
+const listOf = name => { if (name.startsWith('vr.')) return S.video.vc[+name.slice(3)]?.replies; if (name.startsWith('cr.')) return S.news.comments[+name.slice(3)]?.replies; return { photos: S.news.photos, trends: S.trend.trends, posts: S.trend.posts, related: S.news.related, comments: S.news.comments, fixes: S.news.fixes, vc: S.video.vc }[name]; };
+const blankOf = name => name.startsWith('vr.') ? { id: '', text: '' } : name.startsWith('cr.') ? { name: '', time: '', text: '' } : blank[name]();
+const blank = { photos: () => ({ name: '枠', cap: '' }), trends: () => ({ tag: '', count: '' }), posts: () => ({ id: '', name: '', text: '', like: '', rp: '', type: '', tr: '', del: false }), related: () => '', comments: () => ({ name: '', time: '', text: '', agree: '', nar: '', hmm: '', replies: [] }), fixes: () => ({ date: '', text: '' }), vc: () => ({ id: '', text: '', like: '', replies: [] }) };
 // 文章から作る：「――」「-」の行＝コメント、「└」の行＝すぐ上への返信。名前は自動
 function fromText(text) {
   const out = []; let n = 0; const name = () => '@user-' + (++n).toString(36) + Math.random().toString(36).slice(2, 5);
@@ -237,6 +242,7 @@ function setPath(path, val) {
   const ps = path.split('.');
   if (ps[0] === 'video') { S.video[ps[1]] = val; return; }
   if (ps[0] === 'vr') { S.video.vc[+ps[1]].replies[+ps[2]][ps[3]] = val; return; }
+  if (ps[0] === 'cr') { S.news.comments[+ps[1]].replies[+ps[2]][ps[3]] = val; return; }
   if (ps[0] === 'trend') { S.trend[ps[1]] = val; return; }
   if (ps[0] === 'news') { S.news[ps[1]] = val; return; }
   const list = listOf(ps[0]); if (!list) return;
@@ -254,6 +260,7 @@ function shrinkPhoto(file) { return new Promise((ok, ng) => { const r = new File
 document.addEventListener('click', e => {
   const k = e.target.closest('[data-kind]'); if (k) { S.kind = k.dataset.kind; render(); soon(0); return; }
   const pk = e.target.closest('[data-pick]'); if (pk) { pickIndex = +pk.dataset.pick; $('#photoFile').click(); return; }
+  if (e.target.id === 'btnNewsPasteAdd' || e.target.id === 'btnNewsPasteSet') { const list = fromText($('#newsPaste').value).map(c => ({ name: c.id.replace(/^@/, ''), time: '', text: c.text, agree: '', nar: '', hmm: '', replies: c.replies.map(r => ({ name: r.id.replace(/^@/, ''), time: '', text: r.text })) })); if (!list.length) { alert('貼り付けた文がありません'); return; } if (e.target.id === 'btnNewsPasteSet') { if (S.news.comments.length && !confirm('今のコメントを消して、貼り付けた文から作ります。よいですか？')) return; S.news.comments = list; } else S.news.comments.push(...list); render(); soon(0); return; }
   if (e.target.id === 'btnPasteAdd' || e.target.id === 'btnPasteSet') { const list = fromText($('#pasteBox').value); if (!list.length) { alert('貼り付けた文がありません'); return; } if (e.target.id === 'btnPasteSet') { if (S.video.vc.length && !confirm('今のコメントを消して、貼り付けた文から作ります。よいですか？')) return; S.video.vc = list; } else S.video.vc.push(...list); render(); soon(0); return; }
   const add = e.target.closest('[data-add]'); if (add) { const l = listOf(add.dataset.add); if (add.dataset.add === 'photos' && l.length >= 3) return; l.push(blankOf(add.dataset.add)); render(); soon(); const its = add.parentElement.querySelectorAll(':scope > .item'); its[its.length - 1]?.querySelector('input,textarea')?.focus(); return; }
   const rm = e.target.closest('[data-rm]'); if (rm) { const l = listOf(rm.dataset.rm); l.splice(+rm.dataset.i, 1); render(); soon(); return; }

@@ -36,16 +36,30 @@ function trend(a, R) {
   }).join('')}</div></div>`;
 }
 function news(a, R, base) {
-  const body = R.filter(r => !r.k), rel = R.filter(r => r.k === '関連'), cm = R.filter(r => r.k === 'コメント'), ph = R.filter(r => r.k === '写真'), fix = R.filter(r => r.k === '修正');
+  const body = R.filter(r => !r.k), rel = R.filter(r => r.k === '関連'), ph = R.filter(r => r.k === '写真'), fix = R.filter(r => r.k === '修正');
   const img = n => /^(md_|ph_|sc_|hs_|sn_)[a-z_]+$/.test(n || '') ? `${base}a/${n}.jpg` : /^data:image\/(?:jpeg|png|webp|gif);base64,[A-Za-z0-9+/=]+$/.test(n || '') || /^https?:\/\/[^\s"'<>]+$/.test(n || '') ? n : '';
-  return `<div class="nr nr-news"><div class="nr-nh"><b>${esc(a.媒体 || 'STAR NEWS')}</b><small>${esc(a.分類 || 'ENTERTAINMENT')}</small></div>
-  <div class="nr-art">${a.印 ? `<span class="nr-flag nr-in">${esc(a.印)}</span>` : ''}<h3 class="nr-in">${tx(a.見出し || '')}</h3>${a.副題 ? `<h5 class="nr-in">${tx(a.副題)}</h5>` : ''}
-  <div class="nr-by nr-in">${a.日時 ? `<span>${esc(a.日時)}</span>` : ''}<span>${esc(a.記者 || '芸能担当記者')}</span>${a.閲覧 ? `<span>閲覧 ${cnt(a.閲覧)}</span>` : ''}</div>
-  ${ph.length ? `<div class="nr-phs n${Math.min(3, ph.length)}">${ph.slice(0, 3).map((r, i, all) => { const u = img(r.v[0]), cap = r.v.slice(1).join('｜'), more = i === all.length - 1 ? parseInt(String(a.写真ほか || '').replace(/[^0-9]/g, ''), 10) || 0 : 0; return `<figure class="nr-in">${more ? `<span class="nr-more">＋${more}枚</span>` : ''}${u ? `<img src="${esc(u)}" alt="" loading="lazy">` : '<div class="nr-noimg"><span class="nr-cam">📷</span><span>写真</span></div>'}${cap ? `<figcaption>${tx(cap)}</figcaption>` : ''}</figure>`; }).join('')}</div>` : ''}
-  ${body.map(r => `<p class="nr-in">${tx(r.v.join('｜'))}</p>`).join('')}
-  ${fix.map(r => `<div class="nr-fix nr-in">修正 ${esc(r.v[0] || '')}　${tx(r.v[1] || '')}</div>`).join('')}</div>
-  ${rel.length ? `<div class="nr-rel"><div class="nr-sh">関連記事</div>${rel.map(r => `<div class="nr-in">▸ ${tx(r.v.join('｜'))}</div>`).join('')}</div>` : ''}
-  ${cm.length ? `<div class="nr-cm"><div class="nr-sh">コメント ${cm.length}</div>${cm.map(r => `<div class="nr-c nr-in"><b>${esc(r.v[0] || '名無し')}</b><p>${tx(r.v[1] || '')}</p><div class="nr-act"><span>👍 ${cnt(r.o.共感)}</span><span>👎 ${cnt(r.o.反対)}</span></div></div>`).join('')}</div>` : ''}</div>`;
+  // コメントと、その下の返信（「返信：」は、すぐ上のコメントへ）
+  const cms = []; for (const r of R) { if (r.k === 'コメント') cms.push({ r, re: [] }); else if (r.k === '返信' && cms.length) cms[cms.length - 1].re.push(r); }
+  const total = a.コメント数 || String(cms.reduce((n, c) => n + 1 + c.re.length, 0));
+  const more = parseInt(String(a.写真ほか || '').replace(/[^0-9]/g, ''), 10) || 0;
+  // 部分=記事（記事だけ）／コメント（コメント欄だけ）。小説で、地の文をはさんで抜粋するときに使う。大きさ=小 で小さめ
+  const part = a.部分 === '記事' ? 'art' : a.部分 === 'コメント' ? 'cm' : 'all', small = /^(小|小さめ)$/.test(a.大きさ || '');
+  const av = (name, sm) => `<i class="nr-yav${sm ? ' sm' : ''}">${esc([...String(name || '?')][0] || '?')}</i>`;
+  const reacts = o => `<div class="nr-yre"><span>👍 共感した ${cnt(o.共感 || '0')}</span><span>💡 なるほど ${cnt(o.なるほど || '0')}</span><span>🤔 うーん ${cnt(o.うーん || o.反対 || '0')}</span></div>`;
+  const user = (r, sm) => `<div class="nr-ycu">${av(r.v[0], sm)}<b>${esc(r.v[0] || '名無し')}</b>${r.o.時間 ? `<small>${esc(r.o.時間)}</small>` : ''}</div><p>${tx(r.v.slice(1).join('｜'))}</p>`;
+  const photo = (r, i, all) => { const u = img(r.v[0]), cap = r.v.slice(1).join('｜'), m = i === all.length - 1 ? more : 0; return `<figure class="nr-in">${m ? `<span class="nr-more">＋${m}枚</span>` : ''}${u ? `<img src="${esc(u)}" alt="" loading="lazy">` : '<div class="nr-noimg"><span class="nr-cam">📷</span><span>写真</span></div>'}${cap ? `<figcaption>${tx(cap)}</figcaption>` : ''}</figure>`; };
+  const art = `<div class="nr-nart">`
+    + `<div class="nr-nmeta nr-in"><b class="nr-media">${esc(a.媒体 || 'STAR NEWS')}</b>${a.印 ? `<span class="nr-flag">${esc(a.印)}</span>` : ''}${a.閲覧 ? `<span class="nr-views">閲覧: ${cnt(a.閲覧)}</span>` : ''}</div>`
+    + `<h3 class="nr-in">${tx(a.見出し || '')}</h3>${a.副題 ? `<h5 class="nr-in">${tx(a.副題)}</h5>` : ''}`
+    + (a.日時 || a.記者 ? `<div class="nr-by nr-in">${a.日時 ? `<span>${esc(a.日時)}</span>` : ''}${a.記者 ? `<span>${esc(a.記者)}</span>` : ''}</div>` : '')
+    + (ph.length ? `<div class="nr-phs n${Math.min(3, ph.length)}">${ph.slice(0, 3).map(photo).join('')}</div>` : '')
+    + (body.length ? `<div class="nr-nbody">${body.map(r => `<p class="nr-in">${tx(r.v.join('｜'))}</p>`).join('')}</div>` : '')
+    + fix.map(r => `<div class="nr-fix nr-in">修正 ${esc(r.v[0] || '')}　${tx(r.v[1] || '')}</div>`).join('')
+    + (rel.length ? `<div class="nr-rel">${rel.map(r => `<div class="nr-in"><b>関連：</b>${tx(r.v.join('｜'))}</div>`).join('')}</div>` : '')
+    + `</div>`;
+  const head = part === 'cm' ? `<div class="nr-ych"><b>コメント</b><span>${cnt(total)}件</span>${a.見出し ? `<small class="nr-yof">${tx(a.見出し)}</small>` : ''}</div>` : `<div class="nr-ych"><b>コメント</b><span>${cnt(total)}件</span><small class="nr-ytab"><em>おすすめ順</em>｜新着順</small></div>`;
+  const comments = cms.length ? `<div class="nr-ycm">${head}${cms.map(({ r, re }) => `<div class="nr-yc nr-in">${user(r)}${reacts(r.o)}${re.length ? `<div class="nr-yrl"><div class="nr-yrn">返信 ${re.length}件</div>${re.map(x => `<div class="nr-yr nr-in">${user(x, 1)}</div>`).join('')}</div>` : ''}</div>`).join('')}</div>` : '';
+  return `<div class="nr nr-news p-${part}${small ? ' small' : ''}">${part === 'cm' ? '' : art}${part === 'art' ? '' : comments}</div>`;
 }
 // 動画コメント欄（参考：急上昇動画のクリップのコメント欄）。返信は「└@名前｜本文」、ふつうは「@名前｜本文」
 function video(a, R) {
@@ -67,7 +81,7 @@ function html(src, opt = {}) { const d = parse(src); if (!d) return ''; const ba
 function plain(src) {
   const d = parse(src); if (!d) return ''; const a = d.a, out = [];
   if (a.形 === '炎上') { out.push((a.タグ || '') + ' トレンド' + (a.順位 || '1') + '位'); d.R.forEach(r => { if (r.k === 'トレンド') out.push(r.v[0] || ''); else if (r.k === '削除済み') out.push('このポストは削除されました。'); else out.push(r.v.length >= 2 ? r.v[1] : r.v[0] || ''); }); }
-  else if (a.形 === 'ニュース') { out.push(a.見出し || ''); if (a.副題) out.push(a.副題); d.R.forEach(r => { if (!r.k) out.push(r.v.join('｜')); else if (r.k === '関連') out.push(r.v.join('｜')); else if (r.k === 'コメント') out.push(r.v[1] || ''); }); }
+  else if (a.形 === 'ニュース') { out.push(a.見出し || ''); if (a.副題) out.push(a.副題); d.R.forEach(r => { if (!r.k) out.push(r.v.join('｜')); else if (r.k === '関連') out.push(r.v.join('｜')); else if (r.k === 'コメント' || r.k === '返信') out.push(r.v.slice(1).join('｜')); }); }
   else { out.push(a.題 || '動画のコメント欄'); d.R.forEach(r => out.push(r.v.length >= 2 ? r.v.slice(1).join('｜') : r.v[0] || '')); }
   return out.map(s => String(s).replace(/／/g, ' ').trim()).filter(Boolean).join('\n') || '​';
 }
