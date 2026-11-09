@@ -525,6 +525,14 @@
 #reader-progress::-moz-range-track { height:2px; background:#cec7b8; }
 #reader-progress::-moz-range-thumb { width:6px; height:6px; border:0; border-radius:50%; background:#567567; }
 #view-reader.editing #reader-progress-wrap { display:none; }
+#reader-nav.nav-merged #btn-nav-jump { display:none; }
+@media (max-width: 440px) { #reader-nav:not(.nav-merged) #btn-nav-top > span { display:none; } #reader-nav:not(.nav-merged) #btn-nav-top { padding-left:12px; padding-right:12px; } }   /* 狭いスマホ：話の番号のボタンが入るように、本棚は家のマークだけ */
+#reader-nav.nav-merged #reader-page-count::before { content:attr(data-chap); display:block; font-size:10px; line-height:1.2; opacity:.85; }
+#reader-nav.nav-merged #reader-page-count { text-align:center; line-height:1.25; }
+#reader-nav.nav-merged #reader-page-count { cursor:pointer; text-decoration:underline dotted; text-underline-offset:3px; }
+#reader-progress-wrap { position:relative; }
+#reader-progress-tip { position:fixed; top:0; left:0; transform:translateX(-50%); max-width:calc(100vw - 24px); padding:5px 10px; border-radius:10px; background:#2f3f37; color:#f6efe0; font:12px/1.4 sans-serif; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; pointer-events:none; box-shadow:0 2px 8px #0003; z-index:2147483000; }
+#reader-progress-tip[hidden] { display:none; }
 #reader-menu-access { position:absolute; left:50%; top:8px; transform:translateX(-50%); width:1px; height:1px; padding:0; overflow:hidden; clip-path:inset(50%); z-index:40; }
 #view-reader:not(.reader-controls-open):not(.editing) #reader-menu-access:focus-visible { width:auto; height:44px; padding:8px; clip-path:none; background:#faf6ee; }
 
@@ -1198,7 +1206,7 @@
                 <span id="tts-floating-sentence-preview" hidden></span>
             </div>
 
-            <div id="reader-progress-wrap"><input type="range" id="reader-progress" min="0" max="1000" step="1" aria-label="読書位置を移動"></div>
+            <div id="reader-progress-wrap"><div id="reader-progress-tip" hidden aria-hidden="true"></div><input type="range" id="reader-progress" min="0" max="1000" step="1" aria-label="読書位置を移動"></div>
             <!-- ジャンプスライダーバー -->
             <div id="reader-jump-bar" class="bg-kinari/90 backdrop-blur px-4 py-2 border-t border-woodBorder flex items-center space-x-3 text-xs font-sans">
                 <span class="text-[10px] text-softMuted" id="reader-jump-chap-label">話</span>
@@ -1212,6 +1220,8 @@
                     <i class="fa-solid fa-chevron-left text-[10px]"></i>
                     <span>前の話</span>
                 </button>
+
+                <button id="btn-nav-jump" type="button" title="番号を入れて、その話へ移る" aria-label="番号を入れて、その話へ移る" class="px-2.5 py-1.5 bg-kinariCard border border-woodBorder rounded-xl text-xs font-bold text-softText shadow-xs active:scale-95 transition whitespace-nowrap"><span id="nav-jump-num">1 / 1話</span></button>
 
                 <button id="btn-nav-top" class="px-4 py-1.5 bg-woodAccent/15 hover:bg-woodAccent/25 border border-woodAccent/40 rounded-xl text-xs font-bold text-woodAccentDark flex items-center space-x-1.5 shadow-xs active:scale-95 transition">
                     <i class="fa-solid fa-house text-xs"></i>
@@ -1916,6 +1926,7 @@
                     <div class="pt-3 border-t border-woodBorder">
                         <span class="font-bold text-softMuted block mb-1">更新履歴</span>
                         <div id="changelog" class="text-[11px] text-softMuted leading-relaxed">
+<div class="mb-1.5"><b class="text-softText">Version 12.14（2026-11-09）</b><br>読書画面で、話の番号を入れて移れるようにしました。画面の真ん中を押すと出る下のバーの「10 / 360話」を押して、番号を入れます（ページ表示のときは、ページ数のところを押します）。いちばん下の棒を動かしているあいだは、行き先の話を出します。</div>
 <div class="mb-1.5"><b class="text-softText">Version 12.13（2026-11-09）</b><br>Driveの同期を直しました。作品を開いて読んだだけでは「直した」に数えず、別の端末で足した話を上書きしないようにしました。2つの端末で本文を直していたときは、話の数を見せて、どちらを使うか聞きます。作品ページや読書画面で☁を押したときも、開いている作品を同期します。</div>
 <div class="mb-1.5"><b class="text-softText">Version 12.12（2026-11-09）</b><br>更新履歴に、12.2〜12.11の内容を足しました。</div>
 <div class="mb-1.5"><b class="text-softText">Version 12.11（2026-11-09）</b><br>スマホの読書画面で、話の題名を2行まで出すようにしました。演出のボタンが出ても、題名が読めます。</div>
@@ -9496,8 +9507,8 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         // 話の終わり・戻る・本の終わりで、読み終えた話から言葉を拾い、件数を小さく知らせる。読書は止めない
         // ===== 更新の確認：新しい版があれば、魚に青い点とメニュー（版の番号は version.json。公開のたびに、番号が変わる。番号が入っていない開発中は、確かめない） =====
         // 表示用の版。更新の検出は引き続き APP_BUILD の日時番号を使う。
-        const APP_VERSION = '12.13';
-        const APP_BUILD = '20261109201515';
+        const APP_VERSION = '12.14';
+        const APP_BUILD = '20261109205400';
         let updateCheckAt = 0;
         function paintBuild() {
             const el = document.getElementById('app-build-info'); if (!el) return;
@@ -11003,6 +11014,19 @@ function updateReaderProgress(){
  input.setAttribute('aria-valuetext',`${index+1}/${sequence.length}話・${pageReader.index+1}/${pages}ページ`);
  if(pagingActive()&&pageReader.index>=pages-1)readLogSoon();
 }
+// 棒を動かしているあいだ：行き先の話とページを、つまみの上に出す
+let progressTipTimer=null;
+function showProgressTip(input){
+ const tip=document.getElementById('reader-progress-tip');if(!tip)return;const {sequence,index}=readerSequenceIndex();if(!sequence.length)return;
+ const position=Number(input.value)/1000*sequence.length,target=Math.max(0,Math.min(sequence.length-1,Math.ceil(position)-1)),entry=sequence[target];
+ let text=String(entry.chap.title||'').split(String.fromCharCode(10)).join(' ').trim()||(target+1)+'話';text+='（'+(target+1)+' / '+sequence.length+'）';
+ if(target===index&&pagingActive()&&pageReader.model){const n=pageReader.model.pages.length;text+='・'+(pageFromFraction(position-target,n)+1)+' / '+n+'ページ';}
+ if(tip.parentElement!==document.body)document.body.appendChild(tip);   // 魚のボタンより前に出す
+ tip.textContent=text;tip.hidden=false;clearTimeout(progressTipTimer);
+ const r=input.getBoundingClientRect(),x=r.left+r.width*Number(input.value)/1000,half=tip.offsetWidth/2,cx=Math.max(8+half,Math.min(window.innerWidth-8-half,x));
+ tip.style.left=cx+'px';tip.style.top=(r.top-tip.offsetHeight-6)+'px';
+}
+function hideProgressTip(){clearTimeout(progressTipTimer);progressTipTimer=setTimeout(()=>{const tip=document.getElementById('reader-progress-tip');if(tip)tip.hidden=true;},700);}
 function pageFromFraction(fraction,n){const p=Math.max(0,Math.min(n-1,Math.ceil(fraction*n-1e-9)-1));return pageReader.model?.spread?p-p%2:p;}
 // 棒をドラッグ中：同じ話の中なら、ぺらぺらとめくりながら、つまみを正しい位置に固定する
 let sliderFlip=null;
@@ -11135,7 +11159,7 @@ function setupPaging(){
  document.getElementById('reader-reading-mode').onchange=e=>{rememberPage(true);pageReader.mode=e.target.value;savePagePreferences();rebuildPages();};
  document.getElementById('reader-page-direction').onchange=e=>{pageReader.vertical=e.target.value==='vertical';savePagePreferences();rebuildPages();};
  document.getElementById('btn-page-prev').onclick=()=>turnReaderPage(-1);document.getElementById('btn-page-next').onclick=()=>turnReaderPage(1);
- document.getElementById('reader-progress').oninput=e=>dragReaderProgress(e.target);document.getElementById('reader-progress').onchange=e=>seekReaderProgress(e.target.value);const tcBtn=document.getElementById('btn-titlecard-toggle');tcBtn.onclick=()=>{setTtsCfg('readTitleCard',!readerTitleCardOn());paintTitleCardBtn();};paintTitleCardBtn();const spreadBtn=document.getElementById('btn-spread-toggle'),paintSpread=()=>{spreadBtn.textContent='PCでの見開き：'+(pageReader.spread?'入':'切');spreadBtn.setAttribute('aria-pressed',pageReader.spread);spreadBtn.style.background=pageReader.spread?'#6f5a47':'#faf6ed';spreadBtn.style.color=pageReader.spread?'#fff':'#6b5f55';};spreadBtn.onclick=()=>{rememberPage(true);pageReader.spread=!pageReader.spread;savePagePreferences();paintSpread();rebuildPages();};paintSpread();const flipBtn=document.getElementById('btn-flip-toggle'),paintFlip=()=>{flipBtn.textContent='ページをめくる動き：'+(pageReader.flip?'入':'切');flipBtn.setAttribute('aria-pressed',pageReader.flip);flipBtn.style.background=pageReader.flip?'#6f5a47':'#faf6ed';flipBtn.style.color=pageReader.flip?'#fff':'#6b5f55';};flipBtn.onclick=()=>{pageReader.flip=!pageReader.flip;savePagePreferences();paintFlip();};paintFlip();document.getElementById('reader-menu-access').onclick=toggleReaderControls;document.getElementById('btn-mode-scroll').onclick=()=>setReadingMode('scroll');document.getElementById('btn-mode-pages').onclick=()=>setReadingMode('pages');paintReadingModeButtons();protoAssistInit();
+ document.getElementById('reader-progress').oninput=e=>{dragReaderProgress(e.target);showProgressTip(e.target);};document.getElementById('reader-progress').onchange=e=>{seekReaderProgress(e.target.value);hideProgressTip();};['pointerdown','touchstart'].forEach(t=>document.getElementById('reader-progress').addEventListener(t,e=>{setTimeout(()=>showProgressTip(e.target),0);},{passive:true}));['pointerup','pointercancel','touchend','touchcancel','blur'].forEach(t=>document.getElementById('reader-progress').addEventListener(t,hideProgressTip,{passive:true}));const tcBtn=document.getElementById('btn-titlecard-toggle');tcBtn.onclick=()=>{setTtsCfg('readTitleCard',!readerTitleCardOn());paintTitleCardBtn();};paintTitleCardBtn();const spreadBtn=document.getElementById('btn-spread-toggle'),paintSpread=()=>{spreadBtn.textContent='PCでの見開き：'+(pageReader.spread?'入':'切');spreadBtn.setAttribute('aria-pressed',pageReader.spread);spreadBtn.style.background=pageReader.spread?'#6f5a47':'#faf6ed';spreadBtn.style.color=pageReader.spread?'#fff':'#6b5f55';};spreadBtn.onclick=()=>{rememberPage(true);pageReader.spread=!pageReader.spread;savePagePreferences();paintSpread();rebuildPages();};paintSpread();const flipBtn=document.getElementById('btn-flip-toggle'),paintFlip=()=>{flipBtn.textContent='ページをめくる動き：'+(pageReader.flip?'入':'切');flipBtn.setAttribute('aria-pressed',pageReader.flip);flipBtn.style.background=pageReader.flip?'#6f5a47':'#faf6ed';flipBtn.style.color=pageReader.flip?'#fff':'#6b5f55';};flipBtn.onclick=()=>{pageReader.flip=!pageReader.flip;savePagePreferences();paintFlip();};paintFlip();document.getElementById('reader-menu-access').onclick=toggleReaderControls;document.getElementById('btn-mode-scroll').onclick=()=>setReadingMode('scroll');document.getElementById('btn-mode-pages').onclick=()=>setReadingMode('pages');paintReadingModeButtons();protoAssistInit();
  const wrap=document.getElementById('reader-body-wrap');let down=null;
  wrap.addEventListener('pointerdown',e=>{down=e.isPrimary?{x:e.clientX,y:e.clientY,time:performance.now(),id:e.pointerId,selected:!getSelection().isCollapsed}:null;},{passive:true});
  wrap.addEventListener('pointercancel',()=>{down=null;},{passive:true});
@@ -11281,6 +11305,7 @@ function setupPaging(){
             slider.disabled=readerTurning;
             slider.value = String(val);
             label.textContent = `${val} / ${flat.length}`;
+            { const jn = document.getElementById('nav-jump-num'); if (jn) jn.textContent = `${val} / ${flat.length}${state.currentVolumeId ? '章' : '話'}`; const jb = document.getElementById('btn-nav-jump'); if (jb) jb.disabled = readerTurning || flat.length < 2; const pc = document.getElementById('reader-page-count'); if (pc) pc.dataset.chap = val + ' / ' + flat.length + (state.currentVolumeId ? '章' : '話'); }
             pageIndicator.textContent = `${val} / ${flat.length}`;
             updateReaderProgress();
         }
@@ -12601,6 +12626,22 @@ function setupPaging(){
             document.getElementById('btn-nav-prev').addEventListener('click', () => navigateReader(-1,true));
             document.getElementById('btn-nav-next').addEventListener('click', () => navigateReader(1,true));
 
+            // 番号を入れて、その話へ移る（話がとても多い作品でも、ぴったり行ける）
+            function readerJumpPrompt() {
+                if (readerTurning || !canLeaveReader()) return;
+                const book = state.books.find(b => b.id === state.currentBookId); if (!book) return;
+                const flat = getReaderSequence(book); if (flat.length < 2) return;
+                const cur = flat.findIndex(i => i.chap.id === state.currentChapterId) + 1, unit = state.currentVolumeId ? '章' : '話';
+                const ans = prompt(`何${unit}目へ移りますか？（1〜${flat.length}。いまは${cur}${unit}目）`, '');
+                if (ans == null) return;
+                const n = parseInt(String(ans).replace(/[０-９]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0)).replace(/[^0-9]/g, ''), 10);
+                if (!(n >= 1 && n <= flat.length)) { toast(`1〜${flat.length}の番号を入れてください`); return; }
+                if (n === cur) return;
+                const target = flat[n - 1];
+                if (target.volId) openReaderForVolumeChapter(target.volId, target.chap.id, target.partIdx); else openReader(target.chap.id, target.partIdx);
+            }
+            document.getElementById('btn-nav-jump').addEventListener('click', readerJumpPrompt);
+            document.getElementById('reader-page-count').addEventListener('click', () => { if (document.getElementById('reader-nav').classList.contains('nav-merged')) readerJumpPrompt(); });
             document.getElementById('reader-chapter-slider').addEventListener('input', (e) => {
                 if(readerTurning || !canLeaveReader()){updateJumpSliderUI();return;}
                 const targetNum = parseInt(e.target.value);
