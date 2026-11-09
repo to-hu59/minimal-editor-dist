@@ -1928,6 +1928,7 @@
                     <div class="pt-3 border-t border-woodBorder">
                         <span class="font-bold text-softMuted block mb-1">更新履歴</span>
                         <div id="changelog" class="text-[11px] text-softMuted leading-relaxed">
+<div class="mb-1.5"><b class="text-softText">Version 12.19（2026-11-10）</b><br>ニュース記事の写真を、自分の画像に変えられるようにしました。報道メーカーの「写真」で「自分の画像を選ぶ…」を選びます。画像は小さくしてから本文に入るので、同期やバックアップにもそのまま入ります。編集画面でも、報道がカードの見た目のまま出るようになりました。カードの下の「この報道を直す」で、報道メーカーが開きます。</div>
 <div class="mb-1.5"><b class="text-softText">Version 12.18（2026-11-09）</b><br>報道（トレンド・ニュース記事）が、LINEや掲示板と同じように、読む画面の本文の中に、絵のまま出るようになりました。🎬を開かなくても読めて、暗い背景や人影も出ません。見えると、上から順にポンポン出て、順位や数字が動きます。報道メーカーに「動画コメント」を足しました。返信のツリーや、0:47 のような時刻の青い字が出ます。本文のコメント欄（「――」と「└」の行）を貼り付けると、そのまま作れます。</div>
 <div class="mb-1.5"><b class="text-softText">Version 12.17（2026-11-09）</b><br>報道メーカーの「見え方」に、ホラー演出用の暗い背景や人影が出ていたのを消しました。読む画面と同じ、明るい紙の色で見られます。</div>
 <div class="mb-1.5"><b class="text-softText">Version 12.16（2026-11-09）</b><br>「報道メーカー」を足しました。編集画面の動く人のボタン（特殊演出）を押して、「メーカー」の「トレンド（SNS）を作る」「ニュース記事を作る」を選ぶと、入力欄で作れます。LINEや掲示板と同じように、見え方を確かめながら作って、本文に入れられます。入れたトレンドやニュースの中で同じボタンを押すと、直せます。</div>
@@ -9528,8 +9529,8 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         // 話の終わり・戻る・本の終わりで、読み終えた話から言葉を拾い、件数を小さく知らせる。読書は止めない
         // ===== 更新の確認：新しい版があれば、魚に青い点とメニュー（版の番号は version.json。公開のたびに、番号が変わる。番号が入っていない開発中は、確かめない） =====
         // 表示用の版。更新の検出は引き続き APP_BUILD の日時番号を使う。
-        const APP_VERSION = '12.18';
-        const APP_BUILD = '20261109221256';
+        const APP_VERSION = '12.19';
+        const APP_BUILD = '20261110065255';
         let updateCheckAt = 0;
         function paintBuild() {
             const el = document.getElementById('app-build-info'); if (!el) return;
@@ -9618,6 +9619,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                 if (node.hasAttribute('data-editor-placeholder') || node.hasAttribute('data-board-controls')) return '';
                 if (node.hasAttribute('data-line-source')) return window.LineMaker?.inlineSource(node)||node.dataset.lineSource;
                 if (node.hasAttribute('data-document-source')) return window.ProvidedDocument?.inlineSource(node)||node.dataset.documentSource;
+                if (node.hasAttribute('data-news-source')) return node.dataset.newsSource;
                 if (node.hasAttribute('data-board-source')) return typeof window!=='undefined' && window.AzBoardEditor && node.querySelectorAll ? visualBoardInfo(node).source : node.dataset.boardSource;
                 if (node.matches('ruby[data-source], span[data-stair][data-source]')) return node.dataset.source;
                 if (node.tagName === 'BR') return '\n';
@@ -9725,8 +9727,20 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                 }
             };
             const appendText=text=>text.split(/(\r\n|\r|\n)/).forEach(piece=>appendMarked(piece,fragment));
-            const boards=/^［(掲示板|手紙|書類|メール|トーク)(?:[\s　][^］\r\n]*)?］\r?\n[\s\S]*?^［／\1］/gm;let cursor=0;
+            const boards=/^［(掲示板|手紙|書類|メール|トーク|報道)(?:[\s　][^］\r\n]*)?］\r?\n[\s\S]*?^［／\1］/gm;let cursor=0;
             if(window.AzBoardEditor)for(const match of source.matchAll(boards)){
+                if(match[1]==='報道'){
+                    if(!window.NewsReader?.isSource(match[0]))continue;
+                    appendText(source.slice(cursor,match.index));
+                    const atom=document.createElement('span');atom.contentEditable='false';atom.dataset.newsSource=match[0];atom.style.cssText='display:block;white-space:normal;margin:8px 0;writing-mode:horizontal-tb';
+                    const card=document.createElement('div');card.className='fxnews';card.innerHTML=NewsReader.html(match[0],{base:'fx/'});atom.append(card);
+                    const controls=document.createElement('span');controls.dataset.newsControls='true';controls.style.cssText='display:flex;gap:8px;margin-top:6px';
+                    const where=()=>{const r=document.createRange();r.selectNodeContents(visualRoot());r.setEndBefore(atom);const start=serializeVisual(r.cloneContents()).length;return{start,end:start+atom.dataset.newsSource.length}};
+                    const edit=document.createElement('button');edit.type='button';edit.textContent='この報道を直す';edit.onmousedown=e=>e.preventDefault();edit.onclick=()=>fxOpenMaker({src:atom.dataset.newsSource,title:'報道',replace:where()});controls.append(edit);
+                    const remove=document.createElement('button');remove.type='button';remove.textContent='×';remove.setAttribute('aria-label','この報道を削除');remove.onmousedown=e=>e.preventDefault();remove.onclick=()=>{if(visualDraft.mode!=='visual'||visualDraft.composing)return;const pos=where().start;atom.remove();ensureVisualTail();setVisualSelection(pos);syncVisualDraft(true)};controls.append(remove);
+                    for(const button of controls.children)button.style.cssText='padding:8px 12px;border:1px solid #b9aa94;border-radius:8px;background:#fff;color:#332e27';
+                    atom.append(controls);fragment.append(atom);cursor=match.index+match[0].length;continue;
+                }
                 if(window.LineMaker?.isSource(match[0])){
                     appendText(source.slice(cursor,match.index));
                     const atom=document.createElement('span');atom.contentEditable='false';atom.dataset.lineSource=match[0];atom.style.cssText='display:block;white-space:normal;margin:8px 0;writing-mode:horizontal-tb';LineMaker.mountInlineEditable(atom,match[0],(next,change)=>{visualDraft.composing=!!change?.composing;syncVisualDraft(!visualDraft.composing)},delta=>editorHistory(delta));

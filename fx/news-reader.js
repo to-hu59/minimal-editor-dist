@@ -37,7 +37,7 @@ function trend(a, R) {
 }
 function news(a, R, base) {
   const body = R.filter(r => !r.k), rel = R.filter(r => r.k === '関連'), cm = R.filter(r => r.k === 'コメント'), ph = R.filter(r => r.k === '写真'), fix = R.filter(r => r.k === '修正');
-  const img = n => /^(md_|ph_|sc_|hs_|sn_)[a-z_]+$/.test(n || '') ? `${base}a/${n}.jpg` : '';
+  const img = n => /^(md_|ph_|sc_|hs_|sn_)[a-z_]+$/.test(n || '') ? `${base}a/${n}.jpg` : /^data:image\/(?:jpeg|png|webp|gif);base64,[A-Za-z0-9+/=]+$/.test(n || '') || /^https?:\/\/[^\s"'<>]+$/.test(n || '') ? n : '';
   return `<div class="nr nr-news"><div class="nr-nh"><b>${esc(a.媒体 || 'STAR NEWS')}</b><small>${esc(a.分類 || 'ENTERTAINMENT')}</small></div>
   <div class="nr-art">${a.印 ? `<span class="nr-flag nr-in">${esc(a.印)}</span>` : ''}<h3 class="nr-in">${tx(a.見出し || '')}</h3>${a.副題 ? `<h5 class="nr-in">${tx(a.副題)}</h5>` : ''}
   <div class="nr-by nr-in">${a.日時 ? `<span>${esc(a.日時)}</span>` : ''}<span>${esc(a.記者 || '芸能担当記者')}</span>${a.閲覧 ? `<span>閲覧 ${cnt(a.閲覧)}</span>` : ''}</div>

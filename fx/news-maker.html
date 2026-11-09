@@ -47,6 +47,7 @@ footer{position:fixed;left:0;right:0;bottom:0;z-index:6;display:flex;gap:8px;pad
 footer button{flex:1;min-height:46px;border-radius:12px;border:1px solid #ffffff44;background:#2a241f;color:#f1e8d6;font-weight:700}
 footer button.main{background:var(--acc);border-color:var(--acc);color:#1b140c}
 details summary{cursor:pointer;color:var(--mute);font-size:13px}
+.ownph{display:flex;gap:10px;align-items:center;margin:4px 0}.ownph img{width:120px;aspect-ratio:16/9;object-fit:cover;border-radius:8px;border:1px solid var(--line)}.ownph .add{width:auto;padding:0 12px}
 </style>
 </head>
 <body>
@@ -68,6 +69,7 @@ details summary{cursor:pointer;color:var(--mute);font-size:13px}
     </div>
   </div>
 </div>
+<input type="file" id="photoFile" accept="image/*" hidden>
 <footer><button type="button" id="btnSave">この作品に保存</button><button type="button" id="btnInsert" class="main">本文に入れる</button></footer>
 <script>
 (function () {
@@ -208,7 +210,8 @@ function render() {
   } else {
     const n = S.news;
     h += `<div class="card"><h2>記事</h2>${fld('見出し', 'news.見出し', n.見出し, { area: 1 })}${fld('副題（なくてもよい）', 'news.副題', n.副題)}<div class="row2">${fld('媒体', 'news.媒体', n.媒体, { ph: 'STAR NEWS' })}${fld('印（速報・独占など）', 'news.印', n.印)}</div><div class="row2">${fld('日時', 'news.日時', n.日時)}${fld('閲覧数', 'news.閲覧', n.閲覧, { ph: '342,118' })}</div><details><summary>そのほか（分類・記者）</summary><div class="row2">${fld('分類', 'news.分類', n.分類, { ph: 'ENTERTAINMENT' })}${fld('記者', 'news.記者', n.記者)}</div></details></div>`;
-    h += `<div class="card"><h2>写真と本文</h2><div class="row2">${fld('写真', 'news.photo.name', n.photo.name, { sel: PHOTOS })}${fld('写真の説明', 'news.photo.cap', n.photo.cap)}</div>${fld('本文（1行ずつ。改行で段落が分かれます）', 'news.body', n.body, { area: 1 })}</div>`;
+    const own = /^(data:image\/|https?:\/\/)/.test(n.photo.name);
+    h += `<div class="card"><h2>写真と本文</h2><div class="row2">${fld('写真', 'news.photo.name', own ? '__own' : n.photo.name, { sel: PHOTOS.concat([['__own', own ? '自分の画像（選んだもの）' : '自分の画像を選ぶ…']]) })}${fld('写真の説明', 'news.photo.cap', n.photo.cap)}</div>${own ? `<div class="ownph"><img src="${esc(n.photo.name)}" alt=""><button type="button" class="add" id="btnPhotoPick">別の画像にする</button></div>` : ''}<p class="note">自分の画像は、小さくしてから本文に入れます（横 720px まで）。</p>${fld('本文（1行ずつ。改行で段落が分かれます）', 'news.body', n.body, { area: 1 })}</div>`;
     h += `<div class="card"><h2>関連記事</h2>` + n.related.map((x, i) => `<div class="item">${itemHead('関連 ' + (i + 1), 'related', i, n.related.length)}${fld('見出し', 'related.' + i, x)}</div>`).join('') + `<button type="button" class="add" data-add="related">＋ 関連記事を足す</button></div>`;
     h += `<div class="card"><h2>コメント</h2>` + n.comments.map((c, i) => `<div class="item">${itemHead('コメント ' + (i + 1), 'comments', i, n.comments.length)}${fld('名前', 'comments.' + i + '.name', c.name)}${fld('本文', 'comments.' + i + '.text', c.text, { area: 1 })}<div class="row2">${fld('共感', 'comments.' + i + '.agree', c.agree)}${fld('反対', 'comments.' + i + '.disagree', c.disagree)}</div></div>`).join('') + `<button type="button" class="add" data-add="comments">＋ コメントを足す</button></div>`;
     h += `<div class="card"><h2>記事の修正のお知らせ（なくてもよい）</h2>` + n.fixes.map((x, i) => `<div class="item">${itemHead('修正 ' + (i + 1), 'fixes', i, n.fixes.length)}<div class="row2">${fld('日時', 'fixes.' + i + '.date', x.date)}${fld('内容', 'fixes.' + i + '.text', x.text)}</div></div>`).join('') + `<button type="button" class="add" data-add="fixes">＋ 修正のお知らせを足す</button></div>`;
@@ -238,10 +241,17 @@ function setPath(path, val) {
   const list = listOf(ps[0]); if (!list) return;
   if (ps.length === 2) list[+ps[1]] = val; else list[+ps[1]][ps[2]] = val;
 }
-document.addEventListener('input', e => { const p = e.target.dataset && e.target.dataset.p; if (!p) return; setPath(p, e.target.type === 'checkbox' ? e.target.checked : e.target.value); if (e.target.type === 'checkbox' || e.target.tagName === 'SELECT') render(); soon(); });
-document.addEventListener('change', e => { if (e.target.tagName === 'SELECT' && e.target.dataset.p) { setPath(e.target.dataset.p, e.target.value); render(); soon(); } });
+document.addEventListener('input', e => { const p = e.target.dataset && e.target.dataset.p; if (!p || (p === 'news.photo.name' && e.target.value === '__own')) return; setPath(p, e.target.type === 'checkbox' ? e.target.checked : e.target.value); if (e.target.type === 'checkbox' || e.target.tagName === 'SELECT') render(); soon(); });
+document.addEventListener('change', e => {
+  if (e.target.id === 'photoFile') { const file = e.target.files && e.target.files[0]; e.target.value = ''; if (file) shrinkPhoto(file).then(url => { S.news.photo.name = url; render(); soon(0); }).catch(() => alert('この画像は読み込めませんでした')); return; }
+  if (e.target.tagName === 'SELECT' && e.target.dataset.p === 'news.photo.name' && e.target.value === '__own') { $('#photoFile').click(); render(); return; }
+  if (e.target.tagName === 'SELECT' && e.target.dataset.p) { setPath(e.target.dataset.p, e.target.value); render(); soon(); }
+});
+// 画像を小さくする（横 720px まで、JPEG）。本文の印に入るので、大きいままにしない
+function shrinkPhoto(file) { return new Promise((ok, ng) => { const r = new FileReader(); r.onerror = ng; r.onload = () => { const im = new Image(); im.onerror = ng; im.onload = () => { const w = Math.min(720, im.naturalWidth), h = Math.round(im.naturalHeight * w / im.naturalWidth), c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, w, h); g.drawImage(im, 0, 0, w, h); ok(c.toDataURL('image/jpeg', 0.78)); }; im.src = r.result; }; r.readAsDataURL(file); }); }
 document.addEventListener('click', e => {
   const k = e.target.closest('[data-kind]'); if (k) { S.kind = k.dataset.kind; render(); soon(0); return; }
+  if (e.target.id === 'btnPhotoPick') { $('#photoFile').click(); return; }
   if (e.target.id === 'btnPasteAdd' || e.target.id === 'btnPasteSet') { const list = fromText($('#pasteBox').value); if (!list.length) { alert('貼り付けた文がありません'); return; } if (e.target.id === 'btnPasteSet') { if (S.video.vc.length && !confirm('今のコメントを消して、貼り付けた文から作ります。よいですか？')) return; S.video.vc = list; } else S.video.vc.push(...list); render(); soon(0); return; }
   const add = e.target.closest('[data-add]'); if (add) { const l = listOf(add.dataset.add); l.push(blankOf(add.dataset.add)); render(); soon(); const its = add.parentElement.querySelectorAll(':scope > .item'); its[its.length - 1]?.querySelector('input,textarea')?.focus(); return; }
   const rm = e.target.closest('[data-rm]'); if (rm) { const l = listOf(rm.dataset.rm); l.splice(+rm.dataset.i, 1); render(); soon(); return; }
