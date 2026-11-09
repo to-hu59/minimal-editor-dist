@@ -1926,6 +1926,7 @@
                     <div class="pt-3 border-t border-woodBorder">
                         <span class="font-bold text-softMuted block mb-1">更新履歴</span>
                         <div id="changelog" class="text-[11px] text-softMuted leading-relaxed">
+<div class="mb-1.5"><b class="text-softText">Version 12.17（2026-11-09）</b><br>報道メーカーの「見え方」に、ホラー演出用の暗い背景や人影が出ていたのを消しました。読む画面と同じ、明るい紙の色で見られます。</div>
 <div class="mb-1.5"><b class="text-softText">Version 12.16（2026-11-09）</b><br>「報道メーカー」を足しました。編集画面の動く人のボタン（特殊演出）を押して、「メーカー」の「トレンド（SNS）を作る」「ニュース記事を作る」を選ぶと、入力欄で作れます。LINEや掲示板と同じように、見え方を確かめながら作って、本文に入れられます。入れたトレンドやニュースの中で同じボタンを押すと、直せます。</div>
 <div class="mb-1.5"><b class="text-softText">Version 12.14（2026-11-09）</b><br>読書画面で、話の番号を入れて移れるようにしました。画面の真ん中を押すと出る下のバーの「10 / 360話」を押して、番号を入れます（ページ表示のときは、ページ数のところを押します）。いちばん下の棒を動かしているあいだは、行き先の話を出します。</div>
 <div class="mb-1.5"><b class="text-softText">Version 12.13（2026-11-09）</b><br>Driveの同期を直しました。作品を開いて読んだだけでは「直した」に数えず、別の端末で足した話を上書きしないようにしました。2つの端末で本文を直していたときは、話の数を見せて、どちらを使うか聞きます。作品ページや読書画面で☁を押したときも、開いている作品を同期します。</div>
@@ -9516,8 +9517,8 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         // 話の終わり・戻る・本の終わりで、読み終えた話から言葉を拾い、件数を小さく知らせる。読書は止めない
         // ===== 更新の確認：新しい版があれば、魚に青い点とメニュー（版の番号は version.json。公開のたびに、番号が変わる。番号が入っていない開発中は、確かめない） =====
         // 表示用の版。更新の検出は引き続き APP_BUILD の日時番号を使う。
-        const APP_VERSION = '12.16';
-        const APP_BUILD = '20261109214642';
+        const APP_VERSION = '12.17';
+        const APP_BUILD = '20261109215631';
         let updateCheckAt = 0;
         function paintBuild() {
             const el = document.getElementById('app-build-info'); if (!el) return;

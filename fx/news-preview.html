@@ -9,6 +9,11 @@
 <style>
   .hd, .nav, .endnav, #cover { display: none !important; }
   .stage { padding-bottom: 0 !important; }
+  /* ホラー演出用の背景・影・人影・ふちの暗がりは出さない。読む画面と同じ、明るい紙の色にする */
+  .bg, .shade, .silw, .vig, .fx { display: none !important; }
+  html, body, .app, .stage { background: #f3ece0 !important; }
+  .app { max-width: none; }
+  .page { color: #3b332b; text-shadow: none !important; animation: none !important; }
 </style>
 </head>
 <body>
