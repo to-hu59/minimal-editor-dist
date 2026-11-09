@@ -7435,7 +7435,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         function fxStyles(book) { return Array.isArray(book && book.fx && book.fx.styles) ? book.fx.styles : []; }
         function renderFxPicker() {
             const body = document.getElementById('fx-pick-body'), book = ttsBook();
-            let h = '<div class="sp-card"><div class="sp-h">手紙・調査票・メール</div><button type="button" class="sp-link" data-fp-act="document-letter">手紙を作る</button> <button type="button" class="sp-link" data-fp-act="document-report">調査票を作る</button> <button type="button" class="sp-link" data-fp-act="document-email">メールを作る</button></div>';
+            let h = '<div class="sp-card"><div class="sp-h">手紙・調査票・メール</div><button type="button" class="sp-link" data-fp-act="document-letter">手紙を作る</button> <button type="button" class="sp-link" data-fp-act="document-report">調査票を作る</button> <button type="button" class="sp-link" data-fp-act="document-email">メールを作る</button></div><div class="sp-card"><div class="sp-h">ニュース・トレンド</div><button type="button" class="sp-link" data-fp-act="news-trend">トレンド（SNS）を作る</button> <button type="button" class="sp-link" data-fp-act="news-article">ニュース記事を作る</button></div>';
             if (fxPickCtx && fxPickCtx.block) h += '<div class="sp-card"><div class="sp-h">この場所の演出</div><div class="sp-note">' + escapeHtml(fxPickCtx.block.text.slice(0, 60).replace(/\n/g, ' ')) + '…</div><button type="button" class="sp-link" style="margin-top:6px" data-fp-act="edit-block">この演出を、画面で直す</button></div>';
             const styles = fxStyles(book);
             if (styles.length) {
@@ -7472,7 +7472,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             if(window.LineMaker?.isSource(opts.src||'')){openLineEditor(opts);return;}
             if (fxMaker) fxMaker.close();
             const wrap = document.createElement('div'); wrap.className = 'fx-viewer'; wrap.id = 'fx-maker';
-            const frame = document.createElement('iframe'); frame.src = window.ProvidedEmail?.isSource(opts.src||'') ? 'fx/email-maker.html' : /^［(?:手紙|書類|メール)\s[^］\n]*見た目=提供版(?:[\s］])/m.test(String(opts.src || '').trim()) ? 'fx/document-maker.html' : 'fx/maker.html'; frame.setAttribute('title', '演出をつくる');
+            const frame = document.createElement('iframe'); frame.src = /^［報道[ \t][^］\n]*形=(?:炎上|ニュース)(?:[ \t]|］)/.test(String(opts.src || '').trim()) ? 'fx/news-maker.html' : window.ProvidedEmail?.isSource(opts.src||'') ? 'fx/email-maker.html' : /^［(?:手紙|書類|メール)\s[^］\n]*見た目=提供版(?:[\s］])/m.test(String(opts.src || '').trim()) ? 'fx/document-maker.html' : 'fx/maker.html'; frame.setAttribute('title', '演出をつくる');
             wrap.append(frame); document.body.append(wrap);
             const close = () => { window.removeEventListener('message', onMsg); wrap.remove(); if (fxMaker && fxMaker.close === close) fxMaker = null; };
             const onMsg = e => {
@@ -7510,7 +7510,9 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             body.addEventListener('click', e => {
                 const b = e.target.closest('[data-fp-act]'); if (!b) return;
                 const act = b.dataset.fpAct, book = ttsBook(), i = Number(b.dataset.i);
-                if(act === 'document-email'){fxOpenMaker({src:'［メール 見た目=提供版］\n［／メール］',title:'メール'});}
+                if(act === 'news-trend'){fxOpenMaker({src:'［報道 形=炎上 タグ=#話題 件数=12.4K 開始=8 順位=1］\nトレンド：#関連の話題｜4.2K posts\n@news_now｜ここにニュースの投稿が入ります。｜いいね=3.2K｜RP=1.1K｜種類=ニュース\n@someone｜ここに反応の投稿が入ります。｜いいね=820｜RP=96\n［／報道］',title:'トレンド'});}
+                else if(act === 'news-article'){fxOpenMaker({src:'［報道 形=ニュース 媒体=STAR　NEWS 分類=ENTERTAINMENT 印=速報 見出し=ここに見出しが入ります 日時=2026.11.09　18:00 記者=芸能担当記者 閲覧=12,480］\n写真：md_stage｜写真の説明\nここに本文が入ります。\n関連：関連記事の見出し\nコメント：名無し｜コメントが入ります｜共感=120｜反対=8\n［／報道］',title:'ニュース記事'});}
+                else if(act === 'document-email'){fxOpenMaker({src:'［メール 見た目=提供版］\n［／メール］',title:'メール'});}
                 else if (act === 'document-letter' || act === 'document-report') { const k=act === 'document-letter'?'手紙':'書類'; fxOpenMaker({src:'［'+k+' 見た目=提供版］\n［／'+k+'］',title:act === 'document-letter'?'手紙':'調査票'}); }
                 else if (act === 'sample') fxLoadSamples().then(list => { const s = list[i]; if (s) fxOpenMaker({ src: s.src, title: s.name }); });
                 else if (act === 'edit-block') fxOpenMaker({ src: fxPickCtx.block.text, title: 'この演出', replace: { start: fxPickCtx.block.start, end: fxPickCtx.block.end } });
@@ -9507,8 +9509,8 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         // 話の終わり・戻る・本の終わりで、読み終えた話から言葉を拾い、件数を小さく知らせる。読書は止めない
         // ===== 更新の確認：新しい版があれば、魚に青い点とメニュー（版の番号は version.json。公開のたびに、番号が変わる。番号が入っていない開発中は、確かめない） =====
         // 表示用の版。更新の検出は引き続き APP_BUILD の日時番号を使う。
-        const APP_VERSION = '12.14';
-        const APP_BUILD = '20261109205400';
+        const APP_VERSION = '12.15';
+        const APP_BUILD = '20261109214055';
         let updateCheckAt = 0;
         function paintBuild() {
             const el = document.getElementById('app-build-info'); if (!el) return;
