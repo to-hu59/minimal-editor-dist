@@ -1916,6 +1916,7 @@
                     <div class="pt-3 border-t border-woodBorder">
                         <span class="font-bold text-softMuted block mb-1">更新履歴</span>
                         <div id="changelog" class="text-[11px] text-softMuted leading-relaxed">
+<div class="mb-1.5"><b class="text-softText">Version 12.13（2026-11-09）</b><br>Driveの同期を直しました。作品を開いて読んだだけでは「直した」に数えず、別の端末で足した話を上書きしないようにしました。2つの端末で本文を直していたときは、話の数を見せて、どちらを使うか聞きます。作品ページや読書画面で☁を押したときも、開いている作品を同期します。</div>
 <div class="mb-1.5"><b class="text-softText">Version 12.12（2026-11-09）</b><br>更新履歴に、12.2〜12.11の内容を足しました。</div>
 <div class="mb-1.5"><b class="text-softText">Version 12.11（2026-11-09）</b><br>スマホの読書画面で、話の題名を2行まで出すようにしました。演出のボタンが出ても、題名が読めます。</div>
 <div class="mb-1.5"><b class="text-softText">Version 12.10（2026-11-09）</b><br>作品の画面と読書画面の上の虫眼鏡を外しました。検索は、魚のメニューの「探す」から使えます。読書画面の編集ボタンを、いちばん左に動かしました。コメントと押し間違えにくくなります。</div>
@@ -3512,6 +3513,19 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             const open = id => !document.getElementById(id)?.classList.contains('hidden');
             return state.currentBookId === id && (open('view-detail') || open('view-reader'));
         }
+        // 中身だけの印：読んだ記録（readLog）は、読むだけで増えるので、直したかどうかの判定には入れない
+        function driveCHash(packed) { try { const d = JSON.parse(packed); if (d && d.book) { d.book = Object.assign({}, d.book); delete d.book.readLog; } return driveHash(JSON.stringify(d)); } catch (e) { return driveHash(packed); } }
+        // 読んだ記録は、両方の分を合わせる（同じ日・同じ話は1つ）
+        function driveMergeLog(winText, otherText) {
+            try {
+                const w = JSON.parse(winText), o = JSON.parse(otherText), a = Array.isArray(w.book.readLog) ? w.book.readLog.slice() : [], have = new Set(a.map(x => x.d + '|' + x.c));
+                let add = 0; for (const x of (o.book && o.book.readLog) || []) { if (!have.has(x.d + '|' + x.c)) { a.push(x); have.add(x.d + '|' + x.c); add++; } }
+                if (!add) return winText;
+                a.sort((x, y) => x.d < y.d ? -1 : x.d > y.d ? 1 : 0); w.book.readLog = a; return JSON.stringify(w);
+            } catch (e) { return winText; }
+        }
+        function driveChapCount(packed) { let n = 0; try { const walk = x => { if (Array.isArray(x)) x.forEach(walk); else if (x && typeof x === 'object') { if (typeof x.content === 'string' && x.content.trim()) n++; Object.keys(x).forEach(k => { if (k !== 'content' && typeof x[k] === 'object') walk(x[k]); }); } }; walk(JSON.parse(packed).book.parts); } catch (e) {} return n; }
+        let driveSkippedOpen = 0;
         function driveApplyRemote(packed) {
             const data = JSON.parse(packed), i = state.books.findIndex(b => b.id === data.book.id);
             if (i >= 0) state.books[i] = data.book; else state.books.push(data.book);
@@ -3520,12 +3534,12 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             wSave(WIKI_KEY, wiki);
         }
 
-        async function driveSyncOnce() {
+        async function driveSyncOnce(manual) {
             const folderId = await driveFolder();
             const remote = await driveList(folderId), seen = new Set();
             const local = new Map(state.books.map(b => [b.id, b]));
-            let changedLocal = false, conflicts = 0, removed = 0;
-            const record = (id, file, text) => { driveMeta.books[id] = { fileId: file.id, modifiedTime: file.modifiedTime, hash: driveHash(text) }; };
+            let changedLocal = false, conflicts = 0, removed = 0; driveSkippedOpen = 0;
+            const record = (id, file, text) => { driveMeta.books[id] = { fileId: file.id, modifiedTime: file.modifiedTime, hash: driveHash(text), chash: driveCHash(text) }; };
             // 一度にたくさん消えるときだけ確認する（初期化のし直しなど）
             const plannedDeletes = remote.filter(f => f.appProperties?.yomimonoBook && !local.has(f.appProperties.yomimonoBook) && driveMeta.books[f.appProperties.yomimonoBook]).length;
             const allowDelete = plannedDeletes < 3 || confirm(`この端末で消えた作品が${plannedDeletes}件あります。Driveでもごみ箱に入れますか？\n（キャンセルすると、Driveから戻します）`);
@@ -3543,15 +3557,29 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                 const text = drivePack(book), localChanged = !meta || meta.hash !== driveHash(text);
                 if (!remoteChanged && !localChanged) continue;
                 if (!remoteChanged) { record(id, await driveUpload(file.id, { name: driveFileName(book) }, text), text); continue; }
-                if (driveBookBusy(id)) continue;
+                // 開いている作品：自動のときは、閉じるまで待つ（読んでいる途中で入れ替わらないように）。☁を押したときは、すぐ取ってくる
+                if (driveBookBusy(id) && !manual) { driveSkippedOpen++; continue; }
                 const remoteText = await (await driveFetch(`${DRIVE_API}files/${file.id}?alt=media`)).text();
                 if (driveHash(remoteText) === driveHash(text)) { record(id, file, text); continue; }
                 if (!localChanged) { driveApplyRemote(remoteText); record(id, file, remoteText); changedLocal = true; continue; }
-                // 両方で変わった：新しい方を使い、もう片方は控えに
-                conflicts++;
-                const localNewer = meta && driveMeta.editedAt > Date.parse(file.modifiedTime);
-                if (localNewer) { await driveBackup(folderId, JSON.parse(remoteText).book, remoteText); record(id, await driveUpload(file.id, { name: driveFileName(book) }, text), text); }
-                else { await driveBackup(folderId, book, text); driveApplyRemote(remoteText); record(id, file, remoteText); changedLocal = true; }
+                // 両方で変わった。読んだ記録だけの変化は「直した」に数えない。中身を直した方を使う
+                const lc = driveCHash(text), rc = driveCHash(remoteText);
+                const localEdited = lc !== rc && (!meta || !meta.chash || meta.chash !== lc);
+                const remoteEdited = lc !== rc && (!meta || !meta.chash || meta.chash !== rc);
+                let useLocal;
+                if (lc === rc || !localEdited) useLocal = false;
+                else if (!remoteEdited) useLocal = true;
+                else {
+                    // 両方で中身を直した：勝手に決めずに聞く。使わなかった方は、Driveに控えを残す
+                    conflicts++;
+                    const name = String(book.title || '無題').split('\n').join(' ');
+                    useLocal = confirm(`「${name}」を、2つの端末で直していました。\n\nこの端末：本文のある話 ${driveChapCount(text)}話\nDrive（別の端末）：本文のある話 ${driveChapCount(remoteText)}話\n\nOK＝この端末の方を使う\nキャンセル＝Driveの方を使う\n\n使わなかった方も、Driveに控えとして残します。`);
+                    if (useLocal) await driveBackup(folderId, JSON.parse(remoteText).book, remoteText); else await driveBackup(folderId, book, text);
+                }
+                const merged = useLocal ? driveMergeLog(text, remoteText) : driveMergeLog(remoteText, text);
+                if (driveHash(merged) !== driveHash(remoteText)) record(id, await driveUpload(file.id, { name: driveFileName(book) }, merged), merged);
+                else record(id, file, merged);
+                if (driveHash(merged) !== driveHash(text)) { driveApplyRemote(merged); changedLocal = true; }
             }
             for (const book of [...state.books]) {
                 if (seen.has(book.id)) continue;
@@ -3582,10 +3610,11 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             driveSyncing = (async () => {
                 try {
                     let pulled = false;
-                    do { driveAgain = false; if (await driveSyncOnce()) pulled = true; } while (driveAgain);
+                    do { driveAgain = false; if (await driveSyncOnce(manual === true)) pulled = true; } while (driveAgain);
                     const hm = new Date().toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
                     driveMeta.pending = false; driveSaveMeta();
-                    driveSetState('ok', pulled ? `Driveから新しい内容を取ってきました（${hm}）` : `Driveに保存済み（${hm}）`);
+                    if (driveSkippedOpen) driveSetState('ok', `開いている作品は、閉じたときに取ってきます。すぐなら☁を押してください（${hm}）`);
+                    else driveSetState('ok', pulled ? `Driveから新しい内容を取ってきました（${hm}）` : `Driveに保存済み（${hm}）`);
                     if (pulled) {
                         // 別の端末の変更を取ってきたとき：開いている作品の目次も、新しくする
                         if (!document.getElementById('view-detail')?.classList.contains('hidden') && state.currentBookId && state.books.some(b => b.id === state.currentBookId)) { try { updateDetailStats(); renderDetailAccordion(); } catch (e) {} }
@@ -9467,8 +9496,8 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         // 話の終わり・戻る・本の終わりで、読み終えた話から言葉を拾い、件数を小さく知らせる。読書は止めない
         // ===== 更新の確認：新しい版があれば、魚に青い点とメニュー（版の番号は version.json。公開のたびに、番号が変わる。番号が入っていない開発中は、確かめない） =====
         // 表示用の版。更新の検出は引き続き APP_BUILD の日時番号を使う。
-        const APP_VERSION = '12.12';
-        const APP_BUILD = '20261109125737';
+        const APP_VERSION = '12.13';
+        const APP_BUILD = '20261109201515';
         let updateCheckAt = 0;
         function paintBuild() {
             const el = document.getElementById('app-build-info'); if (!el) return;
