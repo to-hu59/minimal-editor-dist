@@ -2008,6 +2008,7 @@
                     <div class="pt-3 border-t border-woodBorder">
                         <span class="font-bold text-softMuted block mb-1">更新履歴</span>
                         <div id="changelog" class="text-[11px] text-softMuted leading-relaxed">
+<div class="mb-1.5"><b class="text-softText">Version 17.5（2026-11-11）</b><br>タイピング音を、書きやすくしました。［タイピング音 速さ=ふつう タダダダダッ!!!］のように、印の中に文字を書くと、その文字だけが1文字ずつ出ます。「速さ＝ふつう」のような全角の「＝」や、「──」での区切りも読みます。速さは「速い・早い・はやい」「ふつう・普通」「ゆっくり・遅い・おそい」のどれでも書けます（前に「とても」も付けられます）。</div>
 <div class="mb-1.5"><b class="text-softText">Version 17.4（2026-11-10）</b><br>本文の演出に「タイピング音」を足しました。［タイピング音 速さ=ふつう］カタカタカタ［／タイピング音］のように囲むと、そこだけ1文字ずつ、キーを打つ音といっしょに出ます。速さは「とても速い・速い・ふつう・ゆっくり・とてもゆっくり」か、1文字の秒数（速さ=0.15 など）で決めます。囲む中の文字は自由です。編集の演出のメニュー（音・振動）からも入れられます。音は設定の「音を出す」がオンのときだけ鳴ります。押すと、すぐ全部出ます。</div>
 <div class="mb-1.5"><b class="text-softText">Version 17.3（2026-11-10）</b><br>あらすじを、まとめて入れられるようにしました。あらすじの画面の下の「まとめて入れる」から、書いておいた文を貼り付けます（.txt・.md のファイルからも入れられます）。「901話」「901〜910話」「3巻」「3巻 2章」「第2部」のような見出しで、話・範囲・巻・部に振り分けます。入れる前に、どこに入るか（新しく・上書き）を確かめられます。</div>
 <div class="mb-1.5"><b class="text-softText">Version 17.2（2026-11-10）</b><br>あらすじと Wiki の通し番号を、単話で数えるようにしました。ebook の章は数えません。ebook の巻には「単話だと何話〜何話か」を入れられます（巻のひとことを書くところ）。入れると、次の部の番号がその続きになります。単話の部には「この部は何話から」も入れられます（部の流れを書くところ）。話の題名に「第901話」のような番号があれば、その番号を使います。</div>
@@ -7279,8 +7280,17 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         }
         const fxKindOf = s => (/タイピング|カタカタ/.test(s) ? 't' : '') + (/着信/.test(s) ? 'r' : '') + (/バイブ/.test(s) ? 'v' : '') + (/怒鳴り|どなる/.test(s) ? 'd' : '') + (/ノイズ|ジジ/.test(s) ? 'n' : '') + (/頭痛/.test(s) ? 'z' : '') + (/どくん|心臓/.test(s) ? 'h' : '');
         // タイピングの速さ：速さ=とても速い／速い／ふつう／ゆっくり／とてもゆっくり、または数字（1文字の秒数）
-        const FX_TYPE_SPEED = { 'とても速い': 0.03, 'とてもはやい': 0.03, '速い': 0.06, 'はやい': 0.06, 'ふつう': 0.1, '普通': 0.1, 'ゆっくり': 0.2, 'おそい': 0.2, '遅い': 0.2, 'とてもゆっくり': 0.35 };
-        function fxTypeSpeed(ps) { const m = String(ps || '').match(/速さ=([^\s　］]+)/); if (!m) return 0; const v = m[1], n = Number(v.replace(/[０-９．]/g, c => c === '．' ? '.' : String.fromCharCode(c.charCodeAt(0) - 0xFEE0))); return n > 0 ? Math.min(2, n) : (FX_TYPE_SPEED[v] || 0); }
+        const FX_TYPE_SPEED = { 'とても速い': 0.03, 'とても早い': 0.03, 'とてもはやい': 0.03, '速い': 0.06, '早い': 0.06, 'はやい': 0.06, 'ふつう': 0.1, '普通': 0.1, 'ゆっくり': 0.2, 'おそい': 0.2, '遅い': 0.2, 'とてもゆっくり': 0.35, 'とてもおそい': 0.35, 'とても遅い': 0.35 };
+        function fxTypeSpeed(ps) { const m = String(ps || '').match(/速さ[=＝]([^\s　］]+)/); if (!m) return 0; const v = m[1], n = Number(v.replace(/[０-９．]/g, c => c === '．' ? '.' : String.fromCharCode(c.charCodeAt(0) - 0xFEE0))); return n > 0 ? Math.min(2, n) : (FX_TYPE_SPEED[v] || 0); }
+        // 印の中に文字があるとき：［タイピング音 速さ=ふつう タダダッ］→［タイピング音 速さ=ふつう］タダダッ［／タイピング音］
+        const FX_TYPE_SP_RE = /速さ[=＝](とても速い|とても早い|とてもはやい|とてもゆっくり|とてもおそい|とても遅い|速い|早い|はやい|ふつう|普通|ゆっくり|おそい|遅い|[0-9０-９.．]+)/;
+        function fxTypeOneTag(line) {
+            return line.replace(/［(タイピング音|タイピング|カタカタ)([\s　][^］]*)］/g, (m, nm, ps) => {
+                const sp = ps.match(FX_TYPE_SP_RE), text = ps.replace(FX_TYPE_SP_RE, ' ').replace(/文[=＝]/, ' ').replace(/^[\s　─━―—–\-－:：、,]+|[\s　]+$/g, '');
+                if (!text) return m;
+                return '［' + nm + (sp ? ' 速さ=' + sp[1] : '') + '］' + text + '［／' + nm + '］';
+            });
+        }
         const fxDefSec = k => k === 't' ? 0.1 : /r/.test(k) ? 3 : /h/.test(k) ? 3.2 : /z/.test(k) ? 1.9 : /d/.test(k) ? 1.5 : 1.2;
         const fxTagRe = () => /［(／?)([^\s／］:：]+)([^］\n]*)］/g;
         const fxHasCache = new Map();
@@ -7312,6 +7322,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             for (let li = 0; li < L.length; li++) {
                 let line = L[li];
                 if (open && !open.closed && !line.trim() && out.length > open.from) { if (frames) frames.push({ from: open.from, to: out.length - 1, color: open.color, label: open.label, small: open.small }); open = null; }
+                if (line.indexOf('［') >= 0 && /［(タイピング音|タイピング|カタカタ)[\s　]/.test(line)) line = fxTypeOneTag(line);
                 // ［着信］（音・振動・文字がゆれる）／［バイブ］（振動・文字がゆれる）／［着信 バイブ］（同時）。印の行は消え、次の行に効く。秒=3 で長さも決められる
                 { const em = line.trim().match(/^［(着信|バイブ|怒鳴り|どなる|ノイズ|ジジッ?|頭痛|どくん|心臓|タイピング音|タイピング|カタカタ)([\s　][^］]*)?］$/);
                   if (em) { const ps = em[2] || '', sec = fxTypeSpeed(ps) || Number((ps.match(/秒=([0-9.]+)/) || [])[1]) || (Number((ps.match(/回数=([0-9]+)/) || [])[1]) * 1.05) || 0; pendingFx = pendingFx || { k: '', sec: 0 }; for (const c of fxKindOf(em[1] + ps)) if (!pendingFx.k.includes(c)) pendingFx.k += c; if (sec) pendingFx.sec = sec; continue; }
@@ -7761,7 +7772,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             { id: 'fx-both', name: '着信＋バイブ（同時）', note: '着信の音と、振動が、同時', tag: '［着信 バイブ］' },
             { id: 'fx-shout', name: '怒鳴り（強くゆれて・振動）', note: '次の行（選んだ文字だけ）が、どなるように、強くゆれて、振動する', tag: '［怒鳴り］' },
             { id: 'fx-noise', name: 'ジジッ（ノイズ・ざわっ）', note: '文字が、ジジッとブレる。ホラーの、ひずみ', tag: '［ジジッ］' },
-            { id: 'fx-type', name: 'タイピング音（1文字ずつ・カタカタ）', note: '選んだ文字が、キーを打つ音といっしょに、1文字ずつ出る。速さ=速い／ふつう／ゆっくり（数字なら1文字の秒数）', tag: '［タイピング音 速さ=ふつう］' },
+            { id: 'fx-type', name: 'タイピング音（1文字ずつ・カタカタ）', note: '文字を選んで押すと、その文字が、キーを打つ音といっしょに1文字ずつ出る。［タイピング音 速さ=ふつう タダダダッ］と、印の中に書いてもよい。速さ=とても速い／速い／ふつう／ゆっくり／とてもゆっくり（数字なら1文字の秒数）', tag: '［タイピング音 速さ=ふつう］' },
             { id: 'fx-head', name: '頭痛（ずきん・ぼやける）', note: '文字が、ずきんとぼやけて、重く響く', tag: '［頭痛］' },
             { inline: true, id: 'ori-v', name: '縦書き（この部分だけ）', note: '選んだ文字だけが、縦に並ぶ。選ばないときは、次の1行', tag: '［縦書き］' },
             { inline: true, id: 'ori-sr', name: 'ななめ（右下がり）', note: 'お／　は／　　よ のように、1文字ずつ、右へずれて、下に並ぶ', tag: '［ななめ］' },
@@ -10134,8 +10145,8 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         // 話の終わり・戻る・本の終わりで、読み終えた話から言葉を拾い、件数を小さく知らせる。読書は止めない
         // ===== 更新の確認：新しい版があれば、魚に青い点とメニュー（版の番号は version.json。公開のたびに、番号が変わる。番号が入っていない開発中は、確かめない） =====
         // 表示用の版。更新の検出は引き続き APP_BUILD の日時番号を使う。
-        const APP_VERSION = '17.4';
-        const APP_BUILD = '20261110193300';
+        const APP_VERSION = '17.5';
+        const APP_BUILD = '20261111085622';
         let updateCheckAt = 0;
         function paintBuild() {
             const el = document.getElementById('app-build-info'); if (!el) return;
