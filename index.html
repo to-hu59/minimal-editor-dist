@@ -188,6 +188,11 @@
         #cand-notice[hidden] { display: none; }
         #detail-accordion-container > .toc-part { border: 0; border-radius: 0; }
         .toc-part-head { display: flex; align-items: center; justify-content: space-between; min-height: 44px; padding: 6px 4px; cursor: pointer; }
+        .toc-part-sum { display: flex; gap: 6px; width: 100%; text-align: left; margin: -2px 0 6px; padding: 4px 8px 4px 26px; font-size: 12px; line-height: 1.6; color: #6b5a3e; background: none; border: 0; cursor: pointer; }
+        .toc-part-sum span { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+        .toc-part-sum i { flex: none; margin-top: 4px; color: #b8923f; font-size: 11px; }
+        .toc-grp > .toc-chunk-head span:first-of-type { font-weight: 700; }
+        .is-reordering #btn-open-synopsis { display: none; }
         .toc-part-head h4 { margin: 0; font-family: 'Hiragino Mincho ProN', 'Yu Mincho', 'Noto Serif JP', serif; font-size: 14px; color: #2a2118; }
         .toc-count { font-size: 11px; color: #7a6a52; margin-left: 6px; font-family: sans-serif; }
         .toc-fmt { font-size: 10px; color: #7a6a52; border: 1px solid #cdbf9f; border-radius: 3px; padding: 0 6px; }
@@ -1143,7 +1148,7 @@
                             <span id="detail-summary-line" class="text-[11px] text-softMuted font-normal">全2部</span>
                         </h3>
                     </div>
-<div id="reorder-toolbar"><button type="button" id="start-reorder">並べ替え</button><span id="reorder-active" hidden><span>持ち手を上下にドラッグ</span><button type="button" id="finish-reorder">完了</button><button type="button" id="cancel-reorder">取消</button></span></div>                    <button type="button" id="btn-add-new-part-header" class="px-3 py-1 rounded-xl bg-white hover:bg-kinari border border-woodBorder text-xs font-bold text-softText flex items-center space-x-1 active:scale-95 shadow-xs transition">
+<div id="reorder-toolbar"><button type="button" id="btn-open-synopsis" onclick="sumOpen()">あらすじ</button><button type="button" id="start-reorder">並べ替え</button><span id="reorder-active" hidden><span>持ち手を上下にドラッグ</span><button type="button" id="finish-reorder">完了</button><button type="button" id="cancel-reorder">取消</button></span></div>                    <button type="button" id="btn-add-new-part-header" class="px-3 py-1 rounded-xl bg-white hover:bg-kinari border border-woodBorder text-xs font-bold text-softText flex items-center space-x-1 active:scale-95 shadow-xs transition">
                         <i class="fa-solid fa-plus text-[10px] text-woodAccent"></i>
                         <span>追加</span>
                     </button>
@@ -1516,6 +1521,10 @@
                 <button type="button" id="btn-sheet-comments" class="hidden w-full py-3 px-3 rounded-2xl hover:bg-kinariDark/60 flex items-center space-x-3 text-xs font-bold text-softText active:scale-98 transition text-left">
                     <i class="fa-regular fa-comment-dots text-woodAccent text-sm w-5 text-center"></i>
                     <span>この話へのコメント</span>
+                </button>
+                <button type="button" id="btn-sheet-summary" class="hidden w-full py-3 px-3 rounded-2xl hover:bg-kinariDark/60 flex items-center space-x-3 text-xs font-bold text-softText active:scale-98 transition text-left">
+                    <i class="fa-regular fa-file-lines text-woodAccent text-sm w-5 text-center"></i>
+                    <span id="btn-sheet-summary-label">あらすじ</span>
                 </button>
                 <button type="button" id="btn-sheet-add-chapter" class="hidden w-full py-3 px-3 rounded-2xl hover:bg-kinariDark/60 flex items-center space-x-3 text-xs font-bold text-softText active:scale-98 transition text-left">
                     <i class="fa-solid fa-plus text-woodAccent text-sm w-5 text-center"></i>
@@ -1998,6 +2007,7 @@
                     <div class="pt-3 border-t border-woodBorder">
                         <span class="font-bold text-softMuted block mb-1">更新履歴</span>
                         <div id="changelog" class="text-[11px] text-softMuted leading-relaxed">
+<div class="mb-1.5"><b class="text-softText">Version 17（2026-11-10）</b><br>「あらすじ」を、部・まとまり・巻・話の入れ子にしました。作品のページの「収録内容」の「あらすじ」から開きます。部には大きな流れ、巻にはひとこと、話にはあらすじを書けます。「1〜10巻」「○○編」のようなまとまりも、いくつずつでも作れます。まとまりを作った部は、目次もそのまとまりで区切ります。目次では、部の下に部のあらすじが2行出て、あらすじのある巻と話には小さな印が付きます。まだ読んでいないところのあらすじは、鍵で隠れます。</div>
 <div class="mb-1.5"><b class="text-softText">Version 16（2026-11-10）</b><br>「作品テンプレート」を足しました。その作品でよく使う型（ステータス画面・システムなど、書き方も見た目も）を登録して、何回でも入れられます。編集画面で登録したいところを選んで（または演出の中にカーソルを置いて）、動く人のボタン →「この作品のテンプレート」→「選んだところをテンプレートに登録」。次からは、同じ一覧の名前を押すと、カーソルのところに入ります。名前の変更・削除もそこでできます。テンプレートは作品ごとで、同期・バックアップにも入ります。</div>
 <div class="mb-1.5"><b class="text-softText">Version 15（2026-11-10）</b><br>Wikiの項目のページを、ナムウィキ風にしました。「プロフィール」と「家族構成」の欄は、いちばん上の表になります。見出しに番号（1. 2. 2.1.）が付き、上に目次が出ます（押すと、たたまれていても開いて飛びます）。文の途中に ［＊補足］ と書くと脚注になり、下に「脚注」がまとまります。{{26話から}} の見出しを開けると「ここから先は、26話の内容（ネタバレ）を含みます」の帯が出ます。新しい項目には、概要・特徴・作中での行跡・能力・人間関係・余談のひな形が入ります（編集の「ナムウィキ風のひな形を入れる」でも入れられます）。</div>
 <div class="mb-1.5"><b class="text-softText">Version 14.2（2026-11-10）</b><br>Wikiの関連で、親子や夫婦を両方のページから付けたとき、逆の呼び方が混ざって出ていたのを直しました（ユ・スルホのページに「息子 ユ・テホ」と出るなど）。自分のページで付けた関係があれば、そちらを使います。相手の側だけで付けた関係は、よくある呼び方を逆にして出します（息子→親、夫→妻、後輩→先輩など）。</div>
@@ -4565,6 +4575,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             });
             return map;
         }
+        function tocSumSlot() { const c = tocRenderCtx; if (c.sumSlot === undefined) c.sumSlot = !!c.book && getFlatChapters(c.book).some(f => sumHasAny(f.chap)); return c.sumSlot; }
         function tocRowHtml(chap, pIdx, volId) {
             const inVol = volId != null, num = tocRenderCtx.numbers.get(chap.id);
             const open = inVol ? `handleVolumeChapterItemClick('${volId}', '${chap.id}', ${pIdx})` : `handleChapterItemClick('${chap.id}', ${pIdx})`;
@@ -4585,6 +4596,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                     </div>
                     <div class="flex items-center space-x-1 text-[10px] text-softMuted flex-shrink-0 pointer-events-auto">
                         <span>${chapVisibleLen(chap)}字</span>
+                        ${sumHasAny(chap) ? `<button type="button" class="toc-sum-mark w-6 h-8 flex items-center justify-center text-woodAccent" onclick="event.stopPropagation(); sumOpen('${chap.id}')" title="あらすじ" aria-label="あらすじあり"><i class="fa-regular fa-file-lines text-[11px]"></i></button>` : tocSumSlot() ? '<span class="w-6 h-8 flex-shrink-0" aria-hidden="true"></span>' : ''}
                         ${fxHasEffects(chap) ? '<span title="演出あり" aria-label="演出あり">🎬</span>' : ''}
                         ${commentBadgeHtml(chap)}
                         <button type="button" class="w-8 h-8 flex items-center justify-center text-woodBorderDark hover:text-woodAccent" onclick="event.stopPropagation(); toggleChapterFavorite('${chap.id}')">
@@ -4711,6 +4723,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                             </div>
                         </div>
 
+                        ${tocPartSumHtml(book, src, pIdx)}
                         <div id="part-items-container-${pIdx}" class="${isPartCollapsed ? 'hidden' : 'block'} font-sans">
                             ${renderPartInnerContent(part, pIdx, format)}
                         </div>
@@ -4963,6 +4976,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                 }
 
                 const rows = list => list.map(chap => tocRowHtml(chap, pIdx, null)).join('');
+                { const grp = !reorderMode && tocGroupsHtml(part, pIdx, chaps, tocRenderCtx.book.parts[pIdx].chapters, rows, '話', TOC_CHUNK); if (grp) return grp; }
                 let listHtml;
                 if (reorderMode || chaps.length <= TOC_CHUNK) {
                     listHtml = `<div id="sortable-part-chaps-${pIdx}">${rows(chaps)}</div>`;
@@ -5017,6 +5031,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                                             <h5 class="text-xs font-bold text-softText truncate font-sans">${escapeHtml(vol.title)}</h5>
                                         </div>
                                         <div class="flex items-center space-x-1.5 pointer-events-auto pr-1">
+                                            ${vol.summary ? `<button type="button" class="toc-sum-mark w-6 h-6 flex items-center justify-center text-woodAccent" onclick="event.stopPropagation(); sumOpenVol(${pIdx}, '${vol.id}')" title="この巻のあらすじ" aria-label="この巻のあらすじ"><i class="fa-regular fa-file-lines text-[11px]"></i></button>` : ''}
                                             <button type="button" class="item-menu w-6 h-6 flex items-center justify-center text-softMuted hover:text-softText" onclick="event.stopPropagation(); openItemBottomSheet('volume', ${pIdx}, '${vol.id}')">
                                                 <i class="fa-solid fa-ellipsis-vertical text-[11px]"></i>
                                             </button>
@@ -5030,6 +5045,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                             `;
                 };
                 const VOL_CHUNK = 10;
+                { const grp = !reorderMode && tocGroupsHtml(part, pIdx, vols, tocRenderCtx.book.parts[pIdx].volumes, l => l.map(volHtml).join(''), '巻', VOL_CHUNK); if (grp) return grp; }
                 if (reorderMode || vols.length <= VOL_CHUNK) return `<div id="sortable-part-vols-${pIdx}">${vols.map(volHtml).join('')}</div>`;
                 const lastChunk = (() => { const li = vols.findIndex(v => (v.chapters || []).some(c => c.id === tocRenderCtx.last)); return li < 0 ? 0 : Math.floor(li / VOL_CHUNK); })();
                 let out = '';
@@ -5154,6 +5170,8 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
 
             state.sheetTarget = { type, partIdx, volId, chapId, title: targetTitle, formatType };
             document.getElementById('btn-sheet-comments').classList.toggle('hidden', type !== 'chapter');
+            document.getElementById('btn-sheet-summary').classList.toggle('hidden', !['part', 'volume', 'chapter'].includes(type));
+            document.getElementById('btn-sheet-summary-label').textContent = type === 'part' ? 'この部のあらすじ（流れ・まとまり）' : type === 'volume' ? 'この巻のあらすじ' : 'この話のあらすじ・まとめ';
             document.getElementById('btn-sheet-add-chapter').classList.toggle('hidden', type !== 'volume');
             document.getElementById('btn-sheet-new-part').classList.toggle('hidden', type !== 'hidden');
             // 話・巻の⋮：別の部（または部なし）へ動かす。動かす先は、形式が合う部だけ。部の⋮：部なしの話を、範囲で入れる
@@ -6147,6 +6165,204 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             if (!h) return '';
             return '<div class="wk-label" style="margin-top:14px">この項目が、出てくるところ</div><div class="wk-sec">' + h + '' + '</div>';
         }
+        // ===== あらすじ（部 › まとまり › 巻 › 話）：Notion のような入れ子。部・巻・まとまりにも、文を置ける =====
+        // 部：part.summary（流れ）。巻：vol.summary（ひとこと）。まとまり：part.groups [{id,title,from,to,text}]（部の中の何巻・何話から何巻・何話まで。数は自由）
+        function sumHasAny(c) { const s = c && c.summary; return !!(s && (s.sub || s.story || s.points || s.memo)); }
+        function sumKids(part) { return !part ? [] : part.formatType === 'ebook' ? (part.volumes || []) : (part.chapters || []); }
+        function sumUnit(part) { return part && part.formatType === 'ebook' ? '巻' : '話'; }
+        function sumPartName(book, i) { const p = book.parts[i]; if (!p) return ''; if (!p.hidden) return p.partName || '第' + (i + 1) + '部'; if (book.structureType === 'mixed_type') return p.formatType === 'ebook' ? 'ebook' : '単話'; return book.parts.length > 1 ? '部なし' : (book.title || '作品'); }
+        function sumGroups(part) { return ((part && part.groups) || []).slice().sort((a, b) => a.from - b.from || a.to - b.to); }
+        function sumGroupOf(part, k1) { return sumGroups(part).find(g => k1 >= g.from && k1 <= g.to) || null; }
+        function sumGroupLabel(part, g) { return g.from === g.to ? g.from + sumUnit(part) : g.from + '〜' + g.to + sumUnit(part); }
+        function sumKidChaps(part, kid) { return part && part.formatType === 'ebook' ? (kid.chapters || []) : [kid]; }
+        function sumPartChaps(part) { return sumKids(part).flatMap(k => sumKidChaps(part, k)); }
+        function sumGroupKids(part, g) { return sumKids(part).slice(g.from - 1, g.to); }
+        function sumNums(book) { const m = new Map(); getFlatChapters(book).forEach((f, i) => m.set(f.chap.id, i + 1)); return m; }
+        function sumSpan(nums, chaps) { let a = 0, b = 0; for (const c of chaps) { const n = nums.get(c.id); if (!n) continue; if (!a || n < a) a = n; if (n > b) b = n; } return { a, b }; }
+        function sumPlain(t, n) { const s = String(t || '').replace(/\[\[([^\]|]+)(\|[^\]]*)?\]\]/g, '$1').replace(/\{\{[^}]*\}\}/g, '').replace(/^\s*#+\s*/gm, '').replace(/\s+/g, ' ').trim(); return s.length > n ? s.slice(0, n) + '…' : s; }
+        function sumShownParts(book) { return (book.parts || []).map((p, i) => i).filter(i => !book.parts[i].hidden || sumKids(book.parts[i]).length); }
+        function sumWhere(book, chapId) {
+            for (let p = 0; p < (book.parts || []).length; p++) {
+                const part = book.parts[p], kids = sumKids(part);
+                for (let i = 0; i < kids.length; i++) {
+                    if (part.formatType === 'ebook') { if ((kids[i].chapters || []).some(c => c.id === chapId)) return { partIdx: p, volId: kids[i].id, kidIdx: i + 1 }; }
+                    else if (kids[i].id === chapId) return { partIdx: p, volId: null, kidIdx: i + 1 };
+                }
+            }
+            return null;
+        }
+        // 上の段（戻る先・道しるべ）
+        function sumAncestors(book, st) {
+            const out = sumShownParts(book).length > 1 ? [{ view: 'list' }] : [];
+            if (!st || st.view === 'list') return [];
+            if (st.view === 'part') return out;
+            let p = st.partIdx, k1 = 0, volId = st.volId || null;
+            if (st.view === 'page') { const w = sumWhere(book, st.chapId); if (!w) return out; p = w.partIdx; volId = w.volId; k1 = w.kidIdx; }
+            const part = book.parts[p]; if (!part) return out;
+            out.push({ view: 'part', partIdx: p });
+            if (st.view === 'group') return out;
+            if (st.view === 'vol') k1 = sumKids(part).findIndex(v => v.id === st.volId) + 1;
+            const g = k1 ? sumGroupOf(part, k1) : null; if (g) out.push({ view: 'group', partIdx: p, groupId: g.id });
+            if (st.view === 'page' && volId) out.push({ view: 'vol', partIdx: p, volId });
+            return out;
+        }
+        function sumCrumbsHtml(book, st) {
+            const anc = sumAncestors(book, st); if (!anc.length) return '';
+            const label = a => {
+                if (a.view === 'list') return book.title || '作品';
+                if (a.view === 'part') return sumPartName(book, a.partIdx);
+                const part = book.parts[a.partIdx] || {};
+                if (a.view === 'group') { const g = (part.groups || []).find(x => x.id === a.groupId); return g ? (g.title || sumGroupLabel(part, g)) : ''; }
+                return ((part.volumes || []).find(v => v.id === a.volId) || {}).title || '巻';
+            };
+            return '<div class="sum-crumbs" style="font-size:12px;display:flex;flex-wrap:wrap;gap:0 4px;align-items:center;margin-bottom:6px">' + anc.map(a => '<button type="button" data-s="up" data-st="' + wEsc(JSON.stringify(a)) + '" style="border:0;background:none;padding:6px 2px;min-height:32px;color:#23594e;text-decoration:underline;font:inherit">' + wEsc(label(a)) + '</button>').join('<span style="opacity:.5">›</span>') + '</div>';
+        }
+        function sumSnap() { return { view: sumUI.view, chapId: sumUI.chapId || null, rangeId: sumUI.rangeId || null, partIdx: sumUI.partIdx, groupId: sumUI.groupId || null, volId: sumUI.volId || null, tk: sumUI.tk || null }; }
+        function sumNav(patch) { sumUI.stack = sumUI.stack || []; sumUI.stack.push(sumSnap()); Object.assign(sumUI, patch, { tOrig: null }); sumRender(); }
+        function sumPop() { const st = (sumUI.stack || []).pop(); if (!st) { const ov = document.getElementById('sum-box'); if (ov) ov.remove(); return; } Object.assign(sumUI, st, { tOrig: null }); sumRender(); }
+        function sumJump(st) { const book = sumBook(); if (!book) return; sumUI.stack = sumAncestors(book, st); Object.assign(sumUI, { view: 'list', chapId: null, rangeId: null, partIdx: null, groupId: null, volId: null, tk: null }, st, { tOrig: null }); sumRender(); }
+        function sumOpenPart(partIdx) { sumOpen(null, { view: 'part', partIdx }); }
+        function sumOpenVol(partIdx, volId) { sumOpen(null, { view: 'vol', partIdx, volId }); }
+        function sumTSnap() { return ['sum-tx', 'sum-gname', 'sum-gfrom', 'sum-gto'].map(id => { const e = document.getElementById(id); return e ? e.value : ''; }).join('\u0001'); }
+        function sumTSave(book) {
+            const part = book.parts[sumUI.partIdx]; if (!part) return;
+            const tx = ((document.getElementById('sum-tx') || {}).value || '').trim();
+            const redraw = () => { try { renderDetailAccordion(); } catch (e) {} };
+            if (sumUI.tk === 'group') {
+                const from = Number(document.getElementById('sum-gfrom').value), to = Number(document.getElementById('sum-gto').value), name = document.getElementById('sum-gname').value.trim();
+                if (!from || !to || to < from) { toast('はじめと終わりを選んでください（はじめ ≦ 終わり）'); return; }
+                part.groups = part.groups || [];
+                let g = part.groups.find(x => x.id === sumUI.groupId); const isNew = !g;
+                if (!g) { g = { id: 'sg_' + Date.now().toString(36) }; part.groups.push(g); }
+                g.from = from; g.to = to; if (name) g.title = name; else delete g.title; if (tx) g.text = tx; else delete g.text;
+                save(); savedToast(isNew ? 'まとまりを作りました' : 'まとまりを保存しました'); redraw();
+                const p = sumUI.partIdx; sumPop(); if (isNew) sumNav({ view: 'group', partIdx: p, groupId: g.id }); return;
+            }
+            if (sumUI.tk === 'vol') { const vol = (part.volumes || []).find(v => v.id === sumUI.volId); if (!vol) return; if (tx) vol.summary = tx; else delete vol.summary; }
+            else { if (tx) part.summary = tx; else delete part.summary; }
+            save(); savedToast('あらすじを保存しました'); redraw(); sumPop();
+        }
+        function sumTreeHtml(book, cur, titleEl) {
+            const nums = sumNums(book), shown = sumShownParts(book);
+            const here = '<span style="color:#23594e;font-weight:700">📍いまここ</span>', muted = t => '<span style="opacity:.55">' + t + '</span>';
+            const st = (span, id) => { const locked = !!(cur && span.a && span.a > cur && !sumUI.reveal[id]); return { locked, right: cur && span.a && cur >= span.a && cur <= span.b ? here : (cur && span.a && span.a > cur ? '🔒' : '') }; };
+            const sec = (label, extra) => '<div style="margin-top:18px;display:flex;justify-content:space-between;align-items:center;gap:8px"><b>' + label + '</b>' + (extra || '') + '</div>';
+            const editBtn = (k, label) => '<button type="button" data-s="tedit" data-k="' + k + '" style="flex:none;border:1px solid #c9b88f;background:#fff;border-radius:10px;padding:6px 12px;min-height:36px;font:inherit;font-size:12px;color:#23594e">✎ ' + label + '</button>';
+            const row = (attrs, head, sub, right) => '<button type="button" ' + attrs + ' class="sum-row" style="display:block;width:100%;margin-top:6px;padding:10px 12px;border-radius:10px;border:1px solid #c9b88f;background:#fff;text-align:left;font:inherit;color:inherit"><span style="display:flex;justify-content:space-between;gap:8px;align-items:baseline"><b style="min-width:0">' + head + '</b><span style="flex:none;font-size:12px">' + (right || '') + '</span></span>' + (sub ? '<span style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;margin-top:3px;font-size:12.5px;line-height:1.6;opacity:.8">' + sub + '</span>' : '') + '</button>';
+            const textBlock = (text, locked, id, empty) => !text ? '<div style="margin-top:6px">' + muted(empty) + '</div>' : locked ? '<div class="wk-muted" style="padding:14px;border:1px dashed #b8923f;border-radius:10px;margin-top:8px">🔒 まだ読んでいないところのあらすじです。<br><button type="button" data-s="reveal" data-id="' + wEsc(id) + '" style="margin-top:8px;padding:8px 14px;border-radius:10px;border:1px solid #c9b88f;background:#fff">ネタバレを見る</button></div>' : '<div class="sum-text" style="margin-top:6px">' + wikiRich(book.id, text, null, { toc: false }) + '</div>';
+            const chapRow = c => { const n = nums.get(c.id) || 0, s = st({ a: n, b: n }, c.id), sm = c.summary || {}; return row('data-s="chap" data-id="' + wEsc(c.id) + '"', wEsc(c.title || (n + '話')), sumHasAny(c) ? (s.locked ? muted('🔒 まだ読んでいない話です') : wEsc(sumPlain(sm.sub || sm.story || sm.points, 110))) : '', s.right); };
+            const kidRow = (part, p, kid) => {
+                if (part.formatType !== 'ebook') return chapRow(kid);
+                const s = st(sumSpan(nums, kid.chapters || []), kid.id);
+                return row('data-s="vol" data-p="' + p + '" data-v="' + wEsc(kid.id) + '"', wEsc(kid.title || '巻'), kid.summary ? (s.locked ? muted('🔒 まだ読んでいない巻です') : wEsc(sumPlain(kid.summary, 110))) : '', s.right);
+            };
+            const kidList = (part, p, list) => {
+                if (!list.length) return '<div style="margin-top:6px">' + muted('ありません') + '</div>';
+                if (list.length <= 50) return list.map(x => kidRow(part, p, x.kid)).join('');
+                let out = '';
+                for (let i = 0; i < list.length; i += 50) {
+                    const c = list.slice(i, i + 50), has = c.some(x => sumKidChaps(part, x.kid).some(ch => nums.get(ch.id) === cur));
+                    out += '<details' + (has || (!cur && i === 0) ? ' open' : '') + ' style="margin-top:6px"><summary style="cursor:pointer;padding:8px 4px;font-weight:700">' + c[0].k1 + '〜' + c[c.length - 1].k1 + sumUnit(part) + '</summary>' + c.map(x => kidRow(part, p, x.kid)).join('') + '</details>';
+                }
+                return out;
+            };
+            if (sumUI.view === 'list' && shown.length === 1) { sumUI.view = 'part'; sumUI.partIdx = shown[0]; }
+            let h = '';
+            if (sumUI.view === 'list') {
+                titleEl.textContent = 'あらすじ';
+                h += '<div style="font-size:18px;font-weight:700">' + wEsc(book.title || '') + '</div><div style="font-size:12px;opacity:.75;margin-top:2px">いま：' + (cur ? cur + '話目' : 'まだ読んでいません') + '。部を押すと、その部の流れと一覧が開きます。</div>';
+                if (!shown.length) h += '<div style="margin-top:12px">' + muted('まだ部・話がありません') + '</div>';
+                for (const p of shown) {
+                    const part = book.parts[p], s = st(sumSpan(nums, sumPartChaps(part)), 'p' + p);
+                    h += row('data-s="part" data-p="' + p + '"', wEsc(sumPartName(book, p)) + ' <span style="font-weight:400;font-size:12px;opacity:.7">（' + sumKids(part).length + sumUnit(part) + '）</span>', part.summary ? (s.locked ? muted('🔒 まだ読んでいない部です') : wEsc(sumPlain(part.summary, 120))) : muted('まだあらすじがありません'), s.right);
+                }
+                const rs = (book.rangeSummaries || []).slice().sort((a, b) => a.from - b.from);
+                if (rs.length) { h += sec('話数の範囲のまとめ'); for (const r of rs) h += row('data-s="range" data-id="' + wEsc(r.id) + '"', r.from + '〜' + r.to + '話', r.text ? (cur && r.from > cur ? muted('🔒 まだ読んでいないところです') : wEsc(sumPlain(r.text, 100))) : '', cur && r.to > cur ? '🔒' : ''); }
+                return h;
+            }
+            const p = sumUI.partIdx, part = book.parts[p];
+            if (!part) { sumUI.view = 'list'; return sumTreeHtml(book, cur, titleEl); }
+            const kids = sumKids(part), unit = sumUnit(part);
+            if (sumUI.view === 'part') {
+                const s = st(sumSpan(nums, sumPartChaps(part)), 'p' + p), gs = sumGroups(part);
+                titleEl.textContent = 'あらすじ';
+                h += sumCrumbsHtml(book, { view: 'part', partIdx: p });
+                h += '<div style="font-size:18px;font-weight:700">' + wEsc(sumPartName(book, p)) + ' <span style="font-weight:400;font-size:13px;opacity:.7">（' + kids.length + unit + '）</span></div>';
+                h += sec('この部の流れ', editBtn('part', part.summary ? '直す' : '書く')) + textBlock(part.summary, s.locked, 'p' + p, 'まだありません。「✎ 書く」から、この部の大きな流れを書けます。');
+                h += sec('まとまり', kids.length > 12 && !gs.length ? '<span style="font-size:11px;opacity:.7;text-align:right">多いときは、まとめると見やすくなります</span>' : '');
+                for (const g of gs) {
+                    const gk = sumGroupKids(part, g), gs2 = st(sumSpan(nums, gk.flatMap(k => sumKidChaps(part, k))), g.id);
+                    h += row('data-s="group" data-p="' + p + '" data-g="' + wEsc(g.id) + '"', wEsc(g.title || sumGroupLabel(part, g)) + (g.title ? ' <span style="font-weight:400;font-size:12px;opacity:.7">' + sumGroupLabel(part, g) + '</span>' : ''), g.text ? (gs2.locked ? muted('🔒 まだ読んでいないところです') : wEsc(sumPlain(g.text, 110))) : '', gs2.right);
+                }
+                if (kids.length) h += '<button type="button" data-s="tedit" data-k="gnew" style="width:100%;margin-top:6px;padding:10px 12px;border-radius:10px;border:1px dashed #b8923f;background:transparent;font:inherit">＋ まとまりを作る（1〜10' + unit + '・○○編など）</button>';
+                const free = kids.map((kid, i) => ({ kid, k1: i + 1 })).filter(x => !gs.some(g => x.k1 >= g.from && x.k1 <= g.to));
+                if (free.length || !kids.length) h += sec(gs.length ? 'まとまりに入っていない' + unit : unit + 'の一覧') + kidList(part, p, free);
+                return h;
+            }
+            if (sumUI.view === 'group') {
+                const g = (part.groups || []).find(x => x.id === sumUI.groupId); if (!g) { sumUI.view = 'part'; return sumTreeHtml(book, cur, titleEl); }
+                const gk = sumGroupKids(part, g), s = st(sumSpan(nums, gk.flatMap(k => sumKidChaps(part, k))), g.id);
+                titleEl.textContent = 'あらすじ';
+                h += sumCrumbsHtml(book, { view: 'group', partIdx: p, groupId: g.id });
+                h += '<div style="font-size:18px;font-weight:700">' + wEsc(g.title || sumGroupLabel(part, g)) + '</div>' + (g.title ? '<div style="font-size:12px;opacity:.7">' + sumGroupLabel(part, g) + '</div>' : '');
+                h += sec('このまとまりのあらすじ', editBtn('group', '直す')) + textBlock(g.text, s.locked, g.id, 'まだありません。「✎ 直す」から書けます。');
+                h += sec(unit + 'の一覧') + kidList(part, p, gk.map((kid, i) => ({ kid, k1: g.from + i })));
+                return h;
+            }
+            if (sumUI.view === 'vol') {
+                const vol = (part.volumes || []).find(v => v.id === sumUI.volId); if (!vol) { sumUI.view = 'part'; return sumTreeHtml(book, cur, titleEl); }
+                const chs = vol.chapters || [], s = st(sumSpan(nums, chs), vol.id);
+                titleEl.textContent = 'あらすじ';
+                h += sumCrumbsHtml(book, { view: 'vol', partIdx: p, volId: vol.id });
+                h += '<div style="font-size:18px;font-weight:700">' + wEsc(vol.title || '巻') + '</div>';
+                h += sec('この巻のひとこと', editBtn('vol', vol.summary ? '直す' : '書く')) + textBlock(vol.summary, s.locked, vol.id, 'まだありません。「✎ 書く」から書けます。');
+                h += sec('章ごとのあらすじ') + (chs.length ? chs.map(chapRow).join('') : '<div style="margin-top:6px">' + muted('章がありません') + '</div>');
+                if (chs.length) h += '<button type="button" data-s="read" data-id="' + wEsc(chs[0].id) + '" style="width:100%;margin-top:14px;padding:10px;border-radius:10px;border:1px solid #23594e;background:#23594e;color:#fff;font:inherit">この巻を読む</button>';
+                return h;
+            }
+            // tedit：部の流れ・巻のひとこと・まとまり を書く
+            const ta = (v, ph) => '<textarea id="sum-tx" rows="12" placeholder="' + wEsc(ph) + '" style="width:100%;box-sizing:border-box;margin-top:8px;padding:9px 10px;border-radius:10px;border:1px solid #c9b88f;background:#fff;font:inherit">' + wEsc(v || '') + '</textarea>';
+            const tip = '<div class="wk-muted" style="margin-top:8px;font-size:12px;opacity:.7">[[名前]] と書くと、Wikiの項目へのリンクになります。上の「✓」で保存します</div>';
+            const inSt = 'padding:9px 10px;border-radius:10px;border:1px solid #c9b88f;background:#fff;font:inherit';
+            if (sumUI.tk === 'part') { titleEl.textContent = 'この部の流れを書く'; return '<b>' + wEsc(sumPartName(book, p)) + '</b>' + ta(part.summary, 'この部の大きな流れ・あらすじ') + tip; }
+            if (sumUI.tk === 'vol') { const vol = (part.volumes || []).find(v => v.id === sumUI.volId) || {}; titleEl.textContent = '巻のひとことを書く'; return '<b>' + wEsc(vol.title || '巻') + '</b>' + ta(vol.summary, 'この巻のひとこと・あらすじ') + tip; }
+            const g = (part.groups || []).find(x => x.id === sumUI.groupId) || null;
+            let from = g ? g.from : 1, to = g ? g.to : 1;
+            if (!g) { const gs = sumGroups(part); for (let i = 1; i <= kids.length; i++) if (!gs.some(x => i >= x.from && i <= x.to)) { from = i; break; } to = Math.min(kids.length, from + 9); }
+            const opts = sel => kids.map((k, i) => '<option value="' + (i + 1) + '"' + (i + 1 === sel ? ' selected' : '') + '>' + (i + 1) + '. ' + wEsc(String(k.title || '').slice(0, 24)) + '</option>').join('');
+            titleEl.textContent = g ? 'まとまりを直す' : 'まとまりを作る';
+            h += '<div style="font-size:12px;opacity:.75">' + wEsc(sumPartName(book, p)) + 'の中の、' + unit + 'のまとまりです（例：1〜10' + unit + '・○○編）。いくつずつでもかまいません。</div>';
+            h += '<div style="margin-top:12px;font-weight:700;font-size:13px;color:#7a6a4a">名前（なくてもよい）</div><input id="sum-gname" value="' + wEsc(g && g.title || '') + '" placeholder="例：チュートリアル編" style="width:100%;box-sizing:border-box;margin-top:4px;' + inSt + '">';
+            h += '<div style="margin-top:12px;font-weight:700;font-size:13px;color:#7a6a4a">範囲</div><div style="display:flex;flex-direction:column;gap:6px;margin-top:4px"><label style="display:flex;gap:6px;align-items:center"><span style="flex:none;width:48px">はじめ</span><select id="sum-gfrom" style="flex:1;min-width:0;' + inSt + '">' + opts(from) + '</select></label><label style="display:flex;gap:6px;align-items:center"><span style="flex:none;width:48px">終わり</span><select id="sum-gto" style="flex:1;min-width:0;' + inSt + '">' + opts(to) + '</select></label></div>';
+            h += '<div style="margin-top:12px;font-weight:700;font-size:13px;color:#7a6a4a">あらすじ</div>' + ta(g && g.text, 'このまとまりのあらすじ') + tip;
+            if (g) h += '<button type="button" data-s="gdel" style="margin-top:18px;padding:8px 14px;border-radius:10px;border:1px solid #c9b88f;background:#fff;color:#a33">このまとまりを消す（' + unit + 'とあらすじは残ります）</button>';
+            return h;
+        }
+        // 目次：まとまりがある部は、30話・10巻ごとの区切りの代わりに、まとまりで区切る
+        function tocGroupsHtml(part, pIdx, items, origArr, rowsFn, unit, size) {
+            const gs = sumGroups(part); if (!gs.length || !items.length) return '';
+            const orig = (origArr || []).map(x => x.id), buckets = new Map(), order = []; let run = null;
+            for (const it of items) {
+                const k = orig.indexOf(it.id) + 1, g = gs.find(x => k >= x.from && k <= x.to); let key;
+                if (g) { key = g.id; run = null; } else { if (!run || buckets.get(run).list.length >= size) run = 'f' + order.length; key = run; }
+                if (!buckets.has(key)) { buckets.set(key, { g, list: [] }); order.push(key); }
+                buckets.get(key).list.push(it);
+            }
+            const last = tocRenderCtx.last, hasLast = b => b.list.some(it => it.id === last || (it.chapters || []).some(c => c.id === last));
+            const anyLast = order.some(k => hasLast(buckets.get(k)));
+            return order.map((key, n) => {
+                const b = buckets.get(key), ks = b.list.map(it => orig.indexOf(it.id) + 1), a = Math.min(...ks), z = Math.max(...ks);
+                const ck = tocRenderCtx.book.id + ':' + pIdx + ':g' + (b.g ? b.g.id : a);
+                const open = ck in state.tocChunkOpen ? state.tocChunkOpen[ck] : (anyLast ? hasLast(b) : n === 0);
+                const name = b.g ? (b.g.title || sumGroupLabel(part, b.g)) : a + '〜' + z + unit, cnt = b.g && b.g.title ? sumGroupLabel(part, b.g) : b.list.length + unit;
+                return '<div class="toc-chunk' + (b.g ? ' toc-grp' : '') + '"><button type="button" class="toc-chunk-head" aria-expanded="' + open + '" onclick="toggleTocChunk(\'' + ck + '\', this)"><i class="fa-solid fa-chevron-' + (open ? 'down' : 'right') + '"></i><span>' + escapeHtml(name) + '</span><span class="toc-count">' + cnt + '</span></button><div class="toc-chunk-body"' + (open ? '' : ' hidden') + '>' + rowsFn(b.list) + '</div></div>';
+            }).join('');
+        }
+        function tocPartSumHtml(book, part, pIdx) {
+            if (!part || !part.summary) return '';
+            const cur = wikiEpisode(book.id), sp = sumSpan(sumNums(book), sumPartChaps(part)), locked = cur && sp.a && sp.a > cur;
+            return '<button type="button" class="toc-part-sum" onclick="event.stopPropagation(); sumOpenPart(' + pIdx + ')" aria-label="この部のあらすじを開く"><i class="fa-regular fa-file-lines"></i><span>' + (locked ? '🔒 あらすじ（まだ読んでいない部です）' : escapeHtml(sumPlain(part.summary, 140))) + '</span></button>';
+        }
         // ===== 話のまとめ：各話に、サブタイトル・あらすじ・注目ポイント・読書メモを置く。範囲（10話ごとなど）のまとめも =====
         const SUM_FIELDS = [['sub', '一行サブタイトル', '例：国民的嫌われ俳優の体に、元・闇金業者が憑依した。', 2], ['story', 'あらすじ', 'できごとを、順に。[[名前]] と書くと、その項目へのリンクになります', 8], ['points', '注目ポイント', '', 4], ['memo', '読書メモ（感想）', '', 4]];
         let sumUI = { view: 'list', chapId: null, rangeId: null, reveal: {} };
@@ -6160,29 +6376,27 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             if (!ov) {
                 ov = document.createElement('div'); ov.id = 'sum-box';
                 ov.style.cssText = 'position:fixed;inset:0;z-index:53;background:#f3ede0;display:flex;flex-direction:column;font:14px/1.7 sans-serif;color:#2a2118';
-                ov.innerHTML = '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:2px solid #b8923f;background:#23352c"><button type="button" id="sum-back" aria-label="戻る" style="min-width:44px;min-height:44px;border:0;background:transparent;color:#e3c783;font-size:22px">‹</button><h3 id="sum-title" style="margin:0;font-size:15px;color:#e3c783;letter-spacing:.08em">話のまとめ</h3><span style="display:flex"><button type="button" id="sum-edit" aria-label="編集する" hidden style="min-width:44px;min-height:44px;border:0;background:transparent;color:#e3c783;font-size:18px">✎</button><button type="button" id="sum-save" aria-label="保存して閉じる" hidden style="min-width:44px;min-height:44px;border:0;background:transparent;color:#e3c783;font-size:22px;font-weight:700">✓</button><button type="button" id="sum-close" aria-label="閉じる" style="min-width:44px;min-height:44px;border:0;background:transparent;color:#e3c783;font-size:22px">×</button></span></div><div id="sum-body" style="flex:1;overflow:auto;padding:14px 16px calc(env(safe-area-inset-bottom,0px) + 24px)"></div>';
+                ov.innerHTML = '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:2px solid #b8923f;background:#23352c"><button type="button" id="sum-back" aria-label="戻る" style="min-width:44px;min-height:44px;border:0;background:transparent;color:#e3c783;font-size:22px">‹</button><h3 id="sum-title" style="margin:0;font-size:15px;color:#e3c783;letter-spacing:.08em">あらすじ</h3><span style="display:flex"><button type="button" id="sum-edit" aria-label="編集する" hidden style="min-width:44px;min-height:44px;border:0;background:transparent;color:#e3c783;font-size:18px">✎</button><button type="button" id="sum-save" aria-label="保存して閉じる" hidden style="min-width:44px;min-height:44px;border:0;background:transparent;color:#e3c783;font-size:22px;font-weight:700">✓</button><button type="button" id="sum-close" aria-label="閉じる" style="min-width:44px;min-height:44px;border:0;background:transparent;color:#e3c783;font-size:22px">×</button></span></div><div id="sum-body" style="flex:1;overflow:auto;padding:14px 16px calc(env(safe-area-inset-bottom,0px) + 24px)"></div>';
                 document.body.appendChild(ov);
                 ov.addEventListener('click', sumClick);
                 document.getElementById('sum-back').onclick = sumBack; document.getElementById('sum-close').onclick = () => { if (sumLeaveOk()) ov.remove(); };
-                document.getElementById('sum-edit').onclick = () => { if (sumUI.view === 'page') { sumUI.view = 'edit'; sumRender(); } else if (sumUI.view === 'rpage') { sumUI.view = 'redit'; sumRender(); } };
+                document.getElementById('sum-edit').onclick = () => { if (sumUI.view === 'page') sumNav({ view: 'edit' }); else if (sumUI.view === 'rpage') sumNav({ view: 'redit' }); };
                 document.getElementById('sum-save').onclick = sumSave;
             }
-            sumUI = { view: chapId ? 'page' : 'list', chapId: chapId || null, rangeId: null, reveal: {} };
-            sumRender();
+            const st0 = chapId ? { view: 'page', chapId } : (arguments[1] || { view: 'list' });
+            sumUI = { view: 'list', chapId: null, rangeId: null, partIdx: null, groupId: null, volId: null, tk: null, reveal: {}, stack: [] };
+            sumJump(st0);
         }
         function sumDirty() {
             if (sumUI.view === 'edit') { const c = sumChapters(sumBook()).find(x => x.chap.id === sumUI.chapId); const s = (c && c.chap.summary) || {}; return SUM_FIELDS.some(([k]) => (document.getElementById('sum-f-' + k).value || '') !== (s[k] || '')); }
             if (sumUI.view === 'redit') { const r = (sumBook().rangeSummaries || []).find(x => x.id === sumUI.rangeId) || {}; return (document.getElementById('sum-rt').value || '') !== (r.text || '') || String(document.getElementById('sum-rf').value || '') !== String(r.from || '') || String(document.getElementById('sum-rto').value || '') !== String(r.to || ''); }
+            if (sumUI.view === 'tedit') return sumUI.tOrig != null && sumTSnap() !== sumUI.tOrig;
             return false;
         }
         const sumLeaveOk = () => !sumDirty() || confirm('保存していない変更があります。破棄して戻りますか？');
         function sumBack() {
             if (!sumLeaveOk()) return;
-            if (sumUI.view === 'edit') { sumUI.view = 'page'; }
-            else if (sumUI.view === 'redit') { sumUI.view = sumUI.rangeId ? 'rpage' : 'list'; }
-            else if (sumUI.view === 'page' || sumUI.view === 'rpage') { sumUI.view = 'list'; }
-            else { const ov = document.getElementById('sum-box'); if (ov) ov.remove(); return; }
-            sumRender();
+            sumPop();
         }
         function sumSave() {
             const book = sumBook(); if (!book) return;
@@ -6190,24 +6404,30 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                 const c = sumChapters(book).find(x => x.chap.id === sumUI.chapId); if (!c) return;
                 const s = {}; for (const [k] of SUM_FIELDS) s[k] = document.getElementById('sum-f-' + k).value.trim();
                 c.chap.summary = (s.sub || s.story || s.points || s.memo) ? s : undefined; if (!c.chap.summary) delete c.chap.summary;
-                save(); savedToast('まとめを保存しました'); sumUI.view = 'page'; sumRender();
+                save(); savedToast('まとめを保存しました'); try { renderDetailAccordion(); } catch (e) {} sumPop();
             } else if (sumUI.view === 'redit') {
                 const from = Math.floor(Number(document.getElementById('sum-rf').value)) || 0, to = Math.floor(Number(document.getElementById('sum-rto').value)) || 0, text = document.getElementById('sum-rt').value.trim();
                 if (!from || !to || to < from) { toast('はじめと終わりの話数を、入れてください（はじめ ≦ 終わり）'); return; }
                 book.rangeSummaries = book.rangeSummaries || [];
                 let r = book.rangeSummaries.find(x => x.id === sumUI.rangeId);
                 if (!r) { r = { id: 'rs_' + Date.now() }; book.rangeSummaries.push(r); sumUI.rangeId = r.id; }
-                r.from = from; r.to = to; r.text = text; save(); savedToast('範囲のまとめを保存しました'); sumUI.view = 'rpage'; sumRender();
-            }
+                r.from = from; r.to = to; r.text = text; save(); savedToast('範囲のまとめを保存しました'); sumPop(); if (sumUI.view !== 'rpage') sumNav({ view: 'rpage', rangeId: r.id });
+            } else if (sumUI.view === 'tedit') sumTSave(book);
         }
         function sumClick(ev) {
             const t = ev.target.closest && ev.target.closest('[data-s]'); if (!t) return;
             const book = sumBook(); if (!book) return; const a = t.dataset.s;
-            if (a === 'chap') { sumUI.view = 'page'; sumUI.chapId = t.dataset.id; sumRender(); }
+            if (a === 'chap') sumNav({ view: 'page', chapId: t.dataset.id });
+            else if (a === 'part') sumNav({ view: 'part', partIdx: Number(t.dataset.p) });
+            else if (a === 'group') sumNav({ view: 'group', partIdx: Number(t.dataset.p), groupId: t.dataset.g });
+            else if (a === 'vol') sumNav({ view: 'vol', partIdx: Number(t.dataset.p), volId: t.dataset.v });
+            else if (a === 'up') { try { sumJump(JSON.parse(t.dataset.st)); } catch (e) {} }
+            else if (a === 'tedit') sumNav({ view: 'tedit', tk: t.dataset.k === 'gnew' ? 'group' : t.dataset.k, groupId: t.dataset.k === 'gnew' ? null : sumUI.groupId });
+            else if (a === 'gdel') { const part = book.parts[sumUI.partIdx]; if (!part || !confirm('このまとまりを消しますか？（中の巻・話と、そのあらすじは消えません）')) return; part.groups = (part.groups || []).filter(x => x.id !== sumUI.groupId); if (!part.groups.length) delete part.groups; save(); try { renderDetailAccordion(); } catch (e) {} sumJump({ view: 'part', partIdx: sumUI.partIdx }); }
             else if (a === 'reveal') { sumUI.reveal[t.dataset.id] = true; sumRender(); }
-            else if (a === 'range') { sumUI.view = 'rpage'; sumUI.rangeId = t.dataset.id; sumRender(); }
-            else if (a === 'range-new') { sumUI.view = 'redit'; sumUI.rangeId = null; sumRender(); }
-            else if (a === 'range-del') { if (!confirm('この範囲のまとめを、消しますか？')) return; book.rangeSummaries = (book.rangeSummaries || []).filter(x => x.id !== sumUI.rangeId); save(); sumUI.view = 'list'; sumRender(); }
+            else if (a === 'range') sumNav({ view: 'rpage', rangeId: t.dataset.id });
+            else if (a === 'range-new') sumNav({ view: 'redit', rangeId: null });
+            else if (a === 'range-del') { if (!confirm('この範囲のまとめを、消しますか？')) return; book.rangeSummaries = (book.rangeSummaries || []).filter(x => x.id !== sumUI.rangeId); save(); sumJump({ view: 'list' }); }
             else if (a === 'prev' || a === 'next') { const all = sumChapters(book), i = all.findIndex(x => x.chap.id === sumUI.chapId), j = i + (a === 'next' ? 1 : -1); if (all[j]) { sumUI.chapId = all[j].chap.id; sumRender(); } }
             else if (a === 'read') { const hit = getFlatChapters(book).find(f => f.chap.id === t.dataset.id); if (hit) { const ov = document.getElementById('sum-box'); if (ov) ov.remove(); wikiCloseQuiet(); state.currentBookId = book.id; if (hit.volId) openReaderForVolumeChapter(hit.volId, hit.chap.id, hit.partIdx); else openReader(hit.chap.id, hit.partIdx); } }
         }
@@ -6216,6 +6436,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             const book = sumBook(), body = document.getElementById('sum-body'), title = document.getElementById('sum-title'); if (!book || !body) return;
             const all = sumChapters(book), cur = sumProgress(book), ed = document.getElementById('sum-edit'), sv = document.getElementById('sum-save');
             ed.hidden = !(sumUI.view === 'page' || sumUI.view === 'rpage'); sv.hidden = !(sumUI.view === 'edit' || sumUI.view === 'redit');
+            if (['list', 'part', 'group', 'vol', 'tedit'].includes(sumUI.view)) { ed.hidden = true; sv.hidden = sumUI.view !== 'tedit'; body.innerHTML = sumTreeHtml(book, cur, title); body.scrollTop = 0; if (sumUI.view === 'tedit' && sumUI.tOrig == null) sumUI.tOrig = sumTSnap(); return; }
             const L = t => wikiRich(book.id, t, null, { toc: false }), lockBox = (id, no) => '<div class="wk-muted" style="padding:14px;border:1px dashed #b8923f;border-radius:10px;margin-top:10px">🔒 まだ読んでいない話（' + no + '話）のまとめです。<br><button type="button" data-s="reveal" data-id="' + wEsc(id) + '" style="margin-top:8px;padding:8px 14px;border-radius:10px;border:1px solid #c9b88f;background:#fff">ネタバレを見る</button></div>';
             const field = (label, html) => '<div style="margin-top:14px;font-weight:700;color:#7a6a4a;font-size:13px">' + label + '</div><div style="margin-top:4px;white-space:normal">' + html + '</div>';
             let h = '';
@@ -6231,7 +6452,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             } else if (sumUI.view === 'page') {
                 const i = all.findIndex(x => x.chap.id === sumUI.chapId), c = all[i]; if (!c) { sumUI.view = 'list'; sumRender(); return; }
                 title.textContent = c.n + '話のまとめ';
-                h += '<div style="font-size:18px;font-weight:700">' + c.n + '話　' + wEsc(c.chap.title || '') + '</div>';
+                h += sumCrumbsHtml(book, { view: 'page', chapId: c.chap.id }) + '<div style="font-size:18px;font-weight:700">' + c.n + '話　' + wEsc(c.chap.title || '') + '</div>';
                 const s = c.chap.summary || {};
                 if (sumHas(c.chap) && c.n > cur && cur && !sumUI.reveal[c.chap.id]) h += lockBox(c.chap.id, c.n);
                 else if (!sumHas(c.chap)) h += '<div class="wk-muted" style="margin-top:12px;opacity:.7">まだ、まとめがありません。右上の鉛筆から、書けます。</div>';
@@ -7804,6 +8025,10 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                 const t = state.sheetTarget; if (!t || !t.chapId) return;
                 const bookId = state.currentBookId, chapId = t.chapId;
                 closeBottomSheet(); openChapterComments(bookId, chapId);
+            });
+            document.getElementById('btn-sheet-summary').addEventListener('click', () => {
+                const t = state.sheetTarget; if (!t) return; closeBottomSheet();
+                if (t.type === 'part') sumOpenPart(t.partIdx); else if (t.type === 'volume') sumOpenVol(t.partIdx, t.volId); else if (t.chapId) sumOpen(t.chapId);
             });
         }
 
@@ -9584,7 +9809,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                     h += '<button type="button" class="a-btn" data-act="search">🔎 この作品を検索（本文・コメント…）</button>';
                     h += '<button type="button" class="a-btn" data-act="book-settings">作品の詳細設定（ジャンル・音読・wiki）</button>';
                     h += '<button type="button" class="a-btn" data-act="locale">🌎 置換辞書（人物・場所ごと）</button>';
-                    h += '<button type="button" class="a-btn" data-act="summary">📝 話のまとめ（あらすじ・読書メモ）</button>';
+                    h += '<button type="button" class="a-btn" data-act="summary">📝 あらすじ（部・巻・話のまとめ）</button>';
                     h += '<button type="button" class="a-btn" data-act="bulkfix">✏️ 一括訂正（誤字・表記ゆれを、まとめて直す）</button>';
                     h += '<button type="button" class="a-btn" data-act="notes">読書ノートを開く</button>';
                 } else if (screen === 'shelf') {
@@ -9609,7 +9834,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                     h += '<button type="button" class="a-btn" data-act="locale">🌎 置換辞書（人物・場所ごと）</button>';
                     h += '<button type="button" class="a-btn a-main" data-act="who">👥 この話に出てくる人・用語</button>';
                     h += '<button type="button" class="a-btn" data-act="summary-this">📝 この話のまとめ</button>';
-                    h += '<button type="button" class="a-btn" data-act="summary">📝 話のまとめ（一覧）</button>';
+                    h += '<button type="button" class="a-btn" data-act="summary">📝 あらすじ（一覧）</button>';
                     h += '<button type="button" class="a-btn" data-act="bulkfix">✏️ 一括訂正（誤字・表記ゆれを、まとめて直す）</button>';
                     h += '<button type="button" class="a-btn" data-act="readmenu">読書メニューを開く</button>';
                 } else {
@@ -9739,8 +9964,8 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         // 話の終わり・戻る・本の終わりで、読み終えた話から言葉を拾い、件数を小さく知らせる。読書は止めない
         // ===== 更新の確認：新しい版があれば、魚に青い点とメニュー（版の番号は version.json。公開のたびに、番号が変わる。番号が入っていない開発中は、確かめない） =====
         // 表示用の版。更新の検出は引き続き APP_BUILD の日時番号を使う。
-        const APP_VERSION = '16';
-        const APP_BUILD = '20261110090615';
+        const APP_VERSION = '17';
+        const APP_BUILD = '20261110135427';
         let updateCheckAt = 0;
         function paintBuild() {
             const el = document.getElementById('app-build-info'); if (!el) return;
