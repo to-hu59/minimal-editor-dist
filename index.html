@@ -2008,6 +2008,7 @@
                     <div class="pt-3 border-t border-woodBorder">
                         <span class="font-bold text-softMuted block mb-1">更新履歴</span>
                         <div id="changelog" class="text-[11px] text-softMuted leading-relaxed">
+<div class="mb-1.5"><b class="text-softText">Version 17.4（2026-11-10）</b><br>本文の演出に「タイピング音」を足しました。［タイピング音 速さ=ふつう］カタカタカタ［／タイピング音］のように囲むと、そこだけ1文字ずつ、キーを打つ音といっしょに出ます。速さは「とても速い・速い・ふつう・ゆっくり・とてもゆっくり」か、1文字の秒数（速さ=0.15 など）で決めます。囲む中の文字は自由です。編集の演出のメニュー（音・振動）からも入れられます。音は設定の「音を出す」がオンのときだけ鳴ります。押すと、すぐ全部出ます。</div>
 <div class="mb-1.5"><b class="text-softText">Version 17.3（2026-11-10）</b><br>あらすじを、まとめて入れられるようにしました。あらすじの画面の下の「まとめて入れる」から、書いておいた文を貼り付けます（.txt・.md のファイルからも入れられます）。「901話」「901〜910話」「3巻」「3巻 2章」「第2部」のような見出しで、話・範囲・巻・部に振り分けます。入れる前に、どこに入るか（新しく・上書き）を確かめられます。</div>
 <div class="mb-1.5"><b class="text-softText">Version 17.2（2026-11-10）</b><br>あらすじと Wiki の通し番号を、単話で数えるようにしました。ebook の章は数えません。ebook の巻には「単話だと何話〜何話か」を入れられます（巻のひとことを書くところ）。入れると、次の部の番号がその続きになります。単話の部には「この部は何話から」も入れられます（部の流れを書くところ）。話の題名に「第901話」のような番号があれば、その番号を使います。</div>
 <div class="mb-1.5"><b class="text-softText">Version 17.1（2026-11-10）</b><br>あらすじの話の一覧を、ずらっと並べずに、段にまとめました。単話の部は「2042〜2051話」のような10話の範囲が並びます（多い部は「2042〜2091話」のような50話の段のトグルの中）。範囲を押すと、その10話の「まとめ」と「一行メモ（各話）」の表が開き、表の話を押すと、その話のまとめが開きます。番号は作品の通し番号です。ebook の巻も、10巻をこえると段のトグルになります。</div>
@@ -4807,6 +4808,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                 if(b.classList.contains('az-board-reader')&&window.matchMedia?.('(prefers-reduced-motion: reduce)').matches){b.dataset.fxt='done';return;}
                 if (fxBbsSeen.has(fxBbsKey(b))) { b.dataset.fxt = 'done'; return; }
                 b.dataset.fxt = 'wait';
+                if ((b.dataset.fxe || '').includes('t') && !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) b.style.visibility = 'hidden';
                 b.querySelectorAll('.bpost, .kkm, .pnote, .bbs-res').forEach(p => { p.style.visibility = 'hidden'; });
                 if (b.classList.contains('fxnote')) b.style.opacity = '0';
                 if (b.dataset.fxe && fxBbsSeen.has(fxBbsKey(b))) { b.dataset.fxt = 'done'; return; }
@@ -4904,10 +4906,24 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             } catch (e) {}
         }
         // ［着信］［バイブ］［怒鳴り］［ジジッ（ノイズ）］［頭痛］［どくん（心臓）］：次の行（または選んだ文字）が動く。音・振動は、設定の「音を出す」「振動する」がONのとき
+        // タイピング音：囲んだ文字が、1文字ずつ出る。音は設定の「音を出す」がONのとき。押すと、すぐ全部出る
+        function fxTypeRun(el, per, stg) {
+            if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) { el.style.visibility = ''; return; }
+            const nodes = [], w = document.createTreeWalker(el, NodeFilter.SHOW_TEXT); let n; while ((n = w.nextNode())) nodes.push(n);
+            const chars = [];
+            for (const t of nodes) { const fr = document.createDocumentFragment(); for (const ch of t.data) { const sp = document.createElement('span'); sp.textContent = ch; sp.style.opacity = '0'; fr.append(sp); chars.push(sp); } t.replaceWith(fr); }
+            el.style.visibility = '';
+            let i = 0, stop = false; const ms = Math.max(15, (per || 0.1) * 1000);
+            const finish = () => { if (stop) return; stop = true; chars.forEach(c => { c.style.opacity = ''; }); el.dataset.fxtyped = '1'; };
+            el.addEventListener('click', finish, { once: true });
+            const tick = () => { if (stop || !el.isConnected) return; const c = chars[i++]; if (!c) { finish(); return; } c.style.opacity = ''; if (stg.sound && /\S/.test(c.textContent)) fxKey(false); setTimeout(tick, ms * (0.7 + Math.random() * 0.6)); };
+            tick();
+        }
         function fxEffectRun(el) {
             el.dataset.fxt = 'done'; fxBbsSeen.add(fxBbsKey(el));
             const k = el.dataset.fxe || '', has = c => k.indexOf(c) >= 0, sec = Number(el.dataset.fxs) || fxDefSec(k), inl = el.classList.contains('fxi');
             const stg = (() => { try { return fxSettingsFor(state.books.find(b => b.id === state.currentBookId)); } catch (e) { return {}; } })();
+            if (has('t')) { fxTypeRun(el, sec, stg); if (k === 't') return; }
             const P = (x, y) => inl ? { left: x + 'px', top: y + 'px' } : { transform: 'translate(' + x + 'px,' + y + 'px)' };
             const run = (kf, o) => { try { el.animate(kf, o); } catch (e) {} };
             if (has('r') || has('v') || has('d')) { const A = has('d') ? 4 : 2, D = has('d') ? 80 : 130; run([P(0, 0), P(-A, A / 2), P(A, -A / 2), P(-A / 2, -A), P(A / 2, A), P(0, 0)], { duration: D, iterations: Math.max(1, Math.round(sec * 1000 / D)) }); }
@@ -6831,7 +6847,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                 // 文の一部の向き：ななめは、文字を1つずつに。そのほかは、向きの指定をつけた span に
                 paraHtml = paraHtml.replace(/\uE000([SL]):([-0-9.]*)\uE002([\s\S]*?)\uE001/g, (m, k, num, inner) => oriStair(inner, k === 'L'));
                 paraHtml = paraHtml.replace(/\uE000([VFGO]+):([-0-9.]*)\uE002/g, (m, k, num) => '<span' + oriAttrs(k, num, false) + '>');
-                paraHtml = paraHtml.replace(/\uE000([rvdnzh]*):([0-9.]*)\uE002/g, (m, k, sec) => '<span class="fxi" data-fxe="' + k + '" data-fxs="' + (sec || fxDefSec(k)) + '">').replace(/\uE001/g, '</span>');
+                paraHtml = paraHtml.replace(/\uE000([trvdnzh]*):([0-9.]*)\uE002/g, (m, k, sec) => '<span class="fxi" data-fxe="' + k + '" data-fxs="' + (sec || fxDefSec(k)) + '">').replace(/\uE001/g, '</span>');
                 const ef = fxe[li], efAttr = ef ? ' data-fxe="' + ef.k + '" data-fxs="' + ef.sec + '"' : '';
                 const te = txe[li];
                 if (te) {   // 1行ぜんぶ
@@ -7261,8 +7277,11 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             const chars = Array.from(txt).filter(c => c !== '\n');
             return '<span class="tx txs' + (left ? ' txsl' : '') + '">' + chars.map((c, i) => '<span style="--i:' + i + '">' + (c === ' ' ? '&nbsp;' : c === '　' ? '&emsp;' : escapeHtml(c)) + '</span>').join('') + '</span>';
         }
-        const fxKindOf = s => (/着信/.test(s) ? 'r' : '') + (/バイブ/.test(s) ? 'v' : '') + (/怒鳴り|どなる/.test(s) ? 'd' : '') + (/ノイズ|ジジ/.test(s) ? 'n' : '') + (/頭痛/.test(s) ? 'z' : '') + (/どくん|心臓/.test(s) ? 'h' : '');
-        const fxDefSec = k => /r/.test(k) ? 3 : /h/.test(k) ? 3.2 : /z/.test(k) ? 1.9 : /d/.test(k) ? 1.5 : 1.2;
+        const fxKindOf = s => (/タイピング|カタカタ/.test(s) ? 't' : '') + (/着信/.test(s) ? 'r' : '') + (/バイブ/.test(s) ? 'v' : '') + (/怒鳴り|どなる/.test(s) ? 'd' : '') + (/ノイズ|ジジ/.test(s) ? 'n' : '') + (/頭痛/.test(s) ? 'z' : '') + (/どくん|心臓/.test(s) ? 'h' : '');
+        // タイピングの速さ：速さ=とても速い／速い／ふつう／ゆっくり／とてもゆっくり、または数字（1文字の秒数）
+        const FX_TYPE_SPEED = { 'とても速い': 0.03, 'とてもはやい': 0.03, '速い': 0.06, 'はやい': 0.06, 'ふつう': 0.1, '普通': 0.1, 'ゆっくり': 0.2, 'おそい': 0.2, '遅い': 0.2, 'とてもゆっくり': 0.35 };
+        function fxTypeSpeed(ps) { const m = String(ps || '').match(/速さ=([^\s　］]+)/); if (!m) return 0; const v = m[1], n = Number(v.replace(/[０-９．]/g, c => c === '．' ? '.' : String.fromCharCode(c.charCodeAt(0) - 0xFEE0))); return n > 0 ? Math.min(2, n) : (FX_TYPE_SPEED[v] || 0); }
+        const fxDefSec = k => k === 't' ? 0.1 : /r/.test(k) ? 3 : /h/.test(k) ? 3.2 : /z/.test(k) ? 1.9 : /d/.test(k) ? 1.5 : 1.2;
         const fxTagRe = () => /［(／?)([^\s／］:：]+)([^］\n]*)］/g;
         const fxHasCache = new Map();
         // その話に、演出の印があるか（目次に🎬を出す）
@@ -7271,7 +7290,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             const text = String(chap.content || ''); if (text.indexOf('［') < 0) return false;
             const key = chap.id + ':' + text.length, hit = fxHasCache.get(key); if (hit !== undefined) return hit;
             const re = fxTagRe(); let m, found = false;
-            if (/［(着信|バイブ|怒鳴り|どなる|ノイズ|ジジッ?|頭痛|どくん|心臓)[\s　］]/.test(text)) { fxHasCache.set(key, true); return true; }
+            if (/［(着信|バイブ|怒鳴り|どなる|ノイズ|ジジッ?|頭痛|どくん|心臓|タイピング音|タイピング|カタカタ)[\s　］]/.test(text)) { fxHasCache.set(key, true); return true; }
             while ((m = re.exec(text))) if (!m[1] && FX_NAMES.has(m[2])) { found = true; break; }
             if (fxHasCache.size > 3000) fxHasCache.clear();
             fxHasCache.set(key, found); return found;
@@ -7283,7 +7302,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             while ((m = re.exec(text))) if (!m[1] && FX_NAMES.has(m[2]) && m[2] !== '掲示板' && !(m[2] === '報道' && /(?:^|[\s　])形=(?:炎上|ニュース|動画)(?:[\s　]|$)/.test(m[3] || '')) && !(m[2]==='トーク'&&/(?:^|[\s　])チャットJSON=/.test(m[3]||'')) && !(['手紙','書類'].includes(m[2]) && /(?:^|[\s　])見た目=提供版(?:[\s　]|$)/.test(m[3]||'')) && !(m[2] === 'システム' && /文=/.test(m[3] || '')) && !(m[2] === '招待状' && /(見た目=カカオ|[\s　]カカオ[\s　])/.test(m[3] || ''))) return true;
             return false;
         }
-        function fxHasInReader(chap) { if(/^［報道[ \t][^］\n]*形=(?:炎上|ニュース|動画)(?:[ \t]|］)/m.test(String(chap?.content||'')))return true; if(/^［トーク[^］\n]*[\s　]チャットJSON=/m.test(String(chap?.content||'')))return true; if(/^［(?:手紙|書類|メール)[^］\n]*[\s　]見た目=提供版(?:[\s　］])/m.test(String(chap?.content||'')))return true;return /［掲示板[\s　］]|［招待状[^］\n]*カカオ|［システム[\s　][^］]*文=|［(着信|バイブ|怒鳴り|どなる|ノイズ|ジジッ?|頭痛|どくん|心臓)[\s　］]/.test(String((chap && chap.content) || '')); }
+        function fxHasInReader(chap) { if(/^［報道[ \t][^］\n]*形=(?:炎上|ニュース|動画)(?:[ \t]|］)/m.test(String(chap?.content||'')))return true; if(/^［トーク[^］\n]*[\s　]チャットJSON=/m.test(String(chap?.content||'')))return true; if(/^［(?:手紙|書類|メール)[^］\n]*[\s　]見た目=提供版(?:[\s　］])/m.test(String(chap?.content||'')))return true;return /［掲示板[\s　］]|［招待状[^］\n]*カカオ|［システム[\s　][^］]*文=|［(着信|バイブ|怒鳴り|どなる|ノイズ|ジジッ?|頭痛|どくん|心臓|タイピング音|タイピング|カタカタ)[\s　］]/.test(String((chap && chap.content) || '')); }
         // ふつうの本文では、演出の印を目立たなくする：印だけの行は消す。画面系のはじまりは「〔名前〕」。文中の印は消す
         // frames に配列を渡すと、枠の位置（表示する行の番号）が入る。印の行は、表示からは消える（朗読の行とも同じにそろう）
         function fxDisplayText(text, frames) {
@@ -7294,8 +7313,8 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                 let line = L[li];
                 if (open && !open.closed && !line.trim() && out.length > open.from) { if (frames) frames.push({ from: open.from, to: out.length - 1, color: open.color, label: open.label, small: open.small }); open = null; }
                 // ［着信］（音・振動・文字がゆれる）／［バイブ］（振動・文字がゆれる）／［着信 バイブ］（同時）。印の行は消え、次の行に効く。秒=3 で長さも決められる
-                { const em = line.trim().match(/^［(着信|バイブ|怒鳴り|どなる|ノイズ|ジジッ?|頭痛|どくん|心臓)([\s　][^］]*)?］$/);
-                  if (em) { const ps = em[2] || '', sec = Number((ps.match(/秒=([0-9.]+)/) || [])[1]) || (Number((ps.match(/回数=([0-9]+)/) || [])[1]) * 1.05) || 0; pendingFx = pendingFx || { k: '', sec: 0 }; for (const c of fxKindOf(em[1] + ps)) if (!pendingFx.k.includes(c)) pendingFx.k += c; if (sec) pendingFx.sec = sec; continue; }
+                { const em = line.trim().match(/^［(着信|バイブ|怒鳴り|どなる|ノイズ|ジジッ?|頭痛|どくん|心臓|タイピング音|タイピング|カタカタ)([\s　][^］]*)?］$/);
+                  if (em) { const ps = em[2] || '', sec = fxTypeSpeed(ps) || Number((ps.match(/秒=([0-9.]+)/) || [])[1]) || (Number((ps.match(/回数=([0-9]+)/) || [])[1]) * 1.05) || 0; pendingFx = pendingFx || { k: '', sec: 0 }; for (const c of fxKindOf(em[1] + ps)) if (!pendingFx.k.includes(c)) pendingFx.k += c; if (sec) pendingFx.sec = sec; continue; }
                   if (pendingFx && line.trim()) { if (frames) { frames.fxe = frames.fxe || []; frames.fxe[out.length] = { k: pendingFx.k, sec: pendingFx.sec || fxDefSec(pendingFx.k) }; } pendingFx = null; } }
                 // ［縦書き］［ななめ］［左右反転］［上下反転］［回転 角度=90］：印だけの行は消え、次の行に効く
                 { const om = line.trim().match(/^［(縦書き|ななめ左|斜め左|ななめ|斜め|左右反転|上下反転|反転|回転|逆さ)([\s　][^］]*)?］$/);
@@ -7407,7 +7426,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                 }
                 // 文の中の一部だけ：［着信］着信があった［／着信］、［バイブ］ぶるっ［／バイブ］（目印の文字にして、読み上げからは外す）
                 if (/［(縦書き|ななめ左|斜め左|ななめ|斜め|左右反転|上下反転|反転|回転|逆さ)/.test(line)) { line = line.replace(/［(縦書き|ななめ左|斜め左|ななめ|斜め|左右反転|上下反転|反転|回転|逆さ)([\s　][^］]*)?］([^［］]*?)(?:［／\1］|［\1終わり］|［ここまで］)/g, (m, nm, ps, body) => { const [k, num] = oriKind(nm, ps); return '\uE000' + k + ':' + num + '\uE002' + body + '\uE001'; }); }
-                if (/［(着信|バイブ|怒鳴り|どなる|ノイズ|ジジッ?|頭痛|どくん|心臓)/.test(line)) { line = line.replace(/［(着信|バイブ|怒鳴り|どなる|ノイズ|ジジッ?|頭痛|どくん|心臓)([\s　][^］]*)?］([^［］]*?)(?:［／\1］|［\1終わり］|［ここまで］)/g, (m, nm, ps, body) => { ps = ps || ''; const k = fxKindOf(nm + ps), sec = (ps.match(/秒=([0-9.]+)/) || [])[1] || ''; return '\uE000' + k + ':' + sec + '\uE002' + body + '\uE001'; }); }
+                if (/［(着信|バイブ|怒鳴り|どなる|ノイズ|ジジッ?|頭痛|どくん|心臓|タイピング音|タイピング|カタカタ)/.test(line)) { line = line.replace(/［(着信|バイブ|怒鳴り|どなる|ノイズ|ジジッ?|頭痛|どくん|心臓|タイピング音|タイピング|カタカタ)([\s　][^］]*)?］([^［］]*?)(?:［／\1］|［\1終わり］|［ここまで］)/g, (m, nm, ps, body) => { ps = ps || ''; const k = fxKindOf(nm + ps), sec = fxTypeSpeed(ps) || (ps.match(/秒=([0-9.]+)/) || [])[1] || ''; return '\uE000' + k + ':' + sec + '\uE002' + body + '\uE001'; }); }
                 let had = false;
                 const only = line.replace(fxTagRe(), (m, sl, name) => FX_NAMES.has(name) ? '' : m).trim() === '';
                 const next = line.replace(fxTagRe(), (m, sl, name) => {
@@ -7742,6 +7761,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             { id: 'fx-both', name: '着信＋バイブ（同時）', note: '着信の音と、振動が、同時', tag: '［着信 バイブ］' },
             { id: 'fx-shout', name: '怒鳴り（強くゆれて・振動）', note: '次の行（選んだ文字だけ）が、どなるように、強くゆれて、振動する', tag: '［怒鳴り］' },
             { id: 'fx-noise', name: 'ジジッ（ノイズ・ざわっ）', note: '文字が、ジジッとブレる。ホラーの、ひずみ', tag: '［ジジッ］' },
+            { id: 'fx-type', name: 'タイピング音（1文字ずつ・カタカタ）', note: '選んだ文字が、キーを打つ音といっしょに、1文字ずつ出る。速さ=速い／ふつう／ゆっくり（数字なら1文字の秒数）', tag: '［タイピング音 速さ=ふつう］' },
             { id: 'fx-head', name: '頭痛（ずきん・ぼやける）', note: '文字が、ずきんとぼやけて、重く響く', tag: '［頭痛］' },
             { inline: true, id: 'ori-v', name: '縦書き（この部分だけ）', note: '選んだ文字だけが、縦に並ぶ。選ばないときは、次の1行', tag: '［縦書き］' },
             { inline: true, id: 'ori-sr', name: 'ななめ（右下がり）', note: 'お／　は／　　よ のように、1文字ずつ、右へずれて、下に並ぶ', tag: '［ななめ］' },
@@ -7781,7 +7801,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         // 同じ系統は、まとめて、たためるようにする（開閉は覚えておく）
         const FRAME_GROUPS = [
             { g: '文字の向き', note: '縦書き・ななめ・反転・回転（この部分だけ。止まった見た目）', ids: ['ori-v', 'ori-sr', 'ori-sl', 'ori-f', 'ori-g', 'ori-r90', 'ori-r180'] },
-            { g: '音・振動', note: '着信・バイブ・怒鳴り・ジジッ・頭痛・心臓', ids: ['fx-ring', 'fx-vib', 'fx-both', 'fx-shout', 'fx-noise', 'fx-head', 'fx-heart'] },
+            { g: '音・振動', note: '着信・バイブ・怒鳴り・ジジッ・頭痛・心臓・タイピング音', ids: ['fx-ring', 'fx-vib', 'fx-both', 'fx-shout', 'fx-noise', 'fx-head', 'fx-heart', 'fx-type'] },
             { g: '流れる文字・案内板', note: '電光掲示板・駅の発車案内・空港の出発案内（🎬で動く）', ids: ['led', 'led-wrap', 'board-sta', 'board-air'] },
             { g: 'ホラー・ぐちゃぐちゃ', note: '文字化け・文字が崩れる・めくれない・巻き戻る（🎬で動く）', ids: ['err-sys', 'crash-chat', 'page-lock', 'page-rewind'] },
             { g: 'システム画面', note: '青・茶・赤・黒の枠', ids: ['win-blue', 'win-brown', 'win-red', 'win-black'] },
@@ -10114,8 +10134,8 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         // 話の終わり・戻る・本の終わりで、読み終えた話から言葉を拾い、件数を小さく知らせる。読書は止めない
         // ===== 更新の確認：新しい版があれば、魚に青い点とメニュー（版の番号は version.json。公開のたびに、番号が変わる。番号が入っていない開発中は、確かめない） =====
         // 表示用の版。更新の検出は引き続き APP_BUILD の日時番号を使う。
-        const APP_VERSION = '17.3';
-        const APP_BUILD = '20261110180014';
+        const APP_VERSION = '17.4';
+        const APP_BUILD = '20261110193300';
         let updateCheckAt = 0;
         function paintBuild() {
             const el = document.getElementById('app-build-info'); if (!el) return;
