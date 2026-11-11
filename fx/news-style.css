@@ -118,3 +118,5 @@
 .fxnews [data-e] { cursor: text; border-radius: 4px; }
 .fxnews [data-e]:hover { background: rgba(35, 89, 78, .07); }
 .fxnews .nr-editing { outline: 2px solid #23594e; outline-offset: 1px; background: #fffbe8 !important; cursor: text; }
+/* 17.8：本文の文字サイズに合わせて、カードをまとめて大きくする（--nr-zoom は読む画面が入れる） */
+.fxnews .nr { zoom: var(--nr-zoom, 1); }
