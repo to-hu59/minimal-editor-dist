@@ -143,3 +143,17 @@
 .nr.nr-col.t-dark .nr-cft { border-top: 1px solid #1e293b; color: #94a3b8; }
 .nr.nr-col.t-dark .nr-chl { background: rgba(56, 189, 248, .2); color: #7dd3fc; }
 .nr.nr-col .nr-tg { color: inherit; }
+/* 18.1：パソコン（広い画面）では、カードを本文の幅いっぱいに広げる（縦が短くなり、1ページに入りやすい） */
+@media (min-width: 900px) {
+  .fxnews .nr, .fxnews .nr.nr-col { max-width: none; }
+  .fxnews .nr-news .nr-phs img { max-height: 42vh; object-fit: cover; }
+  /* コメントが多いときは、カードの中を2段に（縦が半分になる） */
+  .fxnews .nr-video { column-count: 2; column-gap: 28px; }
+  .fxnews .nr-video .nr-vh { column-span: all; }
+  .fxnews .nr-video .nr-vg { break-inside: avoid; }
+  .fxnews .nr-trend .nr-posts { column-count: 2; column-gap: 20px; }
+  .fxnews .nr-trend .nr-tw { break-inside: avoid; }
+  .fxnews .nr-news .nr-ycm { column-count: 2; column-gap: 24px; }
+  .fxnews .nr-news .nr-ych { column-span: all; }
+  .fxnews .nr-news .nr-yc { break-inside: avoid; }
+}
