@@ -6,14 +6,14 @@
 const KINDS = ['炎上', 'ニュース', '動画'];
 const RE = /^［報道[ \t]([^］\n]*)］\n?([\s\S]*?)\n?［／報道］\s*$/;
 const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-function attrs(s) { const a = {}; String(s || '').trim().split(/[ \t]+/).filter(Boolean).forEach(t => { const i = t.indexOf('='); if (i > 0) a[t.slice(0, i)] = t.slice(i + 1); }); return a; }
+function attrs(s) { const a = {}; String(s || '').trim().split(/[ \t]+/).filter(Boolean).forEach(t => { const i = t.indexOf('='); if (i > 0) a[t.slice(0, i)] = t.slice(i + 1); else if (t === '続き') a.続き = '1'; }); return a; }
 function rows(text) {
   return String(text || '').split('\n').filter(l => l.trim()).map(l => {
     let i = l.indexOf('：'); if (i > 8 || l.slice(0, i).includes('｜')) i = -1;
     const ps = l.slice(i + 1).split('｜').map(x => x.trim()), o = {}, v = [];
     ps.forEach(p => { const j = p.indexOf('='); if (j > 0 && j < 6) o[p.slice(0, j)] = p.slice(j + 1); else v.push(p); });
     return { k: i < 0 ? '' : l.slice(0, i).trim(), v, o };
-  });
+  }).map((r, i) => (r.i = i, r));
 }
 function parse(src) { const m = String(src || '').trim().match(RE); if (!m) return null; const a = attrs(m[1]); if (!KINDS.includes(a.形)) return null; return { a, R: rows(m[2]) }; }
 const isSource = src => !!parse(src);
@@ -27,12 +27,12 @@ const avatar = (id, kind) => `<i class="nr-av k-${esc(kind || '')}">${esc(AV[kin
 function trend(a, R) {
   const tr = R.filter(r => r.k === 'トレンド'), ps = R.filter(r => r.k !== 'トレンド');
   return `<div class="nr nr-trend"><div class="nr-h"><b>TRENDING NOW</b><small>トレンド</small></div>
-  <div class="nr-top nr-in"><span class="nr-rank">🔥 <em class="nr-rk" data-from="${esc(a.開始 || a.順位 || '1')}" data-to="${esc(a.順位 || '1')}">${esc(a.順位 || '1')}</em>位</span><b class="nr-tag">${tx(a.タグ || '#話題')}</b><small>${cnt(a.件数, 1)} posts</small></div>
-  ${tr.length ? `<div class="nr-tl">${tr.map((r, i) => `<div class="nr-in"><em>${i + 2}</em><b>${tx(r.v[0])}</b><small>${esc(r.v[1] || '')}</small></div>`).join('')}</div>` : ''}
+  <div class="nr-top nr-in"><span class="nr-rank">🔥 <em class="nr-rk" data-from="${esc(a.開始 || a.順位 || '1')}" data-to="${esc(a.順位 || '1')}">${esc(a.順位 || '1')}</em>位</span><b class="nr-tag" data-e="a:タグ">${tx(a.タグ || '#話題')}</b><small>${cnt(a.件数, 1)} posts</small></div>
+  ${tr.length ? `<div class="nr-tl">${tr.map((r, i) => `<div class="nr-in"><em>${i + 2}</em><b data-e="r:${r.i}:v0">${tx(r.v[0])}</b><small>${esc(r.v[1] || '')}</small></div>`).join('')}</div>` : ''}
   <div class="nr-posts">${ps.map(r => {
     if (r.k === '削除済み') return `<div class="nr-tw nr-del nr-in">🗑 このポストは削除されました。${r.v[0] ? `<span>（スクショが拡散中：「${tx(r.v.join('｜'))}」）</span>` : ''}</div>`;
     const [id, text] = r.v.length >= 2 ? r.v : [r.k || 'user', r.v[0]]; const kind = r.o.種類 || '';
-    return `<div class="nr-tw nr-in k-${esc(kind)}"><div class="nr-twh">${avatar(id, kind)}<b>${esc(r.o.名前 || String(id).replace(/^@/, ''))}</b><small>${esc(String(id).startsWith('@') ? id : '@' + id)}</small></div><p>${tx(text)}</p>${r.o.引用 ? `<div class="nr-q">${tx(r.o.引用)}</div>` : ''}${r.o.訳 ? `<p class="nr-tr" hidden>${tx(r.o.訳)}</p>` : ''}<div class="nr-act"><span>♡ ${cnt(r.o.いいね, 1)}</span><span>↻ ${cnt(r.o.RP, 1)}</span>${r.o.訳 ? '<button type="button" class="nr-trb">翻訳</button>' : ''}</div></div>`;
+    return `<div class="nr-tw nr-in k-${esc(kind)}"><div class="nr-twh">${avatar(id, kind)}<b>${esc(r.o.名前 || String(id).replace(/^@/, ''))}</b><small>${esc(String(id).startsWith('@') ? id : '@' + id)}</small></div><p data-e="r:${r.i}:t">${tx(text)}</p>${r.o.引用 ? `<div class="nr-q">${tx(r.o.引用)}</div>` : ''}${r.o.訳 ? `<p class="nr-tr" hidden>${tx(r.o.訳)}</p>` : ''}<div class="nr-act"><span>♡ ${cnt(r.o.いいね, 1)}</span><span>↻ ${cnt(r.o.RP, 1)}</span>${r.o.訳 ? '<button type="button" class="nr-trb">翻訳</button>' : ''}</div></div>`;
   }).join('')}</div></div>`;
 }
 function news(a, R, base) {
@@ -46,16 +46,16 @@ function news(a, R, base) {
   const part = a.部分 === '記事' ? 'art' : a.部分 === 'コメント' ? 'cm' : 'all', small = /^(小|小さめ)$/.test(a.大きさ || '');
   const av = (name, sm) => `<i class="nr-yav${sm ? ' sm' : ''}">${esc([...String(name || '?')][0] || '?')}</i>`;
   const reacts = o => `<div class="nr-yre"><span>👍 共感した ${cnt(o.共感 || '0')}</span><span>💡 なるほど ${cnt(o.なるほど || '0')}</span><span>🤔 うーん ${cnt(o.うーん || o.反対 || '0')}</span></div>`;
-  const user = (r, sm) => `<div class="nr-ycu">${av(r.v[0], sm)}<b>${esc(r.v[0] || '名無し')}</b>${r.o.時間 ? `<small>${esc(r.o.時間)}</small>` : ''}</div><p>${tx(r.v.slice(1).join('｜'))}</p>`;
-  const photo = (r, i, all) => { const u = img(r.v[0]), cap = r.v.slice(1).join('｜'), m = i === all.length - 1 ? more : 0; return `<figure class="nr-in">${m ? `<span class="nr-more">＋${m}枚</span>` : ''}${u ? `<img src="${esc(u)}" alt="" loading="lazy">` : '<div class="nr-noimg"><span class="nr-cam">📷</span><span>写真</span></div>'}${cap ? `<figcaption>${tx(cap)}</figcaption>` : ''}</figure>`; };
+  const user = (r, sm) => `<div class="nr-ycu">${av(r.v[0], sm)}<b data-e="r:${r.i}:u">${esc(r.v[0] || '名無し')}</b>${r.o.時間 ? `<small>${esc(r.o.時間)}</small>` : ''}</div><p data-e="r:${r.i}:t">${tx(r.v.slice(1).join('｜'))}</p>`;
+  const photo = (r, i, all) => { const u = img(r.v[0]), cap = r.v.slice(1).join('｜'), m = i === all.length - 1 ? more : 0; return `<figure class="nr-in">${m ? `<span class="nr-more">＋${m}枚</span>` : ''}${u ? `<img src="${esc(u)}" alt="" loading="lazy">` : '<div class="nr-noimg"><span class="nr-cam">📷</span><span>写真</span></div>'}${cap ? `<figcaption data-e="r:${r.i}:cap">${tx(cap)}</figcaption>` : ''}</figure>`; };
   const art = `<div class="nr-nart">`
-    + `<div class="nr-nmeta nr-in"><b class="nr-media">${esc(a.媒体 || 'STAR NEWS')}</b>${a.印 ? `<span class="nr-flag">${esc(a.印)}</span>` : ''}${a.閲覧 ? `<span class="nr-views">閲覧: ${cnt(a.閲覧)}</span>` : ''}</div>`
-    + `<h3 class="nr-in">${tx(a.見出し || '')}</h3>${a.副題 ? `<h5 class="nr-in">${tx(a.副題)}</h5>` : ''}`
-    + (a.日時 || a.記者 ? `<div class="nr-by nr-in">${a.日時 ? `<span>${esc(a.日時)}</span>` : ''}${a.記者 ? `<span>${esc(a.記者)}</span>` : ''}</div>` : '')
+    + `<div class="nr-nmeta nr-in"><b class="nr-media" data-e="a:媒体">${esc(a.媒体 || 'STAR NEWS')}</b>${a.印 ? `<span class="nr-flag" data-e="a:印">${esc(a.印)}</span>` : ''}${a.閲覧 ? `<span class="nr-views">閲覧: <span data-e="a:閲覧">${cnt(a.閲覧)}</span></span>` : ''}</div>`
+    + `<h3 class="nr-in" data-e="a:見出し">${tx(a.見出し || '')}</h3>${a.副題 ? `<h5 class="nr-in" data-e="a:副題">${tx(a.副題)}</h5>` : ''}`
+    + (a.日時 || a.記者 ? `<div class="nr-by nr-in">${a.日時 ? `<span data-e="a:日時">${esc(a.日時)}</span>` : ''}${a.記者 ? `<span data-e="a:記者">${esc(a.記者)}</span>` : ''}</div>` : '')
     + (ph.length ? `<div class="nr-phs n${Math.min(3, ph.length)}">${ph.slice(0, 3).map(photo).join('')}</div>` : '')
-    + (body.length ? `<div class="nr-nbody">${body.map(r => `<p class="nr-in">${tx(r.v.join('｜'))}</p>`).join('')}</div>` : '')
+    + (body.length ? `<div class="nr-nbody">${body.map(r => `<p class="nr-in" data-e="r:${r.i}:all">${tx(r.v.join('｜'))}</p>`).join('')}</div>` : '')
     + fix.map(r => `<div class="nr-fix nr-in">修正 ${esc(r.v[0] || '')}　${tx(r.v[1] || '')}</div>`).join('')
-    + (rel.length ? `<div class="nr-rel">${rel.map(r => `<div class="nr-in"><b>関連：</b>${tx(r.v.join('｜'))}</div>`).join('')}</div>` : '')
+    + (rel.length ? `<div class="nr-rel">${rel.map(r => `<div class="nr-in"><b>関連：</b><span data-e="r:${r.i}:all">${tx(r.v.join('｜'))}</span></div>`).join('')}</div>` : '')
     + `</div>`;
   const head = part === 'cm' ? `<div class="nr-ych"><b>コメント</b><span>${cnt(total)}件</span>${a.見出し ? `<small class="nr-yof">${tx(a.見出し)}</small>` : ''}</div>` : `<div class="nr-ych"><b>コメント</b><span>${cnt(total)}件</span><small class="nr-ytab"><em>おすすめ順</em>｜新着順</small></div>`;
   const comments = cms.length ? `<div class="nr-ycm">${head}${cms.map(({ r, re }) => `<div class="nr-yc nr-in">${user(r)}${reacts(r.o)}${re.length ? `<div class="nr-yrl"><div class="nr-yrn">返信 ${re.length}件</div>${re.map(x => `<div class="nr-yr nr-in">${user(x, 1)}</div>`).join('')}</div>` : ''}</div>`).join('')}</div>` : '';
@@ -65,15 +65,15 @@ function news(a, R, base) {
 function video(a, R) {
   const groups = []; let g = null;
   for (const r of R) {
-    const first = (r.v[0] || '').trim(), reply = /^└/.test(first) || r.k === '返信';
+    const first = (r.v[0] || '').trim().replace(/^[―—─－]{1,3}\s*/, ''), reply = /^└/.test(first) || r.k === '返信';
     const id = first.replace(/^└\s*/, ''), text = r.v.length >= 2 ? r.v.slice(1).join('｜') : '';
-    const it = { id: r.v.length >= 2 ? id : '', text: r.v.length >= 2 ? text : id, like: r.o.いいね || '' };
-    if (reply && g) g.replies.push(it); else { g = { c: it, replies: [] }; groups.push(g); }
+    const it = { id: r.v.length >= 2 ? id : '', text: r.v.length >= 2 ? text : id, like: r.o.いいね || '', i: r.i, named: r.v.length >= 2 };
+    if (reply && g) g.replies.push(it); else if (reply) { g = { c: null, replies: [it] }; groups.push(g); } else { g = { c: it, replies: [] }; groups.push(g); }
   }
   const user = s => esc(s ? (String(s).startsWith('@') ? s : '@' + s) : '@user');
   const light = a.見た目 === '明るい';
-  return `<div class="nr nr-video${light ? ' light' : ''}"><div class="nr-vh"><b><span class="nr-play">▶</span> ${tx(a.題 || '急上昇動画 #1 クリップコメント欄')}</b><small>コメント ${cnt(a.件数 || String(groups.reduce((n, x) => n + 1 + x.replies.length, 0)))}件</small></div>
-  ${groups.map(x => `<div class="nr-vg"><div class="nr-vc nr-in"><span class="nr-vu">${user(x.c.id)}</span><span class="nr-vt">${tx(x.c.text)}</span>${x.c.like ? `<span class="nr-vl">👍 ${cnt(x.c.like, 1)}</span>` : ''}</div>${x.replies.map(r => `<div class="nr-vr nr-in"><span class="nr-vi">└</span><span class="nr-vu">${user(r.id)}</span><span class="nr-vt">${tx(r.text)}</span></div>`).join('')}</div>`).join('')}</div>`;
+  return `<div class="nr nr-video${light ? ' light' : ''}${a.続き ? ' cont' : ''}">${a.続き ? '' : `<div class="nr-vh"><b><span class="nr-play">▶</span> <span data-e="a:題">${tx(a.題 || '急上昇動画 #1 クリップコメント欄')}</span></b><small>コメント ${cnt(a.件数 || String(groups.reduce((n, x) => n + 1 + x.replies.length, 0)))}件</small></div>`}
+  ${groups.map(x => `<div class="nr-vg">${x.c ? `<div class="nr-vc nr-in"><span class="nr-vu"${x.c.named ? ` data-e="r:${x.c.i}:u"` : ''}>${user(x.c.id)}</span><span class="nr-vt" data-e="r:${x.c.i}:t">${tx(x.c.text)}</span>${x.c.like ? `<span class="nr-vl">👍 ${cnt(x.c.like, 1)}</span>` : ''}</div>` : ''}${x.replies.map(r => `<div class="nr-vr nr-in"><span class="nr-vi">└</span><span class="nr-vu"${r.named ? ` data-e="r:${r.i}:u"` : ''}>${user(r.id)}</span><span class="nr-vt" data-e="r:${r.i}:t">${tx(r.text)}</span></div>`).join('')}</div>`).join('')}</div>`;
 }
 // 読む画面は改行をそのまま空白として出すので、部品の HTML の改行は取り除く
 function html(src, opt = {}) { const d = parse(src); if (!d) return ''; const base = opt.base == null ? 'fx/' : opt.base; return (d.a.形 === 'ニュース' ? news(d.a, d.R, base) : d.a.形 === '動画' ? video(d.a, d.R) : trend(d.a, d.R)).replace(/>\s*\n\s*</g, '><').replace(/\n\s*/g, ''); }
@@ -82,7 +82,7 @@ function plain(src) {
   const d = parse(src); if (!d) return ''; const a = d.a, out = [];
   if (a.形 === '炎上') { out.push((a.タグ || '') + ' トレンド' + (a.順位 || '1') + '位'); d.R.forEach(r => { if (r.k === 'トレンド') out.push(r.v[0] || ''); else if (r.k === '削除済み') out.push('このポストは削除されました。'); else out.push(r.v.length >= 2 ? r.v[1] : r.v[0] || ''); }); }
   else if (a.形 === 'ニュース') { out.push(a.見出し || ''); if (a.副題) out.push(a.副題); d.R.forEach(r => { if (!r.k) out.push(r.v.join('｜')); else if (r.k === '関連') out.push(r.v.join('｜')); else if (r.k === 'コメント' || r.k === '返信') out.push(r.v.slice(1).join('｜')); }); }
-  else { out.push(a.題 || '動画のコメント欄'); d.R.forEach(r => out.push(r.v.length >= 2 ? r.v.slice(1).join('｜') : r.v[0] || '')); }
+  else { if (!a.続き) out.push(a.題 || '動画のコメント欄'); d.R.forEach(r => out.push(r.v.length >= 2 ? r.v.slice(1).join('｜') : String(r.v[0] || '').replace(/^\s*[―—─－]{1,3}\s*/, ''))); }
   return out.map(s => String(s).replace(/／/g, ' ').trim()).filter(Boolean).join('\n') || '​';
 }
 
@@ -117,5 +117,29 @@ function scan(root, settings, key) {
   if (!io && global.IntersectionObserver) io = new IntersectionObserver(es => es.forEach(e => { if (!e.isIntersecting) return; io.unobserve(e.target); play(e.target, { sound: !!cfg.sound }); }), { threshold: 0.25 });
   list.forEach((el, i) => { if (el.dataset.nrSeen) return; el.dataset.nrSeen = '1'; const k = key + ':' + i + ':' + el.textContent.length; if (seen.has(k) || !io) { finish(el); return; } seen.add(k); el.querySelectorAll('.nr-in').forEach(x => x.classList.remove('on')); io.observe(el); });
 }
-global.NewsReader = { isSource, html, plain, scan, play, finish, KINDS };
+// 直す：key＝「a:見出し」（印の中の項目）か「r:行:場所」（中の行。all＝行全部／t＝本文／u＝名前／cap＝写真の説明／v0＝はじめ）。空にすると、行は消える
+function edit(src, key, val) {
+  const m = String(src || '').match(/^(\s*［報道[ \t])([^］\n]*)(］\r?\n?)([\s\S]*?)(\r?\n?［／報道］\s*)$/); if (!m) return src;
+  val = String(val == null ? '' : val).replace(/\r/g, '').replace(/\n+$/, '').replace(/\n/g, '／').replace(/\u00a0/g, ' ').trim();
+  const [k, a, b] = String(key).split(':');
+  if (k === 'a') {
+    const v = val.replace(/[ \t]+/g, '　').replace(/］/g, '〕'), toks = m[2].trim().split(/[ \t]+/).filter(Boolean), i = toks.findIndex(t => t.startsWith(a + '='));
+    if (!v) { if (i >= 0 && a !== '形') toks.splice(i, 1); } else if (i >= 0) toks[i] = a + '=' + v; else toks.push(a + '=' + v);
+    return m[1] + toks.join(' ') + m[3] + m[4] + m[5];
+  }
+  const lines = m[4].split('\n'), idx = []; lines.forEach((l, j) => { if (l.trim()) idx.push(j); });
+  const j = idx[+a]; if (j == null) return src;
+  const raw = lines[j].replace(/\r$/, ''), lead = raw.match(/^\s*/)[0], r = rows(raw)[0];
+  if (!val && b !== 'cap' && b !== 'u') { lines.splice(j, 1); return m[1] + m[2] + m[3] + lines.join('\n') + m[5]; }
+  let v = r.v.slice(); const pre = ((v[0] || '').match(/^\s*(└|[―—─－]{1,3})\s*/) || [''])[0];
+  if (b === 'all') v = [val];
+  else if (b === 'u') { if (v.length >= 2) v[0] = (/^\s*└/.test(v[0]) ? '└' : '') + val; }
+  else if (b === 'cap') v = val ? [v[0] || '', val] : [v[0] || ''];
+  else if (b === 'v0') v[0] = val;
+  else if (b === 't') v = v.length >= 2 ? [v[0], val] : [pre + val];
+  const opts = Object.entries(r.o).map(([x, y]) => x + '=' + y);
+  lines[j] = lead + (r.k ? r.k + '：' : '') + v.concat(opts).join('｜');
+  return m[1] + m[2] + m[3] + lines.join('\n') + m[5];
+}
+global.NewsReader = { isSource, html, plain, scan, play, finish, edit, KINDS };
 })(window);

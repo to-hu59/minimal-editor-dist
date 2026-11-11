@@ -2008,6 +2008,7 @@
                     <div class="pt-3 border-t border-woodBorder">
                         <span class="font-bold text-softMuted block mb-1">更新履歴</span>
                         <div id="changelog" class="text-[11px] text-softMuted leading-relaxed">
+<div class="mb-1.5"><b class="text-softText">Version 17.7（2026-11-11）</b><br>ニュースなどの報道カードを、左に寄せました（本文の行の始まりにそろいます）。カードの見出し・本文・関連・名前・コメントなどの文字を押すと、読む画面でも編集画面でも、その場で直せます。Enter か、外を押すと決まります（Esc でやめる）。文字を全部消すと、その行が消えます。動画のコメント欄は、小説の「――」で始まる行もコメントとして読みます。［報道 形=動画 続き］と書くと、見出しなしの「続き」のコメント欄になり、あいだに本文をはさめます。</div>
 <div class="mb-1.5"><b class="text-softText">Version 17.6（2026-11-11）</b><br>ニュース・掲示板などの枠の上を押したとき、ページがめくれにくくしました。枠の上でめくるのは、画面の左右の端（10%）だけです。枠のまんなかを押しても、ページはめくれず、メニューも出ません。</div>
 <div class="mb-1.5"><b class="text-softText">Version 17.5（2026-11-11）</b><br>タイピング音を、書きやすくしました。［タイピング音 速さ=ふつう タダダダダッ!!!］のように、印の中に文字を書くと、その文字だけが1文字ずつ出ます。「速さ＝ふつう」のような全角の「＝」や、「──」での区切りも読みます。速さは「速い・早い・はやい」「ふつう・普通」「ゆっくり・遅い・おそい」のどれでも書けます（前に「とても」も付けられます）。</div>
 <div class="mb-1.5"><b class="text-softText">Version 17.4（2026-11-10）</b><br>本文の演出に「タイピング音」を足しました。［タイピング音 速さ=ふつう］カタカタカタ［／タイピング音］のように囲むと、そこだけ1文字ずつ、キーを打つ音といっしょに出ます。速さは「とても速い・速い・ふつう・ゆっくり・とてもゆっくり」か、1文字の秒数（速さ=0.15 など）で決めます。囲む中の文字は自由です。編集の演出のメニュー（音・振動）からも入れられます。音は設定の「音を出す」がオンのときだけ鳴ります。押すと、すぐ全部出ます。</div>
@@ -6827,7 +6828,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             return paragraphs.map((para, li) => {
                 const providedFrame=frameOf(li);
                 if(providedFrame?.kind==='provided-line') {if(para.trim())globalSentenceIndex+=splitSentencesSafe(para).length;return li===providedFrame.from?LineMaker.html(providedFrame.lineSource):'';}
-                if(providedFrame?.kind==='news') {if(para.trim())globalSentenceIndex+=splitSentencesSafe(para).length;return li===providedFrame.from?'<div class="fxnews">'+NewsReader.html(providedFrame.newsSource,{base:'fx/'})+'</div>':'';}
+                if(providedFrame?.kind==='news') {if(para.trim())globalSentenceIndex+=splitSentencesSafe(para).length;return li===providedFrame.from?'<div class="fxnews" data-nri="'+(providedFrame.nri||0)+'">'+NewsReader.html(providedFrame.newsSource,{base:'fx/'})+'</div>':'';}
                 if(providedFrame?.kind==='provided-document') {if(para.trim())globalSentenceIndex+=splitSentencesSafe(para).length;return li===providedFrame.from?'<div class="ymdoc">'+ProvidedDocument.rendered(providedFrame.documentHtml)+'</div>':'';}
                 if(providedFrame?.kind==='bbs'&&providedFrame.boardModel?.presentation&&typeof AzBoardEditor!=='undefined'){
                     // Render the supplied presentation once, without legacy per-row BBS chrome.
@@ -7340,7 +7341,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                 // 報道（トレンド・ニュース記事・動画コメント）：本文の中に、絵のまま出す
                 if(window.NewsReader&&/^［報道[ \t][^］]*形=(?:炎上|ニュース|動画)(?:[ \t]|］)/.test(line.trim())){
                     let end=li+1;while(end<L.length&&L[end].trim()!=='［／報道］')end++;
-                    if(end<L.length){const source=L.slice(li,end+1).map(x=>x.trim()).join('\n');if(NewsReader.isSource(source)){const from=out.length;out.push(...NewsReader.plain(source).split('\n'));if(frames)frames.push({from,to:out.length-1,kind:'news',newsSource:source});li=end;continue;}}
+                    if(end<L.length){const source=L.slice(li,end+1).map(x=>x.trim()).join('\n');if(NewsReader.isSource(source)){const from=out.length;out.push(...NewsReader.plain(source).split('\n'));if(frames)frames.push({from,to:out.length-1,kind:'news',newsSource:source,nri:frames.filter(x=>x.kind==='news').length});li=end;continue;}}
                 }
                 if(window.ProvidedDocument?.isSource(line.trim())){
                     const dm=line.trim().match(/^［(手紙|書類|メール)/);let end=li+1;
@@ -10146,8 +10147,8 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         // 話の終わり・戻る・本の終わりで、読み終えた話から言葉を拾い、件数を小さく知らせる。読書は止めない
         // ===== 更新の確認：新しい版があれば、魚に青い点とメニュー（版の番号は version.json。公開のたびに、番号が変わる。番号が入っていない開発中は、確かめない） =====
         // 表示用の版。更新の検出は引き続き APP_BUILD の日時番号を使う。
-        const APP_VERSION = '17.6';
-        const APP_BUILD = '20261111090958';
+        const APP_VERSION = '17.7';
+        const APP_BUILD = '20261111093608';
         let updateCheckAt = 0;
         function paintBuild() {
             const el = document.getElementById('app-build-info'); if (!el) return;
@@ -10351,6 +10352,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                     appendText(source.slice(cursor,match.index));
                     const atom=document.createElement('span');atom.contentEditable='false';atom.dataset.newsSource=match[0];atom.style.cssText='display:block;white-space:normal;margin:8px 0;writing-mode:horizontal-tb';
                     const card=document.createElement('div');card.className='fxnews';card.innerHTML=NewsReader.html(match[0],{base:'fx/'});atom.append(card);
+                    card.addEventListener('click',e=>{const el=e.target.closest('[data-e]');if(!el||visualDraft.mode!=='visual')return;e.preventDefault();e.stopPropagation();nrStartEdit(el,e,(k,t)=>{const next=NewsReader.edit(atom.dataset.newsSource,k,t);if(next===atom.dataset.newsSource){card.innerHTML=NewsReader.html(next,{base:'fx/'});return;}atom.dataset.newsSource=next;card.innerHTML=NewsReader.html(next,{base:'fx/'});syncVisualDraft(true);toast('報道を直しました');});});
                     const controls=document.createElement('span');controls.dataset.newsControls='true';controls.style.cssText='display:flex;gap:8px;margin-top:6px';
                     const where=()=>{const r=document.createRange();r.selectNodeContents(visualRoot());r.setEndBefore(atom);const start=serializeVisual(r.cloneContents()).length;return{start,end:start+atom.dataset.newsSource.length}};
                     const edit=document.createElement('button');edit.type='button';edit.textContent='この報道を直す';edit.onmousedown=e=>e.preventDefault();edit.onclick=()=>fxOpenMaker({src:atom.dataset.newsSource,title:'報道',replace:where()});controls.append(edit);
@@ -11112,6 +11114,51 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             document.getElementById('btn-reader-edit-toggle').click();
             toast('この段落だけを直します。直したら、上の「✓」を押してください');
         }
+        // ===== 報道カードを、カードの上でそのまま直す =====
+        function nrStartEdit(el, ev, commit) {
+            if (el.isContentEditable) return;
+            const beforeHtml = el.innerHTML, before = el.innerText; let ended = false;
+            try { el.contentEditable = 'plaintext-only'; } catch (e) { el.contentEditable = 'true'; }
+            if (el.contentEditable !== 'plaintext-only') el.contentEditable = 'true';
+            el.classList.add('nr-editing'); el.spellcheck = false; el.focus();
+            try { const r = ev && document.caretRangeFromPoint ? document.caretRangeFromPoint(ev.clientX, ev.clientY) : null; if (r && el.contains(r.startContainer)) { const sl = getSelection(); sl.removeAllRanges(); sl.addRange(r); } } catch (e) {}
+            const stop = e => e.stopPropagation();
+            const end = ok => {
+                if (ended) return; ended = true;
+                el.removeEventListener('keydown', key); el.removeEventListener('blur', blur); ['beforeinput', 'input', 'paste', 'keyup', 'keypress'].forEach(t => el.removeEventListener(t, stop));
+                const now = el.innerText.replace(/\n$/, ''); el.removeAttribute('contenteditable'); el.classList.remove('nr-editing');
+                if (!ok || now === before) { el.innerHTML = beforeHtml; return; }
+                commit(el.dataset.e, now);
+            };
+            const key = e => { e.stopPropagation(); if (e.isComposing) return; if ((e.ctrlKey || e.metaKey) && (e.key === 'a' || e.key === 'A')) { e.preventDefault(); const r = document.createRange(); r.selectNodeContents(el); const sl = getSelection(); sl.removeAllRanges(); sl.addRange(r); return; } if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); end(true); } else if (e.key === 'Escape') { e.preventDefault(); end(false); } };
+            const blur = () => end(true);
+            el.addEventListener('keydown', key); el.addEventListener('blur', blur); ['beforeinput', 'input', 'paste', 'keyup', 'keypress'].forEach(t => el.addEventListener(t, stop));
+        }
+        // 読む画面：本文の中の、何番目の報道かで、元の印を見つけて書き換える
+        function nrCommitReader(card, key, text) {
+            const ref = commentFindChap(state.currentBookId, state.currentChapterId); if (!ref) return;
+            const NL = String.fromCharCode(10), lines = String(ref.chap.content || '').split(NL), blocks = [];
+            for (let li = 0; li < lines.length; li++) {
+                if (!/^［報道[ \t][^］]*形=(?:炎上|ニュース|動画)(?:[ \t]|］)/.test(lines[li].trim())) continue;
+                let end = li + 1; while (end < lines.length && lines[end].trim() !== '［／報道］') end++;
+                if (end >= lines.length) continue;
+                const src = lines.slice(li, end + 1).map(x => x.trim()).join(NL); if (window.NewsReader && NewsReader.isSource(src)) { blocks.push({ li, end, src }); li = end; }
+            }
+            const b = blocks[Number(card.dataset.nri) || 0]; if (!b) { toast('元の報道が見つかりませんでした'); return; }
+            const next = NewsReader.edit(b.src, key, text); if (next === b.src) return;
+            ref.chap.content = lines.slice(0, b.li).concat(next.split(NL), lines.slice(b.end + 1)).join(NL);
+            const wrap = document.getElementById('reader-body-wrap'), top = wrap ? wrap.scrollTop : 0;
+            try { if (pagingActive()) rememberPage(); } catch (e) {}
+            save(); renderReaderContent(ref.book, ref.chap); if (wrap) wrap.scrollTop = top;
+            toast('報道を直しました');
+        }
+        document.getElementById('reader-body-wrap').addEventListener('click', e => {
+            const el = e.target.closest && e.target.closest('.fxnews [data-e]'); if (!el || el.closest('#reader-editor-box') || el.isContentEditable) return;
+            if (document.getElementById('view-reader').classList.contains('editing')) return;
+            e.preventDefault(); e.stopPropagation();
+            const card = el.closest('.fxnews'); try { NewsReader.finish(card); } catch (x) {}
+            nrStartEdit(el, e, (k, t) => nrCommitReader(card, k, t));
+        });
         function partialApplyReader(ctx, text) {
             const ref = commentFindChap(ctx.bookId, ctx.chapId); if (!ref) return;
             const NL = String.fromCharCode(10), lines = (ref.chap.content || '').split(NL);

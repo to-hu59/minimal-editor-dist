@@ -1,6 +1,6 @@
 /* 報道（トレンド・ニュース記事・動画コメント）の見た目。読む画面の本文の中と、報道メーカーの見え方で使う */
 .fxnews { display: block; margin: 14px 0; font-size: 14px; line-height: 1.55; text-align: left; text-indent: 0; writing-mode: horizontal-tb; white-space: normal; letter-spacing: normal; }
-.nr { max-width: 460px; margin: 0 auto; border-radius: 14px; overflow: hidden; font-family: "Hiragino Sans", "Yu Gothic", "Noto Sans JP", sans-serif !important; box-shadow: 0 4px 16px rgba(40, 30, 20, .14); white-space: normal; }
+.nr { max-width: 460px; margin: 0; border-radius: 14px; overflow: hidden; font-family: "Hiragino Sans", "Yu Gothic", "Noto Sans JP", sans-serif !important; box-shadow: 0 4px 16px rgba(40, 30, 20, .14); white-space: normal; }
 .nr * { font-family: inherit !important; letter-spacing: inherit; }
 .nr p { margin: 0; line-height: 1.6; }
 
@@ -112,3 +112,9 @@
 .nr-news.p-cm { border-top: 0; }
 .nr-news.p-cm .nr-ycm { border-top: 0; }
 .nr-yof { margin-left: auto; font-size: 11px; color: #9ca3af; max-width: 55%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* 17.7：続きのコメント欄（見出しなし）・カードの上で直す */
+.nr-video.cont { margin-top: -6px; }
+.fxnews [data-e] { cursor: text; border-radius: 4px; }
+.fxnews [data-e]:hover { background: rgba(35, 89, 78, .07); }
+.fxnews .nr-editing { outline: 2px solid #23594e; outline-offset: 1px; background: #fffbe8 !important; cursor: text; }
