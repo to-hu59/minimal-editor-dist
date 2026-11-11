@@ -112,7 +112,8 @@ function play(el, opt = {}) {
   if (!items.length) { stop(); return { cancel() {} }; }
   root.classList.add('nr-playing'); items.forEach(x => x.classList.remove('on'));
   const fast = root.classList.contains('nr-video') ? 170 : root.classList.contains('nr-col') ? 330 : 260;
-  items.forEach((x, i) => timers.push(setTimeout(() => { x.classList.add('on'); pop(opt.sound, i); }, 120 + i * fast)));
+  // 画面から消えたら（ページを切りかえたら）、そこで止める。音も鳴らさない
+  items.forEach((x, i) => timers.push(setTimeout(() => { if (!root.isConnected) { stop(); return; } x.classList.add('on'); pop(opt.sound, i); }, 120 + i * fast)));
   root.querySelectorAll('.nr-cnt').forEach(c => { const v = +c.dataset.v || 0, k = c.dataset.k === '1'; c.dataset.final = c.textContent; if (!v) return; const from = Math.round(v * 0.82), steps = 18; for (let s = 0; s <= steps; s++) timers.push(setTimeout(() => { if (!done) c.textContent = s === steps ? c.dataset.final : fmt(Math.round(from + (v - from) * s / steps), k); }, 200 + s * 70)); });
   root.querySelectorAll('.nr-rk').forEach(r => { let a = parseInt(r.dataset.from, 10) || 1; const b = parseInt(r.dataset.to, 10) || 1; r.textContent = a; let t = 400; while (a > b) { a--; const v = a; timers.push(setTimeout(() => { if (!done) { r.textContent = v; r.classList.remove('bump'); void r.offsetWidth; r.classList.add('bump'); } }, t)); t += 380; } });
   timers.push(setTimeout(tell, 120 + items.length * fast + 250));
@@ -127,14 +128,18 @@ document.addEventListener('click', e => { const b = e.target.closest && e.target
 const seen = new Set(); let io = null, cfg = {};
 // 順番待ち：前のカードが出終わってから、次のカードが動く（同時に動いて、音がかぶらないように）
 const queue = []; let busy = false;
+let cur = null, gen = 0;
+// ページを切りかえたとき：動いているカードと順番待ちを、全部止める
+function stopAll() { gen++; queue.length = 0; const c = cur; cur = null; if (c) c.cancel(); busy = false; }
 function enqueue(el) { if (!queue.includes(el)) queue.push(el); next(); }
 function next() {
   if (busy) return;
   let el; while ((el = queue.shift()) && !el.isConnected) {}
   if (!el) return;
   busy = true; let ended = false;
-  const go = () => { if (ended) return; ended = true; busy = false; next(); };
-  play(el, { sound: !!cfg.sound, done: go });
+  const g = gen; let h = null;
+  const go = () => { if (ended) return; ended = true; if (g !== gen) return; if (cur === h) cur = null; busy = false; next(); };
+  h = play(el, { sound: !!cfg.sound, done: go }); if (!ended) cur = h;
   setTimeout(go, 20000);   // 念のため（止まったままにしない）
 }
 function scan(root, settings, key) {
@@ -169,5 +174,5 @@ function edit(src, key, val) {
   lines[j] = lead + (r.k ? r.k + '：' : '') + v.concat(opts).join('｜');
   return m[1] + m[2] + m[3] + lines.join('\n') + m[5];
 }
-global.NewsReader = { isSource, html, plain, scan, play, finish, edit, KINDS };
+global.NewsReader = { isSource, html, plain, scan, play, finish, edit, stopAll, KINDS };
 })(window);
