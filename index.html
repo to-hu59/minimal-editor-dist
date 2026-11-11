@@ -2008,6 +2008,7 @@
                     <div class="pt-3 border-t border-woodBorder">
                         <span class="font-bold text-softMuted block mb-1">更新履歴</span>
                         <div id="changelog" class="text-[11px] text-softMuted leading-relaxed">
+<div class="mb-1.5"><b class="text-softText">Version 17.6（2026-11-11）</b><br>ニュース・掲示板などの枠の上を押したとき、ページがめくれにくくしました。枠の上でめくるのは、画面の左右の端（10%）だけです。枠のまんなかを押しても、ページはめくれず、メニューも出ません。</div>
 <div class="mb-1.5"><b class="text-softText">Version 17.5（2026-11-11）</b><br>タイピング音を、書きやすくしました。［タイピング音 速さ=ふつう タダダダダッ!!!］のように、印の中に文字を書くと、その文字だけが1文字ずつ出ます。「速さ＝ふつう」のような全角の「＝」や、「──」での区切りも読みます。速さは「速い・早い・はやい」「ふつう・普通」「ゆっくり・遅い・おそい」のどれでも書けます（前に「とても」も付けられます）。</div>
 <div class="mb-1.5"><b class="text-softText">Version 17.4（2026-11-10）</b><br>本文の演出に「タイピング音」を足しました。［タイピング音 速さ=ふつう］カタカタカタ［／タイピング音］のように囲むと、そこだけ1文字ずつ、キーを打つ音といっしょに出ます。速さは「とても速い・速い・ふつう・ゆっくり・とてもゆっくり」か、1文字の秒数（速さ=0.15 など）で決めます。囲む中の文字は自由です。編集の演出のメニュー（音・振動）からも入れられます。音は設定の「音を出す」がオンのときだけ鳴ります。押すと、すぐ全部出ます。</div>
 <div class="mb-1.5"><b class="text-softText">Version 17.3（2026-11-10）</b><br>あらすじを、まとめて入れられるようにしました。あらすじの画面の下の「まとめて入れる」から、書いておいた文を貼り付けます（.txt・.md のファイルからも入れられます）。「901話」「901〜910話」「3巻」「3巻 2章」「第2部」のような見出しで、話・範囲・巻・部に振り分けます。入れる前に、どこに入るか（新しく・上書き）を確かめられます。</div>
@@ -10145,8 +10146,8 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         // 話の終わり・戻る・本の終わりで、読み終えた話から言葉を拾い、件数を小さく知らせる。読書は止めない
         // ===== 更新の確認：新しい版があれば、魚に青い点とメニュー（版の番号は version.json。公開のたびに、番号が変わる。番号が入っていない開発中は、確かめない） =====
         // 表示用の版。更新の検出は引き続き APP_BUILD の日時番号を使う。
-        const APP_VERSION = '17.5';
-        const APP_BUILD = '20261111085622';
+        const APP_VERSION = '17.6';
+        const APP_BUILD = '20261111090958';
         let updateCheckAt = 0;
         function paintBuild() {
             const el = document.getElementById('app-build-info'); if (!el) return;
@@ -11841,20 +11842,22 @@ function setupPaging(){
  document.getElementById('btn-page-prev').onclick=()=>turnReaderPage(-1);document.getElementById('btn-page-next').onclick=()=>turnReaderPage(1);
  document.getElementById('reader-progress').oninput=e=>{dragReaderProgress(e.target);showProgressTip(e.target);};document.getElementById('reader-progress').onchange=e=>{seekReaderProgress(e.target.value);hideProgressTip();};['pointerdown','touchstart'].forEach(t=>document.getElementById('reader-progress').addEventListener(t,e=>{setTimeout(()=>showProgressTip(e.target),0);},{passive:true}));['pointerup','pointercancel','touchend','touchcancel','blur'].forEach(t=>document.getElementById('reader-progress').addEventListener(t,hideProgressTip,{passive:true}));const tcBtn=document.getElementById('btn-titlecard-toggle');tcBtn.onclick=()=>{setTtsCfg('readTitleCard',!readerTitleCardOn());paintTitleCardBtn();};paintTitleCardBtn();const spreadBtn=document.getElementById('btn-spread-toggle'),paintSpread=()=>{spreadBtn.textContent='PCでの見開き：'+(pageReader.spread?'入':'切');spreadBtn.setAttribute('aria-pressed',pageReader.spread);spreadBtn.style.background=pageReader.spread?'#6f5a47':'#faf6ed';spreadBtn.style.color=pageReader.spread?'#fff':'#6b5f55';};spreadBtn.onclick=()=>{rememberPage(true);pageReader.spread=!pageReader.spread;savePagePreferences();paintSpread();rebuildPages();};paintSpread();const flipBtn=document.getElementById('btn-flip-toggle'),paintFlip=()=>{flipBtn.textContent='ページをめくる動き：'+(pageReader.flip?'入':'切');flipBtn.setAttribute('aria-pressed',pageReader.flip);flipBtn.style.background=pageReader.flip?'#6f5a47':'#faf6ed';flipBtn.style.color=pageReader.flip?'#fff':'#6b5f55';};flipBtn.onclick=()=>{pageReader.flip=!pageReader.flip;savePagePreferences();paintFlip();};paintFlip();document.getElementById('reader-menu-access').onclick=toggleReaderControls;document.getElementById('btn-mode-scroll').onclick=()=>setReadingMode('scroll');document.getElementById('btn-mode-pages').onclick=()=>setReadingMode('pages');paintReadingModeButtons();protoAssistInit();
  const wrap=document.getElementById('reader-body-wrap');let down=null;
+ // 枠（ニュース・掲示板など）の上：めくるのは端の10%だけ。まんなかは枠に任せる（メニューも出さない）
+ const READER_CARD_SEL='.nr,.az-board-reader,.az-board-provided,.fxbbs,.fxkk,.fxnote,.blk,[data-fx]',readerEdge=t=>t&&t.closest&&t.closest(READER_CARD_SEL)?.1:.23;
  wrap.addEventListener('pointerdown',e=>{down=e.isPrimary?{x:e.clientX,y:e.clientY,time:performance.now(),id:e.pointerId,selected:!getSelection().isCollapsed}:null;},{passive:true});
  wrap.addEventListener('pointercancel',()=>{down=null;},{passive:true});
  wrap.addEventListener('pointermove',e=>{if(down&&Math.hypot(e.clientX-down.x,e.clientY-down.y)>10)down=null;},{passive:true});
  wrap.addEventListener('pointerup',e=>{
   const start=down;if(e.pointerType!=='touch'||!start||start.selected||performance.now()-start.time>350||readerTurning||!getSelection().isCollapsed||e.target.closest('button,a,input,textarea,select,[contenteditable],label'))return;
-  if(state.ttsBarVisible&&e.target.closest('.tts-sentence'))return;const rect=wrap.getBoundingClientRect(),x=e.clientX-rect.left;if(x<=rect.width*.23||x>=rect.width*.77)return;
-  down=null;toggleReaderControls();swipeSuppressUntil=performance.now()+500;
+  if(state.ttsBarVisible&&e.target.closest('.tts-sentence'))return;const rect=wrap.getBoundingClientRect(),x=e.clientX-rect.left,edge=readerEdge(e.target);if(x<=rect.width*edge||x>=rect.width*(1-edge))return;
+  if(edge<.2)return;down=null;toggleReaderControls();swipeSuppressUntil=performance.now()+500;
  },{passive:true});
  wrap.addEventListener('click',e=>{
   const start=down;down=null;if(e.target.closest('button,a,input,textarea,select,[contenteditable],label'))return;if(performance.now()<swipeSuppressUntil){e.preventDefault();e.stopImmediatePropagation();return;}if(!start||start.selected||performance.now()-start.time>350||e.detail!==1||!getSelection().isCollapsed)return;
   if(e.target.closest('button,a,input,textarea,select,[contenteditable],label'))return;
-  if(state.ttsBarVisible&&e.target.closest('.tts-sentence'))return;const rect=wrap.getBoundingClientRect(),x=e.clientX-rect.left;if(x>rect.width*.23&&x<rect.width*.77){e.preventDefault();e.stopImmediatePropagation();toggleReaderControls();return;}
+  if(state.ttsBarVisible&&e.target.closest('.tts-sentence'))return;const rect=wrap.getBoundingClientRect(),x=e.clientX-rect.left,edge=readerEdge(e.target);if(x>rect.width*edge&&x<rect.width*(1-edge)){if(edge<.2)return;e.preventDefault();e.stopImmediatePropagation();toggleReaderControls();return;}
   if(!pagingActive())return;
-  e.preventDefault();e.stopImmediatePropagation();const direction=x<rect.width*.23?-1:1;turnReaderPage(pageReader.vertical?-direction:direction);
+  e.preventDefault();e.stopImmediatePropagation();const direction=x<rect.width*edge?-1:1;turnReaderPage(pageReader.vertical?-direction:direction);
  },true);
  setupReaderSwipe(wrap);
  document.addEventListener('keydown',e=>{
