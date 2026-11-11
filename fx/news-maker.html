@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>報道メーカー</title>
-<!-- 報道メーカー：［報道 形=炎上］（トレンド）と［報道 形=ニュース］（芸能ニュース）を、入力欄で作る。
+<!-- 報道メーカー：［報道 形=炎上］（トレンド）と［報道 形=ニュース］（芸能ニュース）と［報道 形=動画］［報道 形=コラム］を、入力欄で作る。
    親 → ここ  { type:'fx-make', src, title, edit }
    ここ → 親  { type:'fx-ready' } / { type:'fx-insert', src } / { type:'fx-save', src } / { type:'fx-close' }
    見た目の確認は、中に「演出をつくる」画面（maker.html）を開いて、本物の表示で見る。 -->
@@ -56,7 +56,7 @@ details summary{cursor:pointer;color:var(--mute);font-size:13px}
   <div>
     <div class="card">
       <h2>画面の種類</h2>
-      <div class="kind"><button type="button" data-kind="炎上" aria-pressed="true">トレンド（SNS）</button><button type="button" data-kind="ニュース" aria-pressed="false">ニュース記事</button><button type="button" data-kind="動画" aria-pressed="false">動画コメント</button></div>
+      <div class="kind"><button type="button" data-kind="炎上" aria-pressed="true">トレンド（SNS）</button><button type="button" data-kind="ニュース" aria-pressed="false">ニュース記事</button><button type="button" data-kind="動画" aria-pressed="false">動画コメント</button><button type="button" data-kind="コラム" aria-pressed="false">コラム</button></div>
       <p class="note" id="kindNote"></p>
     </div>
     <div id="form"></div>
@@ -96,7 +96,8 @@ const S = {
     vc: [{ id: '@user-x9k', text: '記者の質問レベルが低い；下品だ', like: '', replies: [{ id: '@fan_less', text: 'マジでファンじゃないけど、映像を見ている間ずっと顔をしかめてた' }] },
       { id: '@timestamp_watcher', text: '0:47 ここの表情で真心が溢れているのが感じられる。', like: '2.1K', replies: [] }] }
 };
-S.extraRows.動画 = [];
+S.extraRows.動画 = []; S.extraRows.コラム = [];
+S.column = { 見た目: '', 分類: 'オピニオン／芸能コラム', 題: '【コラム】題を入れます', 署名: 'コラム／寄稿：OOO記者', body: '段落を1行ずつ入れます。\n**ここ** のように書くと、蛍光ペンになります。' };
 
 // ---------- 印 → 中身 ----------
 function parseAttrs(s) { const a = {}; s.trim().split(/[ \t]+/).filter(Boolean).forEach(t => { const i = t.indexOf('='); if (i > 0) a[t.slice(0, i)] = t.slice(i + 1); }); return a; }
@@ -107,12 +108,14 @@ const unA = s => String(s || '').replace(/／/g, '\n');
 function load(src) {
   const m = String(src || '').trim().match(/^［報道([^］]*)］\n?([\s\S]*?)\n?［／報道］\s*$/);
   if (!m) return;
-  const a = parseAttrs(m[1]), kind = a.形 === 'ニュース' ? 'ニュース' : a.形 === '動画' ? '動画' : '炎上', R = rowsOf(m[2].split('\n'));
+  const a = parseAttrs(m[1]), kind = a.形 === 'ニュース' ? 'ニュース' : a.形 === '動画' ? '動画' : a.形 === 'コラム' ? 'コラム' : '炎上', R = rowsOf(m[2].split('\n'));
   S.kind = kind; S.extra = {};
-  const known = kind === '炎上' ? ['形', 'タグ', '件数', '開始', '順位'] : kind === '動画' ? ['形', '題', '件数', '見た目'] : ['形', '媒体', '分類', '印', '見出し', '副題', '日時', '記者', '閲覧', '写真ほか', '部分', '大きさ', 'コメント数'];
+  const known = kind === 'コラム' ? ['形', '見た目', '分類', '題', '署名'] : kind === '炎上' ? ['形', 'タグ', '件数', '開始', '順位'] : kind === '動画' ? ['形', '題', '件数', '見た目'] : ['形', '媒体', '分類', '印', '見出し', '副題', '日時', '記者', '閲覧', '写真ほか', '部分', '大きさ', 'コメント数'];
   for (const k in a) if (!known.includes(k)) S.extra[k] = a[k];
   S.extraRows[kind] = [];
-  if (kind === '動画') {
+  if (kind === 'コラム') {
+    const c = S.column; c.見た目 = a.見た目 || ''; c.分類 = a.分類 || ''; c.題 = unA(a.題 || ''); c.署名 = a.署名 || ''; c.body = R.map(r => r.raw.trim()).join('\n');
+  } else if (kind === '動画') {
     const v = S.video; v.題 = unA(a.題 || ''); v.件数 = a.件数 || ''; v.見た目 = a.見た目 || ''; v.vc = [];
     for (const r of R) {
       if (r.k) { S.extraRows.動画.push(r.raw); continue; }
@@ -154,7 +157,11 @@ function build() {
   const ex = Object.entries(S.extra), rows = [];
   let head;
   const uid = s => { let id = optVal(s) || 'user'; return id.startsWith('@') ? id : '@' + id; };
-  if (S.kind === '動画') {
+  if (S.kind === 'コラム') {
+    const c = S.column;
+    head = attrs([['形', 'コラム'], ['見た目', c.見た目], ['分類', c.分類], ['題', c.題], ['署名', c.署名], ...ex]);
+    String(c.body || '').split(/\r?\n/).map(l => l.trim()).filter(Boolean).forEach(l => rows.push(l.replace(/［/g, '[').replace(/］/g, ']')));
+  } else if (S.kind === '動画') {
     const v = S.video;
     head = attrs([['形', '動画'], ['題', v.題], ['件数', v.件数], ['見た目', v.見た目], ...ex]);
     v.vc.forEach(c => {
@@ -199,9 +206,13 @@ const fld = (label, path, val, opt = {}) => opt.area ? `<label class="f"><span>$
 const itemHead = (title, list, i, n) => `<div class="ih"><b>${title}</b><button type="button" data-mv="${list}" data-i="${i}" data-d="-1"${i === 0 ? ' disabled' : ''} aria-label="上へ">↑</button><button type="button" data-mv="${list}" data-i="${i}" data-d="1"${i === n - 1 ? ' disabled' : ''} aria-label="下へ">↓</button><button type="button" class="del" data-rm="${list}" data-i="${i}" aria-label="消す">×</button></div>`;
 function render() {
   document.querySelectorAll('.kind button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.kind === S.kind)));
-  $('#kindNote').textContent = S.kind === '炎上' ? 'トレンドの順位と、SNSの投稿が並ぶ画面です。順位の数字が上がっていき、件数が増えていきます。' : S.kind === '動画' ? '動画のコメント欄です。コメントと、その下の返信（└）が、順にポンポンと出ます。0:47 のような時刻は青い字になります。' : '芸能ニュースの記事の画面です。見出し・写真・本文・関連記事・コメントが並びます。';
+  $('#kindNote').textContent = S.kind === 'コラム' ? 'オピニオン・寄稿のコラムです。分類・題・段落・署名が並び、段落が上から順に出ます。' : S.kind === '炎上' ? 'トレンドの順位と、SNSの投稿が並ぶ画面です。順位の数字が上がっていき、件数が増えていきます。' : S.kind === '動画' ? '動画のコメント欄です。コメントと、その下の返信（└）が、順にポンポンと出ます。0:47 のような時刻は青い字になります。' : '芸能ニュースの記事の画面です。見出し・写真・本文・関連記事・コメントが並びます。';
   let h = '';
-  if (S.kind === '動画') {
+  if (S.kind === 'コラム') {
+    const c = S.column;
+    h += `<div class="card"><h2>コラム</h2>${fld('見た目', 'column.見た目', c.見た目, { sel: [['', 'マガジン（Webマガジン風）'], ['新聞', '新聞・社説風'], ['ダーク', 'ダークメディア']] })}${fld('分類（上に小さく出る）', 'column.分類', c.分類, { ph: 'オピニオン／芸能コラム' })}${fld('題', 'column.題', c.題, { area: 1 })}${fld('署名（下に出る）', 'column.署名', c.署名, { ph: 'コラム／寄稿：OOO記者' })}</div>`;
+    h += `<div class="card"><h2>本文</h2>${fld('段落（1行が1段落。**ここ** で蛍光ペン）', 'column.body', c.body, { area: 1 })}</div>`;
+  } else if (S.kind === '動画') {
     const v = S.video;
     h += `<div class="card"><h2>コメント欄</h2>${fld('上に出る題', 'video.題', v.題, { ph: '急上昇動画 #1 クリップコメント欄' })}<div class="row2">${fld('コメント数', 'video.件数', v.件数, { ph: '1,842' })}${fld('見た目', 'video.見た目', v.見た目, { sel: [['', '暗い（動画サイト風）'], ['明るい', '明るい']] })}</div></div>`;
     h += `<div class="card"><h2>文章から作る</h2><p class="note">本文のコメント欄の部分を、そのまま貼り付けます。「――」や「-」で始まる行がコメント、「└」で始まる行が、すぐ上のコメントへの返信になります。名前は自動で付きます（あとで直せます）。</p><textarea id="pasteBox" placeholder="――記者の質問レベルが低い；下品だ&#10;└マジでファンじゃないけど…"></textarea><div class="row2" style="margin-top:6px"><button type="button" class="add" id="btnPasteAdd">うしろに足す</button><button type="button" class="add" id="btnPasteSet">今のを消して作る</button></div></div>`;
@@ -241,6 +252,7 @@ function fromText(text) {
 function setPath(path, val) {
   const ps = path.split('.');
   if (ps[0] === 'video') { S.video[ps[1]] = val; return; }
+  if (ps[0] === 'column') { S.column[ps[1]] = val; return; }
   if (ps[0] === 'vr') { S.video.vc[+ps[1]].replies[+ps[2]][ps[3]] = val; return; }
   if (ps[0] === 'cr') { S.news.comments[+ps[1]].replies[+ps[2]][ps[3]] = val; return; }
   if (ps[0] === 'trend') { S.trend[ps[1]] = val; return; }

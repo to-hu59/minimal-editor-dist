@@ -3,7 +3,7 @@
    NewsReader.isSource(src) / html(src,{base}) / plain(src) / scan(root,settings,key) / play(el,{sound}) */
 (function (global) {
 'use strict';
-const KINDS = ['炎上', 'ニュース', '動画'];
+const KINDS = ['炎上', 'ニュース', '動画', 'コラム'];
 const RE = /^［報道[ \t]([^］\n]*)］\n?([\s\S]*?)\n?［／報道］\s*$/;
 const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 function attrs(s) { const a = {}; String(s || '').trim().split(/[ \t]+/).filter(Boolean).forEach(t => { const i = t.indexOf('='); if (i > 0) a[t.slice(0, i)] = t.slice(i + 1); else if (t === '続き') a.続き = '1'; }); return a; }
@@ -12,7 +12,7 @@ function rows(text) {
     let i = l.indexOf('：'); if (i > 8 || l.slice(0, i).includes('｜')) i = -1;
     const ps = l.slice(i + 1).split('｜').map(x => x.trim()), o = {}, v = [];
     ps.forEach(p => { const j = p.indexOf('='); if (j > 0 && j < 6) o[p.slice(0, j)] = p.slice(j + 1); else v.push(p); });
-    return { k: i < 0 ? '' : l.slice(0, i).trim(), v, o };
+    return { k: i < 0 ? '' : l.slice(0, i).trim(), v, o, raw: l };
   }).map((r, i) => (r.i = i, r));
 }
 function parse(src) { const m = String(src || '').trim().match(RE); if (!m) return null; const a = attrs(m[1]); if (!KINDS.includes(a.形)) return null; return { a, R: rows(m[2]) }; }
@@ -75,13 +75,25 @@ function video(a, R) {
   return `<div class="nr nr-video${light ? ' light' : ''}${a.続き ? ' cont' : ''}">${a.続き ? '' : `<div class="nr-vh"><b><span class="nr-play">▶</span> <span data-e="a:題">${tx(a.題 || '急上昇動画 #1 クリップコメント欄')}</span></b><small>コメント ${cnt(a.件数 || String(groups.reduce((n, x) => n + 1 + x.replies.length, 0)))}件</small></div>`}
   ${groups.map(x => `<div class="nr-vg">${x.c ? `<div class="nr-vc nr-in"><span class="nr-vu"${x.c.named ? ` data-e="r:${x.c.i}:u"` : ''}>${user(x.c.id)}</span><span class="nr-vt" data-e="r:${x.c.i}:t">${tx(x.c.text)}</span>${x.c.like ? `<span class="nr-vl">👍 ${cnt(x.c.like, 1)}</span>` : ''}</div>` : ''}${x.replies.map(r => `<div class="nr-vr nr-in"><span class="nr-vu"${r.named ? ` data-e="r:${r.i}:u"` : ''}>${user(r.id)}</span><span class="nr-vt" data-e="r:${r.i}:t">${tx(r.text)}</span></div>`).join('')}</div>`).join('')}</div>`;
 }
+// コラム（オピニオン・寄稿）。見た目＝マガジン（ふつう）／新聞／ダーク。1行＝1段落。**ここ** は蛍光ペン
+function column(a, R) {
+  const th = /^新聞/.test(a.見た目 || '') ? 'paper' : /^ダーク/.test(a.見た目 || '') ? 'dark' : 'mag';
+  const hl = t => tx(t).replace(/\*\*([^*<]+?)\*\*/g, '<mark class="nr-chl">$1</mark>');
+  return `<div class="nr nr-col t-${th}">`
+    + (a.分類 ? `<div class="nr-ccat nr-in"><span data-e="a:分類">${esc(a.分類)}</span></div>` : '')
+    + `<h3 class="nr-ctit nr-in" data-e="a:題">${tx(a.題 || '【コラム】題を入れます')}</h3>`
+    + `<div class="nr-cbody">${R.map(r => `<p class="nr-cp nr-in" data-e="r:${r.i}:raw">${hl(String(r.raw || '').trim())}</p>`).join('')}</div>`
+    + (a.署名 ? `<div class="nr-cft nr-in" data-e="a:署名">${esc(a.署名)}</div>` : '')
+    + '</div>';
+}
 // 読む画面は改行をそのまま空白として出すので、部品の HTML の改行は取り除く
-function html(src, opt = {}) { const d = parse(src); if (!d) return ''; const base = opt.base == null ? 'fx/' : opt.base; return (d.a.形 === 'ニュース' ? news(d.a, d.R, base) : d.a.形 === '動画' ? video(d.a, d.R) : trend(d.a, d.R)).replace(/>\s*\n\s*</g, '><').replace(/\n\s*/g, ''); }
+function html(src, opt = {}) { const d = parse(src); if (!d) return ''; const base = opt.base == null ? 'fx/' : opt.base; return (d.a.形 === 'ニュース' ? news(d.a, d.R, base) : d.a.形 === '動画' ? video(d.a, d.R) : d.a.形 === 'コラム' ? column(d.a, d.R) : trend(d.a, d.R)).replace(/>\s*\n\s*</g, '><').replace(/\n\s*/g, ''); }
 // 読み上げ・文字数用の、ふつうの文
 function plain(src) {
   const d = parse(src); if (!d) return ''; const a = d.a, out = [];
   if (a.形 === '炎上') { out.push((a.タグ || '') + ' トレンド' + (a.順位 || '1') + '位'); d.R.forEach(r => { if (r.k === 'トレンド') out.push(r.v[0] || ''); else if (r.k === '削除済み') out.push('このポストは削除されました。'); else out.push(r.v.length >= 2 ? r.v[1] : r.v[0] || ''); }); }
   else if (a.形 === 'ニュース') { out.push(a.見出し || ''); if (a.副題) out.push(a.副題); d.R.forEach(r => { if (!r.k) out.push(r.v.join('｜')); else if (r.k === '関連') out.push(r.v.join('｜')); else if (r.k === 'コメント' || r.k === '返信') out.push(r.v.slice(1).join('｜')); }); }
+  else if (a.形 === 'コラム') { if (a.分類) out.push(a.分類); out.push(a.題 || ''); d.R.forEach(r => out.push(String(r.raw || '').trim().replace(/\*\*/g, ''))); if (a.署名) out.push(a.署名); }
   else { if (!a.続き) out.push(a.題 || '動画のコメント欄'); d.R.forEach(r => out.push(r.v.length >= 2 ? r.v.slice(1).join('｜') : String(r.v[0] || '').replace(/^\s*[―—─－]{1,3}\s*/, ''))); }
   return out.map(s => String(s).replace(/／/g, ' ').trim()).filter(Boolean).join('\n') || '​';
 }
@@ -97,7 +109,7 @@ function play(el, opt = {}) {
   const stop = () => { if (done) return; done = true; timers.forEach(clearTimeout); finish(root); };
   if (global.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) { stop(); return { cancel() {} }; }
   root.classList.add('nr-playing'); items.forEach(x => x.classList.remove('on'));
-  const fast = root.classList.contains('nr-video') ? 170 : 260;
+  const fast = root.classList.contains('nr-video') ? 170 : root.classList.contains('nr-col') ? 330 : 260;
   items.forEach((x, i) => timers.push(setTimeout(() => { x.classList.add('on'); pop(opt.sound, i); }, 120 + i * fast)));
   root.querySelectorAll('.nr-cnt').forEach(c => { const v = +c.dataset.v || 0, k = c.dataset.k === '1'; c.dataset.final = c.textContent; if (!v) return; const from = Math.round(v * 0.82), steps = 18; for (let s = 0; s <= steps; s++) timers.push(setTimeout(() => { if (!done) c.textContent = s === steps ? c.dataset.final : fmt(Math.round(from + (v - from) * s / steps), k); }, 200 + s * 70)); });
   root.querySelectorAll('.nr-rk').forEach(r => { let a = parseInt(r.dataset.from, 10) || 1; const b = parseInt(r.dataset.to, 10) || 1; r.textContent = a; let t = 400; while (a > b) { a--; const v = a; timers.push(setTimeout(() => { if (!done) { r.textContent = v; r.classList.remove('bump'); void r.offsetWidth; r.classList.add('bump'); } }, t)); t += 380; } });
@@ -132,6 +144,7 @@ function edit(src, key, val) {
   const raw = lines[j].replace(/\r$/, ''), lead = raw.match(/^\s*/)[0], r = rows(raw)[0];
   if (!val && b !== 'cap' && b !== 'u') { lines.splice(j, 1); return m[1] + m[2] + m[3] + lines.join('\n') + m[5]; }
   let v = r.v.slice(); const pre = ((v[0] || '').match(/^\s*(└|[―—─－]{1,3})\s*/) || [''])[0];
+  if (b === 'raw') { lines[j] = lead + val; return m[1] + m[2] + m[3] + lines.join('\n') + m[5]; }
   if (b === 'all') v = [val];
   else if (b === 'u') { if (v.length >= 2) v[0] = (/^\s*└/.test(v[0]) ? '└' : '') + val; }
   else if (b === 'cap') v = val ? [v[0] || '', val] : [v[0] || ''];
