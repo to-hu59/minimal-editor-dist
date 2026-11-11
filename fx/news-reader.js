@@ -105,14 +105,17 @@ const fmt = (n, k) => k ? (n >= 1e6 ? (n / 1e6).toFixed(1).replace(/\.0$/, '') +
 function finish(el) { el.querySelectorAll('.nr-in').forEach(x => x.classList.add('on')); el.querySelectorAll('.nr-cnt').forEach(c => { if (c.dataset.final) c.textContent = c.dataset.final; }); el.querySelectorAll('.nr-rk').forEach(r => r.textContent = r.dataset.to); el.classList.remove('nr-playing'); }
 function play(el, opt = {}) {
   const root = el.querySelector('.nr') || el; if (!root) return { cancel() {} };
-  const items = [...root.querySelectorAll('.nr-in')], timers = []; let done = false;
-  const stop = () => { if (done) return; done = true; timers.forEach(clearTimeout); finish(root); };
+  const items = [...root.querySelectorAll('.nr-in')], timers = []; let done = false, told = false;
+  const tell = () => { if (told) return; told = true; if (opt.done) opt.done(); };   // 次のカードへ（出し終わったとき・押して止めたとき）
+  const stop = () => { if (done) return; done = true; timers.forEach(clearTimeout); finish(root); tell(); };
   if (global.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) { stop(); return { cancel() {} }; }
+  if (!items.length) { stop(); return { cancel() {} }; }
   root.classList.add('nr-playing'); items.forEach(x => x.classList.remove('on'));
   const fast = root.classList.contains('nr-video') ? 170 : root.classList.contains('nr-col') ? 330 : 260;
   items.forEach((x, i) => timers.push(setTimeout(() => { x.classList.add('on'); pop(opt.sound, i); }, 120 + i * fast)));
   root.querySelectorAll('.nr-cnt').forEach(c => { const v = +c.dataset.v || 0, k = c.dataset.k === '1'; c.dataset.final = c.textContent; if (!v) return; const from = Math.round(v * 0.82), steps = 18; for (let s = 0; s <= steps; s++) timers.push(setTimeout(() => { if (!done) c.textContent = s === steps ? c.dataset.final : fmt(Math.round(from + (v - from) * s / steps), k); }, 200 + s * 70)); });
   root.querySelectorAll('.nr-rk').forEach(r => { let a = parseInt(r.dataset.from, 10) || 1; const b = parseInt(r.dataset.to, 10) || 1; r.textContent = a; let t = 400; while (a > b) { a--; const v = a; timers.push(setTimeout(() => { if (!done) { r.textContent = v; r.classList.remove('bump'); void r.offsetWidth; r.classList.add('bump'); } }, t)); t += 380; } });
+  timers.push(setTimeout(tell, 120 + items.length * fast + 250));
   timers.push(setTimeout(stop, 120 + items.length * fast + 1600));
   root.addEventListener('click', stop, { once: true });
   return { cancel: stop };
@@ -122,11 +125,23 @@ document.addEventListener('click', e => { const b = e.target.closest && e.target
 
 // 読む画面：見えたら1回だけ動く（同じ話の同じ報道は、2回目からは、はじめから全部出す）
 const seen = new Set(); let io = null, cfg = {};
+// 順番待ち：前のカードが出終わってから、次のカードが動く（同時に動いて、音がかぶらないように）
+const queue = []; let busy = false;
+function enqueue(el) { if (!queue.includes(el)) queue.push(el); next(); }
+function next() {
+  if (busy) return;
+  let el; while ((el = queue.shift()) && !el.isConnected) {}
+  if (!el) return;
+  busy = true; let ended = false;
+  const go = () => { if (ended) return; ended = true; busy = false; next(); };
+  play(el, { sound: !!cfg.sound, done: go });
+  setTimeout(go, 20000);   // 念のため（止まったままにしない）
+}
 function scan(root, settings, key) {
   cfg = settings || {}; if (!root) return;
   const list = [...root.querySelectorAll('.fxnews')].filter(el => !el.closest('#reader-editor-box'));
   if (cfg.enabled === false) { list.forEach(el => finish(el)); return; }
-  if (!io && global.IntersectionObserver) io = new IntersectionObserver(es => es.forEach(e => { if (!e.isIntersecting) return; io.unobserve(e.target); play(e.target, { sound: !!cfg.sound }); }), { threshold: 0.25 });
+  if (!io && global.IntersectionObserver) io = new IntersectionObserver(es => es.filter(e => e.isIntersecting).sort((x, y) => (x.target.compareDocumentPosition(y.target) & 4) ? -1 : 1).forEach(e => { io.unobserve(e.target); enqueue(e.target); }), { threshold: 0.25 });
   list.forEach((el, i) => { if (el.dataset.nrSeen) return; el.dataset.nrSeen = '1'; const k = key + ':' + i + ':' + el.textContent.length; if (seen.has(k) || !io) { finish(el); return; } seen.add(k); el.querySelectorAll('.nr-in').forEach(x => x.classList.remove('on')); io.observe(el); });
 }
 // 直す：key＝「a:見出し」（印の中の項目）か「r:行:場所」（中の行。all＝行全部／t＝本文／u＝名前／cap＝写真の説明／v0＝はじめ）。空にすると、行は消える

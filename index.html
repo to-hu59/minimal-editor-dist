@@ -2014,6 +2014,7 @@
                     <div class="pt-3 border-t border-woodBorder">
                         <span class="font-bold text-softMuted block mb-1">更新履歴</span>
                         <div id="changelog" class="text-[11px] text-softMuted leading-relaxed">
+<div class="mb-1.5"><b class="text-softText">Version 18.2（2026-11-11）</b><br>報道のカード（ニュース・動画のコメント・トレンド・コラム）が、1つずつ順番に動くようにしました。開いたときに、いくつものカードが同時に動いて「ポンポン」の音が重なっていたのを直しました。ページをまたぐカードの続きは、そのページを開いたときに動きます。LINE のトークが、読む画面で絵にならずに文字の枠で出ることがあったのを直しました（印の行の前後に空白や見えない改行の記号があるとき）。</div>
 <div class="mb-1.5"><b class="text-softText">Version 18.1（2026-11-11）</b><br>パソコンでは、報道のカード（ニュース・動画のコメント・トレンド・コラム）を本文の幅いっぱいに広げました。コメントが多いときは、カードの中を2段に並べて、1ページに入りやすくしました。ページ表示で、カードの下が切れることがあったのを直しました。カードは小さく縮めすぎず（7割まで）、それでも入りきらない長いコラムなどは、ふつうの大きさのまま次のページへ続けます。報道メーカーの本文の入力欄を大きくしました。編集画面で［ ］で囲む演出（着信・バイブ・怒鳴り・タイピング音・縦書きなど）のボタンを、何も選ばずに押すと「［着信］ここに本文［／着信］」が入り、「ここに本文」が選ばれた状態になります（そのまま打てば置き換わります）。文字を選んで押すと、その文字を囲みます。</div>
 <div class="mb-1.5"><b class="text-softText">Version 18（2026-11-11）</b><br>報道に「コラム」を足しました。オピニオン・寄稿のコラムを、本文の中にそのまま出せます。見た目は「マガジン」「新聞」「ダーク」の3つです。［報道 形=コラム 見た目=新聞 分類=… 題=… 署名=…］の下に、1行に1段落ずつ書きます。**ここ** と書くと蛍光ペンになります。特殊演出の「メーカー」の「コラムを作る」から、画面で作れます。読む画面では段落が上から順に出て、文字を押すとその場で直せます。</div>
 <div class="mb-1.5"><b class="text-softText">Version 17.9（2026-11-11）</b><br>並べ替えのあいだ、「完了」「取消」の列を画面の上に固定しました。下へスクロールしても押せます。話・巻・部を長押ししたメニューに「並べ替え」を足しました。押すと並べ替えが始まり、その話（巻）の所までスクロールして、少しのあいだ色が付きます。</div>
@@ -7326,7 +7327,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             while ((m = re.exec(text))) if (!m[1] && FX_NAMES.has(m[2]) && m[2] !== '掲示板' && !(m[2] === '報道' && /(?:^|[\s　])形=(?:炎上|ニュース|動画|コラム)(?:[\s　]|$)/.test(m[3] || '')) && !(m[2]==='トーク'&&/(?:^|[\s　])チャットJSON=/.test(m[3]||'')) && !(['手紙','書類'].includes(m[2]) && /(?:^|[\s　])見た目=提供版(?:[\s　]|$)/.test(m[3]||'')) && !(m[2] === 'システム' && /文=/.test(m[3] || '')) && !(m[2] === '招待状' && /(見た目=カカオ|[\s　]カカオ[\s　])/.test(m[3] || ''))) return true;
             return false;
         }
-        function fxHasInReader(chap) { if(/^［報道[ \t][^］\n]*形=(?:炎上|ニュース|動画|コラム)(?:[ \t]|］)/m.test(String(chap?.content||'')))return true; if(/^［トーク[^］\n]*[\s　]チャットJSON=/m.test(String(chap?.content||'')))return true; if(/^［(?:手紙|書類|メール)[^］\n]*[\s　]見た目=提供版(?:[\s　］])/m.test(String(chap?.content||'')))return true;return /［掲示板[\s　］]|［招待状[^］\n]*カカオ|［システム[\s　][^］]*文=|［(着信|バイブ|怒鳴り|どなる|ノイズ|ジジッ?|頭痛|どくん|心臓|タイピング音|タイピング|カタカタ)[\s　］]/.test(String((chap && chap.content) || '')); }
+        function fxHasInReader(chap) { if(/^［報道[ \t][^］\n]*形=(?:炎上|ニュース|動画|コラム)(?:[ \t]|］)/m.test(String(chap?.content||'')))return true; if(/^[ \t　]*［トーク[^］\n]*[\s　]チャットJSON=/m.test(String(chap?.content||'')))return true; if(/^［(?:手紙|書類|メール)[^］\n]*[\s　]見た目=提供版(?:[\s　］])/m.test(String(chap?.content||'')))return true;return /［掲示板[\s　］]|［招待状[^］\n]*カカオ|［システム[\s　][^］]*文=|［(着信|バイブ|怒鳴り|どなる|ノイズ|ジジッ?|頭痛|どくん|心臓|タイピング音|タイピング|カタカタ)[\s　］]/.test(String((chap && chap.content) || '')); }
         // ふつうの本文では、演出の印を目立たなくする：印だけの行は消す。画面系のはじまりは「〔名前〕」。文中の印は消す
         // frames に配列を渡すと、枠の位置（表示する行の番号）が入る。印の行は、表示からは消える（朗読の行とも同じにそろう）
         function fxDisplayText(text, frames) {
@@ -7348,7 +7349,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                 if (line.indexOf('［') < 0) { out.push(line); continue; }
                 if(window.LineMaker&&/^［トーク[^］]*チャットJSON=/.test(line.trim())){
                     let end=li+1;while(end<L.length&&L[end].trim()!=='［／トーク］')end++;
-                    if(end<L.length){const source=L.slice(li,end+1).join('\n');if(LineMaker.isSource(source)){const from=out.length,rows=L.slice(li+1,end);out.push(...(rows.length?rows:['\u200b']));if(frames)frames.push({from,to:out.length-1,kind:'provided-line',lineSource:source});li=end;continue;}}
+                    if(end<L.length){const source=L.slice(li,end+1).map(x=>x.replace(/\r$/,'').trim()).join('\n');if(LineMaker.isSource(source)){const from=out.length,rows=L.slice(li+1,end).map(x=>x.replace(/\r$/,''));out.push(...(rows.length?rows:['\u200b']));if(frames)frames.push({from,to:out.length-1,kind:'provided-line',lineSource:source});li=end;continue;}}
                 }
                 // 報道（トレンド・ニュース記事・動画コメント）：本文の中に、絵のまま出す
                 if(window.NewsReader&&/^［報道[ \t][^］]*形=(?:炎上|ニュース|動画|コラム)(?:[ \t]|］)/.test(line.trim())){
@@ -10172,8 +10173,8 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         // 話の終わり・戻る・本の終わりで、読み終えた話から言葉を拾い、件数を小さく知らせる。読書は止めない
         // ===== 更新の確認：新しい版があれば、魚に青い点とメニュー（版の番号は version.json。公開のたびに、番号が変わる。番号が入っていない開発中は、確かめない） =====
         // 表示用の版。更新の検出は引き続き APP_BUILD の日時番号を使う。
-        const APP_VERSION = '18.1';
-        const APP_BUILD = '20261111110133';
+        const APP_VERSION = '18.2';
+        const APP_BUILD = '20261111112535';
         let updateCheckAt = 0;
         function paintBuild() {
             const el = document.getElementById('app-build-info'); if (!el) return;
