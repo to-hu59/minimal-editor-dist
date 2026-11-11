@@ -284,6 +284,10 @@
         .wiki-sheet .wk-nav { margin-top: 12px; border: 1px solid #b9a77f; border-radius: 10px; overflow: hidden; background: #fff; }
         .wiki-sheet .wk-nav-h { background: #23594e; color: #fff; font-weight: 700; padding: 7px 12px; display: flex; justify-content: space-between; align-items: baseline; }
         .wiki-sheet .wk-nav-h small { font-weight: 400; opacity: .8; }
+        .wiki-sheet summary.wk-nav-h { cursor: pointer; list-style: none; user-select: none; }
+        .wiki-sheet summary.wk-nav-h::-webkit-details-marker { display: none; }
+        .wiki-sheet .wk-nav-ar::after { content: '▸'; display: inline-block; margin-left: 10px; font-size: 18px; line-height: 1; opacity: 1; font-style: normal; transition: transform .15s; }
+        .wiki-sheet details.wk-nav[open] .wk-nav-ar::after { transform: rotate(90deg); }
         .wiki-sheet .wk-nav-r { display: grid; grid-template-columns: 8em 1fr; border-top: 1px solid #e3d7bd; }
         .wiki-sheet .wk-nav-k { background: #efe6d3; padding: 7px 10px; font-size: 13px; font-weight: 700; color: #5c4b2e; display: flex; align-items: center; }
         .wiki-sheet .wk-nav-v { padding: 6px 10px; line-height: 2; font-size: 14px; }
@@ -2049,6 +2053,7 @@
                     <div class="pt-3 border-t border-woodBorder">
                         <span class="font-bold text-softMuted block mb-1">更新履歴</span>
                         <div id="changelog" class="text-[11px] text-softMuted leading-relaxed">
+<div class="mb-1.5"><b class="text-softText">Version 20.1（2026-11-11）</b><br>Wikiの項目のページで、家族が2か所に出ないようにしました。本文の「家族構成」に書いた人は、下の「関連」には出ません。家族構成に「姉：[[名前]]」と書くと、相手のページにもつながりが出ます（相関図にも出ます）。WikiのTOPの緑の帯（登場人物・組織など）を押すと、たたんだり開いたりできます。名前が20こ以上の分類は、はじめは閉じています。開け閉めは覚えておきます。</div>
 <div class="mb-1.5"><b class="text-softText">Version 20（2026-11-11）</b><br>Wikiのステータス・スキル・装備などを、話数ごとに新しい値へ置きかえられるようにしました。見出しの中に「{{30話から}}」だけの行を書いて、その下に新しい値（ステータス画面をそのまま貼った［筋力 - 15］の形でもよい）を書き足すと、30話からは同じ名前の値が新しいものに置きかわります（元の場所に出て、小さく「30話〜」）。値が変わったものは「変遷を見る」で、無職（1話）→ 見習い騎士（30話）のように流れが見られます。本文のボタン「＋ 更新（何話から）」で、その印の行が入ります。見出しに「スキル」が入った所の箇条書きは、字下げを線でつないだスキルツリーになります。</div>
 <div class="mb-1.5"><b class="text-softText">Version 19.2（2026-11-11）</b><br>Wikiの関係を、前に入れたものも本文に書いたものも、項目のページの「関連」の欄に、同じ見た目でまとめて出すようにしました（本文の「関係」の見出しは、見る画面には出ません）。前に入れた関連は、編集を開くと本文の「関係」に入ります（保存すると決まります。期間や詳細の付いたものはそのまま）。「関係」のひな形は「- 親友：[[名前]]（ひとこと）」になり、「親友」を打ちかえるだけで書けます。名前のうしろの文は、かっこがなくても「ひとこと」として読みます。WikiのTOPを、ナムウィキの表紙のようにしました。作品名と項目の数、さがす欄、「相関図」「年表」などのボタンの下に、カテゴリ（登場人物・作品・用語など）ごとの表が並びます。表の左の列はタグ（主要人物など）で、名前が「・」でつながって並ぶので、たくさんの項目を1画面で見渡せます。最近ふえた・直した項目も出ます。今までのカードの一覧は「すべての項目」を開くと出ます（さがすと自動で開きます）。「お仕事」「出演作品」のひな形に「共演：[[名前]]」の行を足しました。作品の行の下に共演者を書くと、相手とも「共演」でつながります（相手のページと相関図に出ます）。</div>
 <div class="mb-1.5"><b class="text-softText">Version 19.1（2026-11-11）</b><br>Wikiの本文のひな形のボタン（家族構成・出演作品・ステータス・年表・関係など）で入る見出しを、はじめから折りたためる形（## ▸ 家族構成）にしました。見る画面では、はじめは閉じていて、押すと開きます（開いたものは覚えます）。いちばん上の文は、いつも見えたままです。</div>
@@ -6036,9 +6041,9 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         function wikiTextRels(bookId, e, ents) {
             const out = [], lines = String(e.basic || '').split('\n'), LK = /\{\{\s*第?\s*(\d{1,4})\s*話\s*から\s*\}\}/;
             const byName = new Map(); (ents || wikiEntries(bookId)).forEach(x => [x.name].concat(x.aliases || []).forEach(n => { const k = String(n || '').trim(); if (k && !byName.has(k)) byName.set(k, x.id); }));
-            let inRel = false, prevItem = '';
+            let inRel = false, inFam = false, prevItem = '';
             for (const raw of lines) {
-                const hm = raw.match(/^\s{0,3}#{1,4}\s+(.*)$/); if (hm) { inRel = /関係/.test(hm[1]); prevItem = ''; continue; }
+                const hm = raw.match(/^\s{0,3}#{1,4}\s+(.*)$/); if (hm) { inFam = /家族/.test(hm[1]); inRel = inFam || /関係/.test(hm[1]); prevItem = ''; continue; }
                 if (!inRel) {
                     const cm = raw.match(/^(\s*)[-*・●]\s+(共演者?|ゲスト|出演者)\s*[：:](.*)$/);
                     if (cm) {
@@ -6048,7 +6053,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                     } else if (/^\s*[-*・●]\s+/.test(raw)) prevItem = raw;
                     continue;
                 }
-                const lm = raw.match(/^\s*[-*・●]\s+(.*)$/); if (!lm) continue;
+                const lm = raw.match(/^\s*[-*・●]\s+(.*)$/) || (inFam ? raw.match(/^\s*([^\s#].*[：:].*)$/) : null); if (!lm) continue;
                 const body = lm[1], lk = body.match(LK), ep = lk ? Number(lk[1]) : null;
                 const names = [...body.matchAll(/\[\[([^\]]+)\]\]/g)].map(x => x[1].trim()); if (!names.length) continue;
                 const ci = body.search(/[：:]/), first = body.indexOf('[[');
@@ -6058,7 +6063,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                 const note = (rest.match(/^[（(](.*)[）)]$/) || [null, rest])[1].trim();
                 if (label === '関係') label = '';   // ひな形の「関係」のままなら、ただの関連
                 const note2 = note === 'ひとこと' ? '' : note;
-                for (const n of names) { const to = byName.get(n); if (to && to !== e.id) out.push({ id: 'tr_' + to + '_' + out.length, to, label: label || '関連', back: '', note: note2, ep, src: 'text' }); }
+                for (const n of names) { const to = byName.get(n); if (to && to !== e.id) out.push({ id: 'tr_' + to + '_' + out.length, to, label: label || (inFam ? '家族' : '関連'), back: '', note: note2, ep, src: 'text', fam: inFam || undefined }); }
             }
             return out;
         }
@@ -6087,10 +6092,13 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                 groups.get(label).push({ id: otherId, name: other.name, note: note || '', when: wikiWhenText(other), key: wikiWhenKey(other), period: rel ? periodText(rel) : '', pkey: pk, attrs: (rel && rel.attrs && (mine || rel.shared)) ? rel.attrs : [] });
             };
             const me = byId.get(id);
-            if (me) for (const r of (me.rels || [])) { if (skipText && r.src === 'text') continue; add(r.label || '関連', r.to, r.ep, r.note, r, true); }
+            const FAM_RE = /^(家族|父|母|父親|母親|親|両親|兄|姉|弟|妹|兄弟|姉妹|きょうだい|息子|娘|子|子ども|子供|夫|妻|配偶者|祖父|祖母|祖父母|孫|叔父|叔母|伯父|伯母|おじ|おば|おい|めい|おい・めい|いとこ|義.+)$/;
+            const famTo = new Set(me ? wikiTextRels(bookId, me, all).filter(r => r.fam).map(r => r.to) : []);
+            const famHide = (r, other) => famTo.has(other) && (r.fam || FAM_RE.test(String(r.label || '').trim()) || FAM_RE.test(String(r.back || '').trim()));
+            if (me) for (const r of (me.rels || [])) { if (skipText && r.src === 'text') continue; if (famHide(r, r.to)) continue; add(r.label || '関連', r.to, r.ep, r.note, r, true); }
             // 相手の側からの関係：自分のページでその人との関係を付けていれば、重ねない（自分で付けたほうを使う）
             const mineTo = new Set(((me && me.rels) || []).map(r => r.to));
-            for (const e of all) if (e.id !== id && !mineTo.has(e.id)) for (const r of (e.rels || [])) if (r.to === id) add(String(r.back || '').trim() || wikiRelBack(r.label), e.id, r.ep, r.note, r, false);
+            for (const e of all) if (e.id !== id && !mineTo.has(e.id)) for (const r of (e.rels || [])) if (r.to === id && !famHide(r, e.id)) add(String(r.back || '').trim() || wikiRelBack(r.label), e.id, r.ep, r.note, r, false);
             return [...groups.entries()].map(([label, items]) => ({ label, items: items.sort((a, b) => a.key - b.key) }));
         }
         function wikiRelAttrsView(attrs, cur) {
@@ -9299,9 +9307,11 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                 const list = by.get(c), rows = new Map();
                 for (const e of list) { const gs = (e.groups || []).length ? e.groups : ['']; for (const g of gs) { if (!rows.has(g)) rows.set(g, []); rows.get(g).push(e); } }
                 const keys = [...rows.keys()].sort((a, b) => (a === '') - (b === ''));
-                h += '<div class="wk-nav"><div class="wk-nav-h"><span>' + wEsc(title(c)) + '</span><small>' + list.length + '</small></div>';
+                let st = null; try { st = localStorage.getItem('wk-nav:' + bookId + ':' + c); } catch (_) {}
+                const open = st === null ? list.length < 20 : st === '1';
+                h += '<details class="wk-nav" data-nk="' + wEsc(bookId + ':' + c) + '"' + (open ? ' open' : '') + '><summary class="wk-nav-h"><span>' + wEsc(title(c)) + '</span><small>' + list.length + '<i class="wk-nav-ar"></i></small></summary>';
                 for (const g of keys) h += (keys.length > 1 || g ? '<div class="wk-nav-r"><div class="wk-nav-k">' + wEsc(g || 'そのほか') + '</div>' : '<div class="wk-nav-r" style="grid-template-columns:1fr">') + '<div class="wk-nav-v">' + names(rows.get(g)) + '</div></div>';
-                h += '</div>';
+                h += '</details>';
             }
             const recent = entries.slice().sort((a, b) => (b.upd || b.at || 0) - (a.upd || a.at || 0)).slice(0, 10);
             if (entries.length > 5) h += '<div class="wk-nav"><div class="wk-nav-h"><span>最近ふえた・直した項目</span></div><div class="wk-nav-r" style="grid-template-columns:1fr"><div class="wk-nav-v">' + recent.map(link).join('<span class="wk-dot">·</span>') + '</div></div></div>';
@@ -9852,6 +9862,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                     const d = ev.target;
                     if (d && d.classList && d.classList.contains('wk-ptg')) { const P = wikiState.panels = wikiState.panels || {}, o = P[d.dataset.pid] = P[d.dataset.pid] || {}; if (d.open) o[d.dataset.p] = true; else delete o[d.dataset.p]; return; }
                     if (d && d.id === 'wk-all') { wikiState.allOpen = d.open; return; }
+                    if (d && d.classList && d.classList.contains('wk-nav') && d.dataset.nk) { try { localStorage.setItem('wk-nav:' + d.dataset.nk, d.open ? '1' : '0'); } catch (_) {} return; }
                     if (d && d.classList && d.classList.contains('wk-tg') && d.dataset.tk) { const T = wikiState.tgOpen = wikiState.tgOpen || {}; if (d.open) T[d.dataset.tk] = true; else delete T[d.dataset.tk]; return; }
                     if (!d || !d.classList || !d.classList.contains('wk-fold')) return;
                     wikiState.folded = wikiState.folded || {};
@@ -10438,8 +10449,8 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         // 話の終わり・戻る・本の終わりで、読み終えた話から言葉を拾い、件数を小さく知らせる。読書は止めない
         // ===== 更新の確認：新しい版があれば、魚に青い点とメニュー（版の番号は version.json。公開のたびに、番号が変わる。番号が入っていない開発中は、確かめない） =====
         // 表示用の版。更新の検出は引き続き APP_BUILD の日時番号を使う。
-        const APP_VERSION = '20';
-        const APP_BUILD = '20261111170201';
+        const APP_VERSION = '20.1';
+        const APP_BUILD = '20261111220238';
         let updateCheckAt = 0;
         function paintBuild() {
             const el = document.getElementById('app-build-info'); if (!el) return;
