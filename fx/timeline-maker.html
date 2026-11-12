@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>タイムラインメーカー</title>
+<!-- タイムラインメーカー：［報道 形=タイムライン］を、読む画面と同じ見た目のまま、触って作る。
+   親 → ここ  { type:'fx-make', src, title }
+   ここ → 親  { type:'fx-ready' } / { type:'fx-insert', src } / { type:'fx-save', src } / { type:'fx-close' }
+   中身は、いつも本文の印（src）のまま持つ。直すたびに news-reader.js で描き直す。 -->
+<link rel="stylesheet" href="news-style.css">
+<style>
+:root{--bg:#f3eee4;--card:#fffdf8;--line:#dccfb8;--ink:#3b332b;--mute:#857761;--acc:#b8923f;--acc2:#23594e;--red:#c0392b}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.6 "Hiragino Sans","Yu Gothic","Noto Sans JP",sans-serif}
+body.dark{background:#18181b}
+header{position:sticky;top:0;z-index:30;display:flex;align-items:center;gap:8px;padding:10px 12px;background:#23352c;color:#f1e8d6}
+header h1{flex:1;margin:0;font-size:15px}
+header button{min-height:36px;padding:0 12px;border-radius:10px;border:1px solid #b8923f;background:transparent;color:#f1e8d6;font-weight:700}
+.tools{max-width:640px;margin:10px auto 0;padding:10px;background:var(--card);border:1px solid var(--line);border-radius:14px;display:flex;flex-direction:column;gap:8px}
+.tools .row{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.tools button,.tools select{min-height:36px;padding:0 11px;border-radius:10px;border:1px solid var(--line);background:#fff;color:var(--ink);font:inherit;font-size:13px;font-weight:700}
+.tools button[aria-pressed="true"]{background:var(--acc2);border-color:var(--acc2);color:#fff}
+.tools button.add{border:1px dashed var(--acc);color:#7a5c1e}
+.tools button.play{background:#6d28d9;border-color:#6d28d9;color:#fff}
+.tools label{display:flex;align-items:center;gap:4px;font-size:13px}
+.tools select{flex:1;min-width:150px}
+.note{max-width:640px;margin:6px auto 0;padding:0 6px;font-size:12px;color:var(--mute)}
+body.dark .note{color:#a1a1aa}
+#stage{max-width:600px;margin:12px auto 0;padding:0 0 110px}
+#stage .nr{margin:0 auto}
+/* 直すときだけ：押せる所の目印と、投稿・返信のボタン */
+#stage.ed [data-e]{outline:1px dashed transparent;border-radius:3px;min-width:1em;display:inline-block}
+#stage.ed .tl-b[data-e],#stage.ed .tl-rt[data-e]{display:block}
+#stage.ed .t-ig .tl-rt[data-e]{display:inline}
+#stage.ed [data-e]:hover{outline-color:rgba(59,130,246,.55)}
+#stage.ed [data-e]:focus{outline:2px solid #3b82f6;background:rgba(59,130,246,.08)}
+#stage.ed .tl-0{min-width:1.6em;height:1.2em;vertical-align:middle;outline:1px dashed rgba(127,127,127,.45)!important}
+#stage.ed [data-av]{cursor:pointer}
+.ctl{position:absolute;top:8px;right:8px;z-index:8;display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end;max-width:70%}
+.ctl button{border:0;border-radius:999px;padding:2px 9px;min-height:24px;font:700 11px/1.4 "Hiragino Sans","Yu Gothic",sans-serif;color:#fff;background:rgba(100,116,139,.82);cursor:pointer}
+.ctl button:hover{background:rgba(51,65,85,.95)}
+.ctl button.del:hover{background:#ef4444}
+.tl-r>.ctl{top:0;right:0}
+.tl-m>.ctl{top:auto;bottom:8px}
+.tl-r{position:relative}
+#stage.ed .tl-r{padding-right:56px}
+#stage.ed .tl-p{padding-top:34px}
+#stage.ed .t-ig .tl-p{padding-top:36px}
+footer{position:fixed;left:0;right:0;bottom:0;z-index:30;display:flex;gap:8px;padding:10px 12px calc(10px + env(safe-area-inset-bottom));background:#23352cf2}
+footer button{flex:1;min-height:46px;border-radius:12px;border:1px solid #ffffff44;background:#2a241f;color:#f1e8d6;font-weight:700;font-size:14px}
+footer button.main{background:var(--acc);border-color:var(--acc);color:#1b140c}
+#toast{position:fixed;left:50%;bottom:84px;transform:translateX(-50%);z-index:40;background:#111827;color:#fff;font-size:12px;font-weight:700;padding:8px 14px;border-radius:12px;opacity:0;pointer-events:none;transition:opacity .25s}
+#toast.on{opacity:1}
+</style>
+<script src="news-reader.js"></script>
+</head>
+<body>
+<header><h1>タイムラインメーカー</h1><button type="button" id="btnUndo">↶ もどす</button><button type="button" id="btnBack">とじる</button></header>
+<div class="tools">
+  <div class="row" id="looks"><button type="button" data-look="Xダーク">𝕏 ダーク</button><button type="button" data-look="Xライト">𝕏 ライト</button><button type="button" data-look="インスタ">📸 インスタ</button><button type="button" data-look="フェイスブック">📘 Facebook</button></div>
+  <div class="row"><button type="button" class="add" id="btnAdd">＋ 投稿を足す</button><select id="scene" aria-label="見本"><option value="">見本を読みこむ…</option><option value="ep1">① 1話直後のTL衝撃</option><option value="viral">② バイラル＆レスバ</option><option value="variety">③ バラエティときめき</option><option value="blank">まっさら（投稿1つ）</option></select></div>
+  <div class="row"><button type="button" class="play" id="btnPlay">▶ 再生してみる</button><label><input type="checkbox" id="snd"> 音</label></div>
+</div>
+<p class="note">文字を押すと、そのまま直せます。数字の所も押して直せます（空の点線の枠は、押すと数が入れられます）。アイコンを押すと色が変わります。投稿や返信の右上のボタンで、返信を足す・画像の枠・消すができます。**ここ** と書くと太字、改行は投稿の中でそのまま入ります。</p>
+<div id="stage" class="fxnews ed"></div>
+<input type="file" id="photoFile" accept="image/*" hidden>
+<div id="toast"></div>
+<footer><button type="button" id="btnSave">この作品に保存</button><button type="button" id="btnInsert" class="main">本文に入れる</button></footer>
+<script>
+(function () {
+'use strict';
+const post = m => { try { parent.postMessage(m, '*'); } catch (e) {} };
+const $ = s => document.querySelector(s);
+const NR = window.NewsReader;
+const TL_RE = /^［報道[ \t][^］\n]*形=タイムライン(?:[ \t]|］)/;
+const SCENES = {
+  blank: `［報道 形=タイムライン 見た目=Xダーク 題=おすすめ タグ=#話題］
+投稿：ユーザー名｜@user_id｜ここに投稿の本文を入れます。／#ハッシュタグ｜時間=たった今｜返信=12｜RP=34｜いいね=1,240｜表示=3.5万
+返信：返信する人｜@reply_user｜返信の本文を入れます｜時間=たった今｜いいね=5
+［／報道］`,
+  ep1: `［報道 形=タイムライン 見た目=Xダーク 題=おすすめ タグ=#ユナゴン　#ユ・スルホ］
+投稿：韓ドラ実況民｜@live_yunagon｜TLに誰もいないのか 頼む｜時間=2分前｜返信=312｜RP=4,910｜いいね=1.4万｜表示=58万｜色=青｜字=実｜反応=😮😱
+画像：📺 〈君と僕の空間〉第1話 リアルタイム放送中｜カン・ミヌ初登場シーンの衝撃｜背景=ステージ｜出す=インスタ
+返信：非ドラマ勢の友人｜@friend_02｜なんで｜時間=2分前｜いいね=84｜色=灰｜字=友
+返信：韓ドラ実況民｜@live_yunagon｜まじかよ 人間だ！！！おいおいおい お前今ユナゴン見てる？？？｜時間=2分前｜いいね=412｜色=青｜字=実
+返信：非ドラマ勢の友人｜@friend_02｜ううん 俺ドラマ見ない｜時間=1分前｜いいね=95｜色=灰｜字=友
+返信：韓ドラ実況民｜@live_yunagon｜ダメだ お前これ見なきゃ 今見ろ 今テレビつけて見ろ 頼むから一回だけ｜時間=1分前｜いいね=620｜色=青｜字=実
+返信：非ドラマ勢の友人｜@friend_02｜あーまた大げさに騒いでる；｜時間=1分前｜いいね=110｜色=灰｜字=友
+返信：韓ドラ実況民｜@live_yunagon｜違う！大げさじゃなくて本当だ！！今俺が目で見ても信じられない場面を見たんだ！！！お前も見たら衝撃に陥ってたはずだ！！！｜時間=45秒前｜いいね=980｜色=青｜字=実
+返信：非ドラマ勢の友人｜@friend_02｜わかったから落ち着け；；何でそんなに｜時間=30秒前｜いいね=145｜色=灰｜字=友
+返信：韓ドラ実況民｜@live_yunagon｜衝撃受けるなよ よく聞け… それはまさに… **『ユ・スルホが演技が上手い』**｜時間=15秒前｜いいね=8,420｜色=青｜字=実
+返信：非ドラマ勢の友人｜@friend_02｜？｜時間=たった今｜いいね=5,310｜色=灰｜字=友
+投稿：ドラマ視聴垢｜@drama_shock_k｜何だこれ？？本気で何なの？？／俺は何を見たんだ 夢でも見たのか／いや、俺だけが鳥肌立ったんじゃないよな？？？｜時間=1分前｜返信=840｜RP=1.2万｜いいね=3.1万｜表示=92万｜色=紫｜字=鳥｜反応=😮👍
+画像：⚡ 1話エンディング カン・ミヌ登場カット｜「うちのスルホが変わった…？」コミュニティサーバーがパンク寸前｜背景=ネオン｜出す=インスタ
+返信：呆然視聴者｜@user_w｜俺ほんとにオーバーに言いたくないけどマジで呆れて言葉も出ないｗｗｗｗ何なんだよマジでｗｗｗ｜時間=40秒前｜いいね=1,290｜色=水｜字=呆
+返信：古参オタク｜@old_fan｜うちのスルホが変わった…？｜時間=12秒前｜いいね=2,410｜色=ピンク｜字=古｜先=@drama_shock_k
+［／報道］`,
+  viral: `［報道 形=タイムライン 見た目=Xダーク 題=おすすめ タグ=#君と僕の空間　#カン・ミヌ］
+投稿：バズ動画まとめbot｜@viral_shorts_kr｜今アルゴリズムに無限に流れてくる切り抜きショート一覧ｗｗｗ／▶ [全国民が現実否認中という無駄演技の最近の近況]／▶ [見ても信じられない昨日の『君と僕の空間』ユ・スルホのクリップ映像]／▶ [衝撃注意！ユ・スルホの演技はどう変わったのか？ビフォーアフター比較]｜時間=2時間前｜返信=4,120｜RP=2.4万｜いいね=6.7万｜表示=210万｜色=黄｜字=動｜反応=🔥😮😂
+画像：🎬 「私の弟が両親を殺したんだ。」｜〈君と僕の空間〉2話エンディング クリップ再生数 420万回突破｜背景=夕焼け
+返信：冷静な通行人｜@skeptic_01｜みんなオーバーしすぎじゃない？俳優なら元々これくらいの演技はするもんだよみんな；｜時間=1時間前｜いいね=340｜色=灰｜字=冷
+返信の返信：辛口批評垢｜@anti_w｜正直演技のレベルはそこそこだけど、無駄演技だから余計上手く見えるって錯覚してると思うｗㄱｗｗ｜時間=52分前｜いいね=215｜色=紫｜字=辛
+返信の返信：アンチ古参｜@hater_99｜そこそこでもないｗｗｗ 作為的な感じがこんなに強いのに演技が上手いと思うのも不思議だｗㄲｗ｜時間=41分前｜いいね=89｜色=黄｜字=疑
+返信の返信：ドラマガチ勢｜@viewer_true｜え、作為的な感じが全くないんだけど何言ってるの。おい俺も無駄演技好きじゃないけど、今回は演技上手かったけど｜時間=28分前｜いいね=1,840｜色=青｜字=真
+投稿：青春ドラマ愛好家｜@youth_drama_love｜私はこんなドラマを待ってたのよㅠㅠ 主演俳優がみんな20代なのがどれくらいぶりよㅠ／医者でも警察でもなく平凡な大学生のオリジナル脚本、しかもカン・ミヌが間に入ることで救済の叙事がめちゃくちゃ深くなってる…！｜時間=45分前｜返信=530｜RP=1.6万｜いいね=4.2万｜表示=89万｜色=緑｜字=作｜反応=❤️😭
+画像：🎓 〈君と僕の空間〉20代主演キャスト陣｜クラシックな青春ロマンス×緊迫の心理描写｜背景=スタジオ｜出す=インスタ
+返信：王道好き｜@classic_taste｜10年前に出てたらありきたりだと罵られただろうに、なんでこんなに面白いの。クラシックな味がむしろ新鮮に感じられるみたい｜時間=19分前｜いいね=920｜色=水｜字=王
+［／報道］`,
+  variety: `［報道 形=タイムライン 見た目=Xダーク 題=おすすめ タグ=#ウチェユ　#賢明な熱湯冷湯］
+投稿：賢明な熱湯冷湯 公式｜@hot_cold_show｜【EP.37 公開】ユナゴンの代わりにウチェユ！（ウ・ジュンソ×チェ・ラン×ユ・スルホ）| 賢明な熱湯冷湯 EP.37／清涼な笑顔から伝説のドッキリカメラ回まで完全収録✨／#ユ・スルホ #ウ・ジュンソ #チェ・ラン #イ・スルギ｜時間=30分前｜返信=3,210｜RP=3.8万｜いいね=8.9万｜表示=185万｜色=ピンク｜字=熱｜反応=❤️😍🤯
+画像：🎥 賢明な熱湯冷湯 EP.37 ドッキリカメラ名場面｜イ・スルギを真っ直ぐに見つめるユ・スルホの眼差し｜背景=夕焼け
+返信：動揺する視聴者｜@doki_panic｜いや、私なんでときめいてる……？｜時間=21分前｜いいね=4,120｜色=ピンク｜字=恋
+返信：元アンチ民｜@former_anti｜私になんでこんなことするの… 私あなたのこと嫌いだったじゃない…｜時間=14分前｜いいね=6,850｜色=紫｜字=元｜先=@hot_cold_show
+返信：顔面被害者｜@face_genius｜くそ；イケメンすぎてめちゃくちゃイケメンだな；誰かこの映像を見ない方法を教えてくれㅠㅠ｜時間=5分前｜いいね=9,340｜色=黄｜字=顔｜先=@hot_cold_show
+［／報道］`
+};
+let src = SCENES.blank, title = 'タイムライン', playing = null;
+const undo = [];
+const toast = t => { const el = $('#toast'); el.textContent = t; el.classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.remove('on'), 1800); };
+
+// ---------- 印（src）を、頭・行・おしりに分ける ----------
+function parts() {
+  const m = src.trim().match(/^(［報道[ \t][^］\n]*］)\n?([\s\S]*?)\n?(［／報道］)\s*$/);
+  return m ? { head: m[1], lines: m[2].split('\n').filter(l => l.trim()) } : { head: '［報道 形=タイムライン］', lines: [] };
+}
+function setLines(p, lines) { change(p.head + '\n' + lines.join('\n') + '\n［／報道］'); }
+function change(next) { if (next === src) return; undo.push(src); if (undo.length > 60) undo.shift(); src = next; render(); }
+const kindOf = l => (l.match(/^([^：｜]{1,8})：/) || [])[1] || '';
+const optOf = (l, k) => { const p = l.split('｜').slice(1).find(x => x.trim().startsWith(k + '=')); return p ? p.trim().slice(k.length + 1) : ''; };
+function setOpt(i, k, v) { change(NR.edit(src, 'r:' + i + ':o:' + k, v)); }
+// 投稿 i の行の、おわり（次の投稿の前）
+function postEnd(lines, i) { let j = i + 1; while (j < lines.length && kindOf(lines[j]) !== '投稿') j++; return j; }
+
+// ---------- 描く ----------
+function lookOf() { return (src.match(/^［報道[^］\n]*見た目=([^\s］]+)/) || [])[1] || 'Xダーク'; }
+let rendering = false;
+function render() {
+  const st = $('#stage'), y = window.scrollY;
+  st.classList.add('ed');
+  rendering = true;
+  try { st.innerHTML = NR.html(src, { base: '', edit: true }) || '<p style="text-align:center;color:#857761">（中身がありません。「＋ 投稿を足す」から作れます）</p>'; } finally { rendering = false; }
+  st.querySelectorAll('[data-e]').forEach(el => { try { el.contentEditable = 'plaintext-only'; } catch (e) { el.contentEditable = 'true'; } if (el.contentEditable !== 'plaintext-only') el.contentEditable = 'true'; el.spellcheck = false; });
+  const p = parts();
+  st.querySelectorAll('.tl-p').forEach(el => {
+    const i = +el.dataset.r, end = postEnd(p.lines, i), hasImg = p.lines.slice(i + 1, end).some(l => kindOf(l) === '画像');
+    const c = document.createElement('div'); c.className = 'ctl';
+    c.innerHTML = '<button type="button" data-op="reply" data-i="' + i + '">💬 返信</button><button type="button" data-op="img" data-i="' + i + '">🖼 ' + (hasImg ? '画像をはずす' : '画像の枠') + '</button><button type="button" data-op="letter" data-i="' + i + '">字</button><button type="button" data-op="up" data-i="' + i + '" aria-label="上へ">↑</button><button type="button" data-op="down" data-i="' + i + '" aria-label="下へ">↓</button><button type="button" class="del" data-op="delpost" data-i="' + i + '" aria-label="この投稿を消す">×</button>';
+    el.prepend(c);
+  });
+  st.querySelectorAll('.tl-r').forEach(el => {
+    const i = +el.dataset.r, c = document.createElement('div'); c.className = 'ctl';
+    c.innerHTML = '<button type="button" data-op="sub" data-i="' + i + '" title="この返信への返信">↳</button><button type="button" class="del" data-op="delrow" data-i="' + i + '" aria-label="この返信を消す">×</button>';
+    el.prepend(c);
+  });
+  st.querySelectorAll('.tl-m').forEach(el => {
+    const i = +el.dataset.m, l = p.lines[i] || '', c = document.createElement('div'); c.className = 'ctl';
+    c.innerHTML = '<button type="button" data-op="bg" data-i="' + i + '">🎨 背景</button><button type="button" data-op="photo" data-i="' + i + '">📷 ' + (optOf(l, '写真') ? '写真をはずす' : '写真') + '</button><button type="button" data-op="igonly" data-i="' + i + '">' + (optOf(l, '出す') === 'インスタ' ? 'インスタだけ ✓' : 'インスタだけ') + '</button>';
+    el.append(c);
+  });
+  const look = lookOf();
+  document.querySelectorAll('[data-look]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.look === look)));
+  document.body.classList.toggle('dark', look === 'Xダーク');
+  $('#btnUndo').disabled = !undo.length;
+  window.scrollTo(0, y);
+}
+
+// ---------- 文字を直す（はなれたとき） ----------
+const oneLine = k => !/:v2$/.test(k);   // 本文だけは改行できる
+$('#stage').addEventListener('keydown', e => { const el = e.target.closest && e.target.closest('[data-e]'); if (!el) return; if (e.key === 'Enter' && !e.isComposing && oneLine(el.dataset.e)) { e.preventDefault(); el.blur(); } });
+$('#stage').addEventListener('focusout', e => {
+  const el = e.target.closest && e.target.closest('[data-e]'); if (!el || playing || rendering || !el.isConnected) return;
+  const key = el.dataset.e, val = el.innerText.replace(/ /g, ' ').replace(/\n+$/, '');
+  const to = e.relatedTarget && e.relatedTarget.closest && e.relatedTarget.closest('[data-e]'), toKey = to && to.dataset.e;
+  const next = NR.edit(src, key, val);
+  if (next !== src) { change(next); if (toKey) { const n = $('#stage').querySelector('[data-e="' + toKey + '"]'); if (n) n.focus(); } }
+});
+
+// ---------- ボタン ----------
+let pickAt = -1;
+// ボタンを押しても、打っている所から離れない（先に、打った分を入れてから、ボタンの仕事をする）
+$('#stage').addEventListener('mousedown', e => { if (e.target.closest('[data-op],[data-av]')) e.preventDefault(); });
+function commit() {
+  const el = document.activeElement; if (!el || !el.dataset || !el.dataset.e || !$('#stage').contains(el)) return;
+  const next = NR.edit(src, el.dataset.e, el.innerText.replace(/ /g, ' ').replace(/\n+$/, ''));
+  if (next !== src) { undo.push(src); src = next; }
+  rendering = true; try { el.blur(); } finally { rendering = false; }
+}
+$('#stage').addEventListener('click', e => {
+  if (playing) return;
+  if (e.target.closest('[data-op],[data-av]')) commit();
+  const av = e.target.closest('[data-av]');
+  if (av) { const i = +av.dataset.av, l = parts().lines[i] || '', cols = NR.TL_COLS, cur = optOf(l, '色'); setOpt(i, '色', cols[(cols.indexOf(cur) + 1) % cols.length]); return; }
+  const b = e.target.closest('[data-op]'); if (!b) return;
+  e.preventDefault();
+  const p = parts(), L = p.lines.slice(), i = +b.dataset.i, op = b.dataset.op;
+  if (op === 'reply') { L.splice(postEnd(L, i), 0, '返信：返信する人｜@reply_user｜返信の本文を入れます｜時間=たった今'); setLines(p, L); toast('返信を足しました'); return; }
+  if (op === 'sub') { let j = i + 1; while (j < L.length && kindOf(L[j]) === '返信の返信') j++; L.splice(j, 0, '返信の返信：返信する人｜@reply_user｜返信への返信を入れます｜時間=たった今'); setLines(p, L); toast('返信への返信を足しました'); return; }
+  if (op === 'img') { const end = postEnd(L, i), k = L.slice(i + 1, end).findIndex(l => kindOf(l) === '画像'); if (k >= 0) L.splice(i + 1 + k, 1); else L.splice(i + 1, 0, '画像：📷 画像の説明｜くわしい説明｜背景=ステージ'); setLines(p, L); return; }
+  if (op === 'letter') { const cur = optOf(L[i], '字'), v = prompt('アイコンに出す字（1文字。空にすると、名前のはじめの字）', cur); if (v == null) return; setOpt(i, '字', [...v.trim()][0] || ''); return; }
+  if (op === 'up' || op === 'down') {
+    const starts = []; L.forEach((l, j) => { if (kindOf(l) === '投稿') starts.push(j); });
+    const k = starts.indexOf(i), k2 = op === 'up' ? k - 1 : k + 1; if (k < 0 || k2 < 0 || k2 >= starts.length) return;
+    const a = Math.min(k, k2), seg = x => L.slice(starts[x], postEnd(L, starts[x]));
+    const head = L.slice(0, starts[a]), A = seg(a), B = seg(a + 1), tail = L.slice(postEnd(L, starts[a + 1]));
+    setLines(p, head.concat(B, A, tail)); return;
+  }
+  if (op === 'delpost') { const end = postEnd(L, i); if (end - i > 1 && !confirm('この投稿と、ついている返信を消します。よいですか？（「↶ もどす」で戻せます）')) return; L.splice(i, end - i); setLines(p, L); toast('投稿を消しました'); return; }
+  if (op === 'delrow') { L.splice(i, 1); setLines(p, L); toast('返信を消しました'); return; }
+  if (op === 'bg') { const bgs = NR.TL_BG, cur = optOf(L[i], '背景') || bgs[0]; setOpt(i, '背景', bgs[(bgs.indexOf(cur) + 1) % bgs.length]); return; }
+  if (op === 'igonly') { setOpt(i, '出す', optOf(L[i], '出す') === 'インスタ' ? '' : 'インスタ'); toast(optOf(parts().lines[i], '出す') ? 'インスタの見た目のときだけ出ます' : 'どの見た目でも出ます'); return; }
+  if (op === 'photo') { if (optOf(L[i], '写真')) { setOpt(i, '写真', ''); return; } pickAt = i; $('#photoFile').click(); return; }
+});
+// 画像を小さくする（横 720px まで、JPEG）。本文の印に入るので、大きいままにしない
+function shrinkPhoto(file) { return new Promise((ok, ng) => { const r = new FileReader(); r.onerror = ng; r.onload = () => { const im = new Image(); im.onerror = ng; im.onload = () => { const w = Math.min(720, im.naturalWidth), h = Math.round(im.naturalHeight * w / im.naturalWidth), c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, w, h); g.drawImage(im, 0, 0, w, h); ok(c.toDataURL('image/jpeg', 0.78)); }; im.src = r.result; }; r.readAsDataURL(file); }); }
+$('#photoFile').addEventListener('change', e => { const file = e.target.files && e.target.files[0], i = pickAt; e.target.value = ''; if (!file || i < 0) return; shrinkPhoto(file).then(url => setOpt(i, '写真', url)).catch(() => alert('この画像は読み込めませんでした')); });
+$('#looks').addEventListener('click', e => { const b = e.target.closest('[data-look]'); if (b) change(NR.edit(src, 'a:見た目', b.dataset.look)); });
+$('#btnAdd').onclick = () => { const p = parts(), L = p.lines.slice(); L.push('投稿：ユーザー名｜@new_user｜ここに投稿の本文を入れます｜時間=たった今｜返信=0｜RP=0｜いいね=0'); setLines(p, L); toast('投稿を足しました'); setTimeout(() => { const ps = document.querySelectorAll('#stage .tl-p'); ps[ps.length - 1]?.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 30); };
+$('#scene').onchange = e => { const k = e.target.value; e.target.value = ''; if (!k) return; if (!confirm('今の中身を、見本と入れかえます。よいですか？（「↶ もどす」で戻せます）')) return; change(SCENES[k]); toast('見本を読みこみました'); };
+$('#btnUndo').onclick = () => { if (!undo.length) return; src = undo.pop(); render(); };
+
+// ---------- 再生してみる（読む画面と同じ動き） ----------
+function stopPlay() { if (!playing) return; const h = playing; playing = null; try { h.cancel(); } catch (e) {} $('#btnPlay').textContent = '▶ 再生してみる'; render(); }
+$('#btnPlay').onclick = () => {
+  if (playing) { stopPlay(); return; }
+  const st = $('#stage'); st.classList.remove('ed'); st.innerHTML = NR.html(src, { base: '' });
+  $('#btnPlay').textContent = '■ 止めて直す'; st.scrollIntoView({ behavior: 'smooth' });
+  let h = null; h = playing = NR.play(st, { sound: $('#snd').checked, done: () => setTimeout(() => { if (playing === h) { playing = null; $('#btnPlay').textContent = '▶ 再生してみる'; render(); } }, 2200) });
+};
+
+$('#btnBack').onclick = () => post({ type: 'fx-close' });
+$('#btnInsert').onclick = () => { if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); post({ type: 'fx-insert', src: src.trim() }); };
+$('#btnSave').onclick = () => { if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); post({ type: 'fx-save', src: src.trim() }); };
+let loaded = false;
+window.addEventListener('message', e => {
+  const d = e.data || {}; if (e.source !== parent || d.type !== 'fx-make' || loaded) return;
+  loaded = true; if (d.src && TL_RE.test(String(d.src).trim()) && NR.isSource(String(d.src).trim())) src = String(d.src).trim(); if (d.title) title = d.title; render();
+});
+window.TimelineMaker = { get src() { return src; }, set: s => { src = s; render(); }, SCENES };
+render();
+if (parent !== window) post({ type: 'fx-ready' });
+})();
+</script>
+</body>
+</html>

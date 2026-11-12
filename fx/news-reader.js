@@ -3,7 +3,7 @@
    NewsReader.isSource(src) / html(src,{base}) / plain(src) / scan(root,settings,key) / play(el,{sound}) */
 (function (global) {
 'use strict';
-const KINDS = ['炎上', 'ニュース', '動画', 'コラム'];
+const KINDS = ['炎上', 'ニュース', '動画', 'コラム', 'タイムライン'];
 const RE = /^［報道[ \t]([^］\n]*)］\n?([\s\S]*?)\n?［／報道］\s*$/;
 const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 function attrs(s) { const a = {}; String(s || '').trim().split(/[ \t]+/).filter(Boolean).forEach(t => { const i = t.indexOf('='); if (i > 0) a[t.slice(0, i)] = t.slice(i + 1); else if (t === '続き') a.続き = '1'; }); return a; }
@@ -86,13 +86,63 @@ function column(a, R) {
     + (a.署名 ? `<div class="nr-cft nr-in" data-e="a:署名">${esc(a.署名)}</div>` : '')
     + '</div>';
 }
+// 22：タイムライン（X ダーク／X ライト／インスタ／フェイスブック）。
+//   投稿：名前｜@ID｜本文｜時間=2分前｜返信=312｜RP=4,910｜いいね=1.4万｜表示=58万｜色=青｜字=実
+//   画像：見出し｜説明｜背景=ステージ｜写真=…｜出す=インスタ（すぐ上の投稿の画像の枠）
+//   返信：名前｜@ID｜本文｜時間=…｜いいね=84｜先=@相手（なければ、すぐ上の人へ）　返信の返信：同じ（1段下げる）
+const TL_LOOK = { Xダーク: 'xd', Xライト: 'xl', インスタ: 'ig', フェイスブック: 'fb' };
+const TL_COL = { 青: 'blue', ピンク: 'pink', 紫: 'purple', 緑: 'emerald', 黄: 'amber', 灰: 'slate', 水: 'cyan' };
+const TL_COLS = Object.keys(TL_COL);
+const TL_BG = { ステージ: 'stage', 夕焼け: 'sunset', スタジオ: 'studio', ネオン: 'neon' };
+const tlCol = (o, id) => { if (TL_COL[o.色]) return TL_COL[o.色]; let h = 0; for (const c of String(id || '')) h = (h * 31 + c.codePointAt(0)) >>> 0; return TL_COL[TL_COLS[h % TL_COLS.length]]; };
+const tlId = s => { s = String(s || '').trim() || '@user'; return s.startsWith('@') ? s : '@' + s; };
+const tlTx = s => tx(s).replace(/\*\*([^*<]+?)\*\*/g, '<strong>$1</strong>');
+function tlGroups(R) {
+  const ps = []; let p = null;
+  for (const r of R) {
+    if (r.k === '投稿') { p = { r, media: null, re: [] }; ps.push(p); }
+    else if (r.k === '画像' && p) p.media = r;
+    else if ((r.k === '返信' || r.k === '返信の返信') && p) p.re.push(r);
+  }
+  return ps;
+}
+function timeline(a, R, base, ed) {
+  const look = TL_LOOK[a.見た目] || 'xd';
+  const img = n => /^(md_|ph_|sc_|hs_|sn_)[a-z_0-9]+$/.test(n || '') ? base + 'a/' + n + '.jpg' : /^data:image\/(?:jpeg|png|webp|gif);base64,[A-Za-z0-9+/=]+$/.test(n || '') || /^https?:\/\/[^\s"'<>]+$/.test(n || '') ? n : '';
+  // ed（メーカーで直すとき）は、空の数も押して入れられるように、空の枠を出す
+  const c = (r, k, kk) => r.o[k] ? '<span data-e="r:' + r.i + ':o:' + k + '">' + cnt(r.o[k], kk) + '</span>' : ed ? '<span class="tl-0" data-e="r:' + r.i + ':o:' + k + '"></span>' : '';
+  const av = (r, cls) => '<i class="' + cls + ' av-' + tlCol(r.o, r.v[1]) + '" data-av="' + r.i + '">' + esc(r.o.字 || [...String(r.v[0] || '?')][0] || '?') + '</i>';
+  const title = look === 'ig' ? 'Instagram' : look === 'fb' ? 'facebook' : '';
+  let h = '<div class="nr nr-tml t-' + look + '"><div class="tl-top">' + (title ? '<b>' + title + '</b>' : '<b data-e="a:題">' + esc(a.題 || 'おすすめ') + '</b>') + '<small data-e="a:タグ">' + tx(a.タグ || '') + '</small></div>';
+  for (const p of tlGroups(R)) {
+    const r = p.r, m = p.media, id = tlId(r.v[1]);
+    let prev1 = id, prev = id;   // 返信はすぐ上の返信（か投稿）へ。返信の返信は、すぐ上の人へ
+    const reps = p.re.map(x => {
+      const lv2 = x.k === '返信の返信', xid = tlId(x.v[1]), to = x.o.先 ? tlId(x.o.先) : lv2 ? prev : prev1; prev = xid; if (!lv2) prev1 = xid;
+      return '<div class="tl-r nr-in' + (x.k === '返信の返信' ? ' lv2' : '') + '" data-r="' + x.i + '"><div class="tl-rl">' + av(x, 'tl-rav') + '<i class="tl-ln"></i></div><div class="tl-rc"><div class="tl-rw"><div class="tl-rm"><b data-e="r:' + x.i + ':v0">' + esc(x.v[0] || '名無し') + '</b><small class="tl-hd" data-e="r:' + x.i + ':v1">' + esc(xid) + '</small>' + (x.o.時間 || ed ? '<small class="tl-tm">· <span data-e="r:' + x.i + ':o:時間">' + esc(x.o.時間) + '</span></small>' : '') + '</div><div class="tl-to">返信先: <span data-e="r:' + x.i + ':o:先">' + esc(to) + '</span></div><div class="tl-rt" data-e="r:' + x.i + ':v2">' + tlTx(x.v[2] || '') + '</div></div>'
+        + '<div class="tl-ra"><span class="f">いいね！</span><span class="f">返信</span><span class="x">💬 ' + c(x, '返信') + '</span><span class="x">🔁 ' + c(x, 'RP') + '</span><span class="xi">♡ ' + c(x, 'いいね') + '</span></div></div></div>';
+    }).join('');
+    const u = m ? img(m.o.写真) : '';
+    const media = m ? '<div class="tl-m bg-' + (TL_BG[m.o.背景] || 'stage') + (m.o.出す === 'インスタ' ? ' only-ig' : '') + (u ? ' ph' : '') + '" data-m="' + m.i + '">' + (u ? '<img src="' + esc(u) + '" alt="" loading="lazy">' : '') + '<div class="tl-mc"><b data-e="r:' + m.i + ':v0">' + tlTx(m.v[0] || '') + '</b>' + (m.v[1] || ed ? '<small data-e="r:' + m.i + ':v1">' + tlTx(m.v[1]) + '</small>' : '') + '</div></div>' : '';
+    h += '<div class="tl-p nr-in' + (p.re.length ? ' th' : '') + '" data-r="' + r.i + '">'
+      + '<div class="tl-ph">' + av(r, 'tl-av') + '<div class="tl-pm"><b data-e="r:' + r.i + ':v0">' + esc(r.v[0] || '名無し') + '</b><small class="tl-hd" data-e="r:' + r.i + ':v1">' + esc(id) + '</small><small class="tl-tm">· <span data-e="r:' + r.i + ':o:時間">' + esc(r.o.時間 || 'たった今') + '</span></small></div></div>'
+      + '<div class="tl-b" data-e="r:' + r.i + ':v2">' + tlTx(r.v[2] || '') + '</div>' + media
+      + '<div class="tl-igl">いいね！ ' + (c(r, 'いいね') || '0') + '件</div>'
+      + '<div class="tl-fbs"><span>' + esc(r.o.反応 || '👍❤️') + ' ' + (c(r, 'いいね') || '0') + '</span><span>コメント ' + (c(r, '返信') || String(p.re.length)) + '件' + (r.o.RP ? ' · シェア ' + c(r, 'RP') + '件' : '') + '</span></div>'
+      + '<div class="tl-a"><span class="x">💬 ' + c(r, '返信') + '</span><span class="x">🔁 ' + c(r, 'RP') + '</span><span class="x">♡ ' + c(r, 'いいね') + '</span><span class="x tl-v">📊 ' + c(r, '表示') + '</span>'
+      + '<span class="i">♡</span><span class="i">💬</span><span class="i">➤</span><span class="i tl-bm">🔖</span><span class="f">👍 いいね！</span><span class="f">💬 コメント</span><span class="f">↗ シェア</span></div>'
+      + (reps ? '<div class="tl-rs">' + reps + '</div>' : '') + '</div>';
+  }
+  return h + '</div>';
+}
 // 読む画面は改行をそのまま空白として出すので、部品の HTML の改行は取り除く
-function html(src, opt = {}) { const d = parse(src); if (!d) return ''; const base = opt.base == null ? 'fx/' : opt.base; return (d.a.形 === 'ニュース' ? news(d.a, d.R, base) : d.a.形 === '動画' ? video(d.a, d.R) : d.a.形 === 'コラム' ? column(d.a, d.R) : trend(d.a, d.R)).replace(/>\s*\n\s*</g, '><').replace(/\n\s*/g, ''); }
+function html(src, opt = {}) { const d = parse(src); if (!d) return ''; const base = opt.base == null ? 'fx/' : opt.base; return (d.a.形 === 'ニュース' ? news(d.a, d.R, base) : d.a.形 === '動画' ? video(d.a, d.R) : d.a.形 === 'コラム' ? column(d.a, d.R) : d.a.形 === 'タイムライン' ? timeline(d.a, d.R, base, !!opt.edit) : trend(d.a, d.R)).replace(/>\s*\n\s*</g, '><').replace(/\n\s*/g, ''); }
 // 読み上げ・文字数用の、ふつうの文
 function plain(src) {
   const d = parse(src); if (!d) return ''; const a = d.a, out = [];
   if (a.形 === '炎上') { out.push((a.タグ || '') + ' トレンド' + (a.順位 || '1') + '位'); d.R.forEach(r => { if (r.k === 'トレンド') out.push(r.v[0] || ''); else if (r.k === '削除済み') out.push('このポストは削除されました。'); else out.push(r.v.length >= 2 ? r.v[1] : r.v[0] || ''); }); }
   else if (a.形 === 'ニュース') { out.push(a.見出し || ''); if (a.副題) out.push(a.副題); d.R.forEach(r => { if (!r.k) out.push(r.v.join('｜')); else if (r.k === '関連') out.push(r.v.join('｜')); else if (r.k === 'コメント' || r.k === '返信') out.push(r.v.slice(1).join('｜')); }); }
+  else if (a.形 === 'タイムライン') { if (a.タグ) out.push(a.タグ); d.R.forEach(r => { if (r.k === '投稿' || r.k === '返信' || r.k === '返信の返信') out.push(r.v[2] || ''); else if (r.k === '画像') out.push(r.v.slice(0, 2).join(' ')); }); }
   else if (a.形 === 'コラム') { if (a.分類) out.push(a.分類); out.push(a.題 || ''); d.R.forEach(r => out.push(String(r.raw || '').trim().replace(/\*\*/g, ''))); if (a.署名) out.push(a.署名); }
   else { if (!a.続き) out.push(a.題 || '動画のコメント欄'); d.R.forEach(r => out.push(r.v.length >= 2 ? r.v.slice(1).join('｜') : String(r.v[0] || '').replace(/^\s*[―—─－]{1,3}\s*/, ''))); }
   return out.map(s => String(s).replace(/／/g, ' ').trim()).filter(Boolean).join('\n') || '​';
@@ -111,7 +161,7 @@ function play(el, opt = {}) {
   if (global.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) { stop(); return { cancel() {} }; }
   if (!items.length) { stop(); return { cancel() {} }; }
   root.classList.add('nr-playing'); items.forEach(x => x.classList.remove('on'));
-  const fast = root.classList.contains('nr-video') ? 170 : root.classList.contains('nr-col') ? 330 : 260;
+  const fast = root.classList.contains('nr-video') ? 170 : root.classList.contains('nr-col') ? 330 : root.classList.contains('nr-tml') ? 420 : 260;
   // 画面から消えたら（ページを切りかえたら）、そこで止める。音も鳴らさない
   items.forEach((x, i) => timers.push(setTimeout(() => { if (!root.isConnected) { stop(); return; } x.classList.add('on'); pop(opt.sound, i); }, 120 + i * fast)));
   root.querySelectorAll('.nr-cnt').forEach(c => { const v = +c.dataset.v || 0, k = c.dataset.k === '1'; c.dataset.final = c.textContent; if (!v) return; const from = Math.round(v * 0.82), steps = 18; for (let s = 0; s <= steps; s++) timers.push(setTimeout(() => { if (!done) c.textContent = s === steps ? c.dataset.final : fmt(Math.round(from + (v - from) * s / steps), k); }, 200 + s * 70)); });
@@ -153,7 +203,7 @@ function scan(root, settings, key) {
 function edit(src, key, val) {
   const m = String(src || '').match(/^(\s*［報道[ \t])([^］\n]*)(］\r?\n?)([\s\S]*?)(\r?\n?［／報道］\s*)$/); if (!m) return src;
   val = String(val == null ? '' : val).replace(/\r/g, '').replace(/\n+$/, '').replace(/\n/g, '／').replace(/\u00a0/g, ' ').trim();
-  const [k, a, b] = String(key).split(':');
+  const [k, a, b, c] = String(key).split(':');
   if (k === 'a') {
     const v = val.replace(/[ \t]+/g, '　').replace(/］/g, '〕'), toks = m[2].trim().split(/[ \t]+/).filter(Boolean), i = toks.findIndex(t => t.startsWith(a + '='));
     if (!v) { if (i >= 0 && a !== '形') toks.splice(i, 1); } else if (i >= 0) toks[i] = a + '=' + v; else toks.push(a + '=' + v);
@@ -162,17 +212,18 @@ function edit(src, key, val) {
   const lines = m[4].split('\n'), idx = []; lines.forEach((l, j) => { if (l.trim()) idx.push(j); });
   const j = idx[+a]; if (j == null) return src;
   const raw = lines[j].replace(/\r$/, ''), lead = raw.match(/^\s*/)[0], r = rows(raw)[0];
-  if (!val && b !== 'cap' && b !== 'u') { lines.splice(j, 1); return m[1] + m[2] + m[3] + lines.join('\n') + m[5]; }
+  if (!val && b !== 'cap' && b !== 'u' && !/^(v\d|o)$/.test(b)) { lines.splice(j, 1); return m[1] + m[2] + m[3] + lines.join('\n') + m[5]; }
   let v = r.v.slice(); const pre = ((v[0] || '').match(/^\s*(└|[―—─－]{1,3})\s*/) || [''])[0];
+  if (b === 'o') { const o = Object.assign({}, r.o), w = val.replace(/[｜\s]/g, ''); if (w) o[c] = w; else delete o[c]; lines[j] = lead + (r.k ? r.k + '：' : '') + v.concat(Object.entries(o).map(([x, y]) => x + '=' + y)).join('｜'); return m[1] + m[2] + m[3] + lines.join('\n') + m[5]; }
   if (b === 'raw') { lines[j] = lead + val; return m[1] + m[2] + m[3] + lines.join('\n') + m[5]; }
   if (b === 'all') v = [val];
   else if (b === 'u') { if (v.length >= 2) v[0] = (/^\s*└/.test(v[0]) ? '└' : '') + val; }
   else if (b === 'cap') v = val ? [v[0] || '', val] : [v[0] || ''];
-  else if (b === 'v0') v[0] = val;
+  else if (/^v\d$/.test(b)) { const n = +b.slice(1); while (v.length < n) v.push(''); v[n] = val.replace(/｜/g, '|'); if (n === 1 && v[1] && !v[1].startsWith('@')) v[1] = '@' + v[1]; }
   else if (b === 't') v = v.length >= 2 ? [v[0], val] : [pre + val];
   const opts = Object.entries(r.o).map(([x, y]) => x + '=' + y);
   lines[j] = lead + (r.k ? r.k + '：' : '') + v.concat(opts).join('｜');
   return m[1] + m[2] + m[3] + lines.join('\n') + m[5];
 }
-global.NewsReader = { isSource, html, plain, scan, play, finish, edit, stopAll, KINDS };
+global.NewsReader = { isSource, html, plain, scan, play, finish, edit, stopAll, KINDS, TL_COLS, TL_BG: Object.keys(TL_BG), TL_LOOKS: Object.keys(TL_LOOK) };
 })(window);
