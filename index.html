@@ -2065,6 +2065,7 @@
                     <div class="pt-3 border-t border-woodBorder">
                         <span class="font-bold text-softMuted block mb-1">更新履歴</span>
                         <div id="changelog" class="text-[11px] text-softMuted leading-relaxed">
+<div class="mb-1.5"><b class="text-softText">Version 21.3（2026-11-12）</b><br>読んだ記録の「よく読んだ作品・ジャンル・作家」の数を、ちがう話の数にしました（例：29話）。別の日にもう一度読んだ分も入れた数は、下に小さく「のべ 47 回」と出ます。並び順も、ちがう話の数で決めます。パワポ・エクセルの書き出しも同じ数え方です。</div>
 <div class="mb-1.5"><b class="text-softText">Version 21.2（2026-11-12）</b><br>Wikiの本文のひな形のボタンを、自分で作れるようにしました。ボタンの並びの「＋ ボタンを作る」で、名前（例：仲間）と入れる中身を書くと、その作品だけで使えるボタンになります。中身が空なら「## ▸ ボタンの名前」の見出しが入ります。作ったボタンは長押し（PCは右クリック）で、直したり消したりできます。ひな形のボタンとエディタの道具は、いっしょに上にとまるようにしました。</div>
 <div class="mb-1.5"><b class="text-softText">Version 21.1（2026-11-12）</b><br>書体によって「•」「♡」「～」などが空白になっていたのを直しました。書体を読みこむときに、何も描かれない字を自動で調べて、その字だけほかの書体で出します（自分で追加した書体も同じです）。✨ 本文を整える で、「••••••」「・・・」を「……」にそろえるようにしました。</div>
 <div class="mb-1.5"><b class="text-softText">Version 21（2026-11-12）</b><br>Wikiの本文を、話の本文と同じエディタで書けるようにしました。太字・訂正線（S）・文字色・マーカー・大きく・小さく・ルビなどが、見た目のまま使えます。線の中の名前も、押すと項目のページへ行けます。行のうしろに {{50話で 婚約解消}} と書くと、その話から行に線が引かれ、小さく「婚約解消（50話）」と付きます（それより前の話では、ふつうに見えます）。ひな形のボタンに「＋ 復讐相手」「＋ 何話で線」を足しました。項目に「原作の名前」「日本語版の名前（ローカライズ）」を入れられます。どちらの名前でもさがせて、リンクにもなります。WikiのTOPで、表や相関図に出す名前を選べます。</div>
@@ -10575,8 +10576,8 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         // 話の終わり・戻る・本の終わりで、読み終えた話から言葉を拾い、件数を小さく知らせる。読書は止めない
         // ===== 更新の確認：新しい版があれば、魚に青い点とメニュー（版の番号は version.json。公開のたびに、番号が変わる。番号が入っていない開発中は、確かめない） =====
         // 表示用の版。更新の検出は引き続き APP_BUILD の日時番号を使う。
-        const APP_VERSION = '21.2';
-        const APP_BUILD = '20261112145349';
+        const APP_VERSION = '21.3';
+        const APP_BUILD = '20261112155542';
         let updateCheckAt = 0;
         function paintBuild() {
             const el = document.getElementById('app-build-info'); if (!el) return;
@@ -12731,13 +12732,16 @@ function setupPaging(){
                 state.actChart = new Chart(document.getElementById('actBarChart').getContext('2d'), { type: 'bar', data: { labels, datasets: [{ label: '読んだ話', data, backgroundColor: '#5b9279', borderRadius: 6 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0, font: { family: 'Hiragino Sans', size: 10 } } }, x: { ticks: { font: { family: 'Hiragino Sans', size: 10 } } } } } });
             }
             // ランキング：作品・ジャンル・作家（読んだ話の数）
-            const top = (map, unit) => Object.entries(map).sort((a, b) => b[1] - a[1]).slice(0, actRankAll ? 9999 : 5).map(([k, v], i) => '<div class="flex items-center justify-between p-1.5 bg-kinari rounded-lg border border-woodBorder"><div class="flex items-center space-x-1.5 min-w-0"><span class="w-4 h-4 rounded-full bg-kinariDark border border-woodBorder flex items-center justify-center font-bold text-[9px] text-woodAccentDark flex-none">' + (i + 1) + '</span><span class="font-bold text-softText truncate">' + escapeHtml(k) + '</span></div><span class="text-[10px] font-bold text-woodAccentDark flex-none">' + v + ' ' + unit + '</span></div>').join('') || '<div class="text-[10px] text-softMuted py-1 text-center">記録がありません</div>';
+            // 数：ちがう話だけ（巻は冊）。別の日にもう一度読んだ分も入れた数は「のべ」
+            const rankRow = (k, rs, i, sub) => { const uniq = new Set(rs.map(x => x.bid + '|' + x.c)).size, label = actUnitTotal(rs).replace(/(\d)([^\d・])/g, '$1 $2'); return '<div class="flex items-center justify-between p-1.5 bg-kinari rounded-lg border border-woodBorder"><div class="flex items-center space-x-1.5 min-w-0"><span class="w-4 h-4 rounded-full bg-kinariDark border border-woodBorder flex items-center justify-center font-bold text-[9px] text-woodAccentDark flex-none">' + (i + 1) + '</span><span class="min-w-0"><span class="font-bold text-softText block truncate">' + escapeHtml(k) + '</span>' + (sub ? '<span class="text-[10px] text-softMuted block truncate">' + escapeHtml(sub) + '</span>' : '') + '</span></div><span class="flex-none text-right"><span class="text-[10px] font-bold text-woodAccentDark block">' + label + '</span>' + (rs.length > uniq ? '<span class="text-[9px] text-softMuted block">のべ ' + rs.length + ' 回</span>' : '') + '</span></div>'; };
+            const uniqOf = rs => new Set(rs.map(x => x.bid + '|' + x.c)).size;
+            const top = map => Object.entries(map).sort((a, b) => uniqOf(b[1]) - uniqOf(a[1]) || b[1].length - a[1].length).slice(0, actRankAll ? 9999 : 5).map(([k, rs], i) => rankRow(k, rs, i, '')).join('') || '<div class="text-[10px] text-softMuted py-1 text-center">記録がありません</div>';
             const byBook = {}, byGenre = {}, byAuthor = {};
-            rows.forEach(x => { byBook[x.bt] = (byBook[x.bt] || 0) + 1; x.tags.forEach(t => { byGenre[t] = (byGenre[t] || 0) + 1; }); byAuthor[x.author || '作者名'] = (byAuthor[x.author || '作者名'] || 0) + 1; });
+            rows.forEach(x => { (byBook[x.bt] = byBook[x.bt] || []).push(x); x.tags.forEach(t => { (byGenre[t] = byGenre[t] || []).push(x); }); const au = x.author || '作者名'; (byAuthor[au] = byAuthor[au] || []).push(x); });
             const box = (title, body) => '<div class="bg-white border border-woodBorder rounded-2xl p-3.5 space-y-1.5 shadow-xs text-xs"><span class="text-[11px] font-bold text-softText block border-b border-woodBorder/50 pb-1.5">' + title + '</span>' + body + '</div>';
             const rangeOf = {}; rows.forEach(x => { (rangeOf[x.bt] = rangeOf[x.bt] || []).push(x); });
-            const topBooks = Object.entries(byBook).sort((a, b) => b[1] - a[1]).slice(0, actRankAll ? 9999 : 5).map(([k, v], i) => { const r = actRangeLabel(rangeOf[k] || [], true); return '<div class="flex items-center justify-between p-1.5 bg-kinari rounded-lg border border-woodBorder"><div class="flex items-center space-x-1.5 min-w-0"><span class="w-4 h-4 rounded-full bg-kinariDark border border-woodBorder flex items-center justify-center font-bold text-[9px] text-woodAccentDark flex-none">' + (i + 1) + '</span><span class="min-w-0"><span class="font-bold text-softText block truncate">' + escapeHtml(k) + '</span>' + (r ? '<span class="text-[10px] text-softMuted block truncate">' + escapeHtml(r) + '</span>' : '') + '</span></div><span class="text-[10px] font-bold text-woodAccentDark flex-none">' + v + ' 話</span></div>'; }).join('') || '<div class="text-[10px] text-softMuted py-1 text-center">記録がありません</div>';
-            document.getElementById('act-rank').innerHTML = rows.length ? box('よく読んだ作品', topBooks) + box('よく読んだジャンル', top(byGenre, '話')) + box('よく読んだ作家', top(byAuthor, '話')) + ((Object.keys(byBook).length > 5 || Object.keys(byGenre).length > 5 || Object.keys(byAuthor).length > 5) ? '<button type="button" class="w-full text-[11px] text-woodAccentDark underline py-1" onclick="actRankAll=!actRankAll;renderActivity()">' + (actRankAll ? '上位5つだけにする' : 'ぜんぶ見る') + '</button>' : '') : '';
+            const topBooks = Object.entries(byBook).sort((a, b) => uniqOf(b[1]) - uniqOf(a[1]) || b[1].length - a[1].length).slice(0, actRankAll ? 9999 : 5).map(([k, rs], i) => rankRow(k, rs, i, actRangeLabel(rs, true))).join('') || '<div class="text-[10px] text-softMuted py-1 text-center">記録がありません</div>';
+            document.getElementById('act-rank').innerHTML = rows.length ? box('よく読んだ作品', topBooks) + box('よく読んだジャンル', top(byGenre)) + box('よく読んだ作家', top(byAuthor)) + ((Object.keys(byBook).length > 5 || Object.keys(byGenre).length > 5 || Object.keys(byAuthor).length > 5) ? '<button type="button" class="w-full text-[11px] text-woodAccentDark underline py-1" onclick="actRankAll=!actRankAll;renderActivity()">' + (actRankAll ? '上位5つだけにする' : 'ぜんぶ見る') + '</button>' : '') : '';
             // 日ごとの記録（新しい日から。月のカレンダーで、日を選んだら、その日だけ）
             let list = rows; if (A.mode === 'month' && A.day) list = rows.filter(x => x.d === A.day);
             const byDay = {}; list.forEach(x => { (byDay[x.d] = byDay[x.d] || []).push(x); });
@@ -12761,7 +12765,7 @@ function setupPaging(){
             }
             else if (A.mode === 'year') { const keys = Array.from({ length: 12 }, (_, i) => i + 1); labels = keys.map(m => m + '月'); bucket(x => Number(x.d.slice(5, 7)), keys); axis = '月ごと'; }
             else { const ys = [...new Set(all.map(x => x.d.slice(0, 4)))].sort(); const keys = ys.length ? ys : [String(now.getFullYear())]; labels = keys.map(y => y + '年'); bucket(x => x.d.slice(0, 4), keys); axis = '年ごと'; }
-            const rank = fn => { const m = {}, rs = {}; rows.forEach(x => fn(x).forEach(k => { m[k] = (m[k] || 0) + 1; (rs[k] = rs[k] || []).push(x); })); return Object.entries(m).sort((a, b) => b[1] - a[1]).map(([k, n]) => [k, n, actUnitTotal(rs[k]), actRangeLabel(rs[k], true)]); };
+            const rank = fn => { const rs = {}; rows.forEach(x => fn(x).forEach(k => { (rs[k] = rs[k] || []).push(x); })); const u = a => new Set(a.map(x => x.bid + '|' + x.c)).size; return Object.keys(rs).map(k => [k, u(rs[k]), actUnitTotal(rs[k]), actRangeLabel(rs[k], true), rs[k].length]).sort((a, b) => b[1] - a[1] || b[4] - a[4]); };
             return { A, title, rows, labels, chapters, chars, bookCnt, axis, cal, dayRows, days: new Set(rows.map(x => x.d)).size, books: new Set(rows.map(x => x.bid)).size, totalChars: rows.reduce((n, x) => n + x.n, 0),
                 rankBook: rank(x => [x.bt]), rankGenre: rank(x => x.tags.length ? x.tags : ['（なし）']), rankAuthor: rank(x => [x.author || '作者名']) };
         }
