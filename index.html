@@ -2123,6 +2123,7 @@ p.fx-drama.fx-sfx { opacity:1; font-weight:700; font-size:1.15em; letter-spacing
                     <div class="pt-3 border-t border-woodBorder">
                         <span class="font-bold text-softMuted block mb-1">更新履歴</span>
                         <div id="changelog" class="text-[11px] text-softMuted leading-relaxed">
+<div class="mb-1.5"><b class="text-softText">Version 24.21（2026-11-14）</b><br>「選んだ文から作る」で、「―」のない行が書き込みのすぐ下に続くときは、その書き込みの続きにするようにしました。韓国語の「ㅉㅉ」は「やれやれ」にします。</div>
 <div class="mb-1.5"><b class="text-softText">Version 24.20（2026-11-14）</b><br>Wiki の上の表で、ステータスも「名前：値」の表の行で出すようにしました。「### クエスト」のような小見出しで区切れます。{{N話で 達成}} を付けた行は、線を引いて「達成（N話）」と出ます。「###クエスト」のように空白がなくても見出しになります。</div>
 <div class="mb-1.5"><b class="text-softText">Version 24.19（2026-11-13）</b><br>着信バナーを直しました。文の左端にそろえ、章を開くたびに鳴るようにしました。通話中に赤を押すと「通話終了」で止まります。LINE・カカオの通知も開くたびに鳴り、トークの吹き出しは出るたびに「ポン」と鳴ります（音を出す がオンのとき）。</div>
 <div class="mb-1.5"><b class="text-softText">Version 24.18（2026-11-13）</b><br>本文の中に挟める、1行の着信バナーを足しました（［着信 相手=母］）。応答・拒否を押せます。種類=ビデオ・結果=不在も書けます。今までの［着信］…［／着信］（文字がゆれる着信）は、そのままです。</div>
@@ -8499,7 +8500,8 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             // 驚き・あきれの言葉（2026.11.13）。韓国語のままのときと、読みのままのカタカナのとき。カタカナは、それだけで1つの言葉のときだけ（ホルモン・オモチャなどは直さない）
             [/(?<![가-힣])아이고+(?![가-힣])/g, 'ああもう'], [/(?<![가-힣])어머나?(?![가-힣])/g, 'えっ'], [/(?<![가-힣])헐(?![가-힣])/g, 'まじか'],
             [/(^|[「“"\s　(（])(アイゴー?|オモナ?|ホル)(?=[！!？?〜～ー…、。,.\s　」”")）]|$)/gm, (m, a, w) => a + (w.startsWith('アイゴ') ? 'ああもう' : w.startsWith('オモ') ? 'えっ' : 'まじか')],
-            [/\bOMG\b/gi, 'うそでしょ'], [/\bWTF\b/gi, 'は？']
+            [/\bOMG\b/gi, 'うそでしょ'], [/\bWTF\b/gi, 'は？'],
+            [/(?<=[^\s　、。！!？?])[ \t　]*ㅉ{2,}/g, '、やれやれ'], [/ㅉ{2,}/g, 'やれやれ']
         ];
         function fxKoNet(t, sns) {
             t = String(t || '');
@@ -8516,6 +8518,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                 const kind = FXC_REPLY.test(ln) ? 'r' : FXC_POST.test(ln) ? 'p' : '';
                 if (kind) { if (!run) { run = { rows: [] }; out.push(run); gap = []; } else gap = []; run.rows.push({ k: kind, t: ln.replace(kind === 'r' ? FXC_REPLY : FXC_POST, '').trim() }); run.src = (run.src === undefined ? '' : run.src + '\n') + ln; continue; }
                 if (!ln.trim() && run) { gap.push(ln); continue; }
+                if (run && !gap.length && run.rows.length) { const last = run.rows[run.rows.length - 1]; last.t += (last.t ? '' : '') + ln.trim(); run.src += '\n' + ln; continue; }
                 if (run) { out.push(...gap.map(g => ({ text: g }))); run = null; gap = []; }
                 out.push({ text: ln });
             }
@@ -8537,7 +8540,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             return out;
         }
         const fxcAttr = v => String(v || '').replace(/[\s]+/g, '　').replace(/[［］]/g, '').trim();
-        const fxcBody = v => String(v || '').replace(/｜/g, '|').replace(/／/g, '/');
+        const fxcBody = v => String(v || '').replace(/｜/g, '|').replace(/／/g, '/').replace(//g, '／');   //  は、続きの行の改行（カードの中で「／」になる）
         function fxConvSns(run, kind) {
             let np = 0, nr = 0;
             const who = k => { const n = k === 'p' ? ++np : ++nr; return k === 'p' ? ['名無し' + n, '@user' + String(n).padStart(2, '0')] : ['通りすがり' + n, '@reply' + String(n).padStart(2, '0')]; };
@@ -11084,8 +11087,8 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         // 話の終わり・戻る・本の終わりで、読み終えた話から言葉を拾い、件数を小さく知らせる。読書は止めない
         // ===== 更新の確認：新しい版があれば、魚に青い点とメニュー（版の番号は version.json。公開のたびに、番号が変わる。番号が入っていない開発中は、確かめない） =====
         // 表示用の版。更新の検出は引き続き APP_BUILD の日時番号を使う。
-        const APP_VERSION = '24.20';
-        const APP_BUILD = '20261114014946';
+        const APP_VERSION = '24.21';
+        const APP_BUILD = '20261114070901';
         let updateCheckAt = 0;
         function paintBuild() {
             const el = document.getElementById('app-build-info'); if (!el) return;
