@@ -3,7 +3,7 @@
    NewsReader.isSource(src) / html(src,{base}) / plain(src) / scan(root,settings,key) / play(el,{sound}) */
 (function (global) {
 'use strict';
-const KINDS = ['炎上', 'ニュース', '動画', 'コラム', 'タイムライン', '見出し', 'おすすめ'];
+const KINDS = ['炎上', 'ニュース', '動画', 'コラム', 'タイムライン', '見出し', 'おすすめ', 'YouTube'];
 const RE = /^［報道[ \t]([^］\n]*)］\n?([\s\S]*?)\n?［／報道］\s*$/;
 const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 function attrs(s) { const a = {}; String(s || '').trim().split(/[ \t]+/).filter(Boolean).forEach(t => { const i = t.indexOf('='); if (i > 0) a[t.slice(0, i)] = t.slice(i + 1); else if (t === '続き') a.続き = '1'; }); return a; }
@@ -180,13 +180,33 @@ function recfeed(a, R) {
   });
   return h + '</div></div>';
 }
+// YouTube（形=YouTube）：本編の動画（横長）と、ショートの棚。棚は ショート=なし で出さない
+// 動画：題名｜チャンネル名｜42万 回視聴｜公開されたばかり｜長さ=12:48｜印=NEW｜字=熱｜色=ピンク｜背景=紺
+// ショート：題名｜384万 回視聴｜背景=赤
+const YT_BG = { 紺: 'b1', 赤: 'b2', 青: 'b3', 紫: 'b4', 橙: 'b5' };
+function ytube(a, R) {
+  const bgs = Object.values(YT_BG), bar = s => esc(s || '').replace(/\|/g, '｜');
+  let h = '<div class="nr nr-yt">';
+  R.filter(r => r.k === '動画').forEach((r, n) => {
+    const meta = [1, 2, 3].filter(k => r.v[k]).map(k => '<span data-e="r:' + r.i + ':v' + k + '">' + esc(r.v[k]) + '</span>').join('<span class="yt-dot">•</span>');
+    h += '<div class="yt-main nr-in" data-r="' + r.i + '"><div class="yt-th ' + (YT_BG[r.o.背景] || 'b1') + '"><i>▶</i>' + (r.o.印 ? '<span class="yt-new" data-e="r:' + r.i + ':o:印">' + esc(r.o.印) + '</span>' : '') + (r.o.長さ ? '<span class="yt-len" data-e="r:' + r.i + ':o:長さ">' + esc(r.o.長さ) + '</span>' : '') + '</div>'
+      + '<div class="yt-info"><i class="yt-ic av-' + tlCol(r.o, r.v[1] || r.v[0]) + '">' + esc(r.o.字 || [...String(r.v[1] || r.v[0] || '?')][0]) + '</i><div><div class="yt-tt" data-e="r:' + r.i + ':v0">' + bar(r.v[0]) + '</div><div class="yt-meta">' + meta + '</div></div></div></div>';
+  });
+  const sh = R.filter(r => r.k === 'ショート');
+  if (sh.length && a.ショート !== 'なし') {
+    h += '<div class="yt-shelf"><div class="yt-sh-h"><span class="yt-bolt">🗲</span><span data-e="a:棚">' + esc(a.棚 || '急上昇ショート') + '</span></div><div class="yt-sh-g' + (a.並べ === '折り返す' ? ' wrap' : '') + '">'
+      + sh.map((r, n) => '<div class="yt-si nr-in" data-r="' + r.i + '"><div class="yt-st ' + (YT_BG[r.o.背景] || bgs[n % bgs.length]) + '">' + (r.v[1] ? '<span class="yt-sv" data-e="r:' + r.i + ':v1">' + esc(r.v[1]) + '</span>' : '') + '</div><div class="yt-stt" data-e="r:' + r.i + ':v0">' + bar(r.v[0]) + '</div></div>').join('') + '</div></div>';
+  }
+  return h + '</div>';
+}
 // 読む画面は改行をそのまま空白として出すので、部品の HTML の改行は取り除く
-function html(src, opt = {}) { const d = parse(src); if (!d) return ''; const base = opt.base == null ? 'fx/' : opt.base; return (d.a.形 === 'ニュース' ? news(d.a, d.R, base) : d.a.形 === '動画' ? video(d.a, d.R) : d.a.形 === 'コラム' ? column(d.a, d.R) : d.a.形 === 'タイムライン' ? timeline(d.a, d.R, base, !!opt.edit) : d.a.形 === '見出し' ? heads(d.a, d.R) : d.a.形 === 'おすすめ' ? recfeed(d.a, d.R) : trend(d.a, d.R)).replace(/>\s*\n\s*</g, '><').replace(/\n\s*/g, ''); }
+function html(src, opt = {}) { const d = parse(src); if (!d) return ''; const base = opt.base == null ? 'fx/' : opt.base; return (d.a.形 === 'ニュース' ? news(d.a, d.R, base) : d.a.形 === '動画' ? video(d.a, d.R) : d.a.形 === 'コラム' ? column(d.a, d.R) : d.a.形 === 'タイムライン' ? timeline(d.a, d.R, base, !!opt.edit) : d.a.形 === '見出し' ? heads(d.a, d.R) : d.a.形 === 'おすすめ' ? recfeed(d.a, d.R) : d.a.形 === 'YouTube' ? ytube(d.a, d.R) : trend(d.a, d.R)).replace(/>\s*\n\s*</g, '><').replace(/\n\s*/g, ''); }
 // 読み上げ・文字数用の、ふつうの文
 function plain(src) {
   const d = parse(src); if (!d) return ''; const a = d.a, out = [];
   if (a.形 === '炎上') { out.push((a.タグ || '') + ' トレンド' + (a.順位 || '1') + '位'); d.R.forEach(r => { if (r.k === 'トレンド') out.push(r.v[0] || ''); else if (r.k === '削除済み') out.push('このポストは削除されました。'); else out.push(r.v.length >= 2 ? r.v[1] : r.v[0] || ''); }); }
   else if (a.形 === 'ニュース') { out.push(a.見出し || ''); if (a.副題) out.push(a.副題); d.R.forEach(r => { if (!r.k) out.push(r.v.join('｜')); else if (r.k === '関連') out.push(r.v.join('｜')); else if (r.k === 'コメント' || r.k === '返信') out.push(r.v.slice(1).join('｜')); }); }
+  else if (a.形 === 'YouTube') d.R.forEach(r => { if (r.k === '動画') out.push((r.v[0] || '').replace(/\|/g, ' ')); else if (r.k === 'ショート' && a.ショート !== 'なし') out.push(r.v[0] || ''); });
   else if (a.形 === 'おすすめ') d.R.forEach(r => out.push(r.k ? (r.v[0] || '') : r.raw.trim().replace(/^[\[［]\s*|\s*[\]］]$/g, '')));
   else if (a.形 === '見出し') d.R.forEach(r => out.push(r.raw.trim().replace(/^[\[［]\s*|\s*[\]］]$/g, '')));
   else if (a.形 === 'タイムライン') { if (a.タグ) out.push(a.タグ); d.R.forEach(r => { if (r.k === '投稿' || r.k === '返信' || r.k === '返信の返信') out.push(r.v[2] || ''); else if (r.k === '画像') out.push(r.v.slice(0, 2).join(' ')); else if (r.k === 'ショート') out.push(r.v[0] || ''); else if (r.k === '動画') out.push(r.v.slice(0, 2).join(' ')); }); }
@@ -208,7 +228,7 @@ function play(el, opt = {}) {
   if (global.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) { stop(); return { cancel() {} }; }
   if (!items.length) { stop(); return { cancel() {} }; }
   root.classList.add('nr-playing'); items.forEach(x => x.classList.remove('on'));
-  const fast = root.classList.contains('nr-video') ? 170 : root.classList.contains('nr-col') ? 330 : root.classList.contains('nr-tml') ? 420 : root.classList.contains('nr-hl') ? 150 : root.classList.contains('nr-rf') ? 110 : 260;
+  const fast = root.classList.contains('nr-video') ? 170 : root.classList.contains('nr-col') ? 330 : root.classList.contains('nr-tml') ? 420 : root.classList.contains('nr-hl') ? 150 : root.classList.contains('nr-rf') ? 110 : root.classList.contains('nr-yt') ? 160 : 260;
   // 画面から消えたら（ページを切りかえたら）、そこで止める。音も鳴らさない
   items.forEach((x, i) => timers.push(setTimeout(() => { if (!root.isConnected) { stop(); return; } x.classList.add('on'); pop(opt.sound, i); }, 120 + i * fast)));
   root.querySelectorAll('.nr-cnt').forEach(c => { const v = +c.dataset.v || 0, k = c.dataset.k === '1'; c.dataset.final = c.textContent; if (!v) return; const from = Math.round(v * 0.82), steps = 18; for (let s = 0; s <= steps; s++) timers.push(setTimeout(() => { if (!done) c.textContent = s === steps ? c.dataset.final : fmt(Math.round(from + (v - from) * s / steps), k); }, 200 + s * 70)); });
@@ -266,7 +286,7 @@ function edit(src, key, val) {
   if (b === 'all') v = [val];
   else if (b === 'u') { if (v.length >= 2) v[0] = (/^\s*└/.test(v[0]) ? '└' : '') + val; }
   else if (b === 'cap') v = val ? [v[0] || '', val] : [v[0] || ''];
-  else if (/^v\d$/.test(b)) { const n = +b.slice(1); while (v.length < n) v.push(''); v[n] = val.replace(/｜/g, '|'); if (n === 1 && v[1] && !v[1].startsWith('@') && r.k !== 'ショート') v[1] = '@' + v[1]; }
+  else if (/^v\d$/.test(b)) { const n = +b.slice(1); while (v.length < n) v.push(''); v[n] = val.replace(/｜/g, '|'); if (n === 1 && v[1] && !v[1].startsWith('@') && r.k !== 'ショート' && r.k !== '動画') v[1] = '@' + v[1]; }
   else if (b === 't') v = v.length >= 2 ? [v[0], val] : [pre + val];
   const opts = Object.entries(r.o).map(([x, y]) => x + '=' + y);
   lines[j] = lead + (r.k ? r.k + '：' : '') + v.concat(opts).join('｜');

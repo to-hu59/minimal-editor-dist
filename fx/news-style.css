@@ -401,3 +401,50 @@
 .nr-rf .rf-c { flex: 1; min-width: 0; }
 .nr-rf .rf-t { font-size: 14px; font-weight: 700; color: #e7e9ea; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .nr-rf .rf-s { font-size: 11px; color: #71767b; margin-top: 4px; }
+
+/* 24.7：YouTube（本編の動画＋ショートの棚） */
+.nr.nr-yt { max-width: 560px; background: #0f0f0f; color: #f1f1f1; border-radius: 14px; padding: 14px; display: flex; flex-direction: column; gap: 14px; font-family: Roboto, Arial, "Hiragino Sans", "Yu Gothic", sans-serif; }
+.nr-yt .yt-main { display: flex; flex-direction: column; gap: 10px; }
+.nr-yt .yt-th { position: relative; width: 100%; aspect-ratio: 16 / 9; max-height: 300px; border-radius: 12px; border: 1px solid #272727; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.nr-yt .yt-th.b1, .nr-yt .yt-st.b1 { background: linear-gradient(135deg, #4338ca, #312e81 55%, #0f172a); }
+.nr-yt .yt-th.b2, .nr-yt .yt-st.b2 { background: linear-gradient(135deg, #b91c1c, #7f1d1d 55%, #18181b); }
+.nr-yt .yt-th.b3, .nr-yt .yt-st.b3 { background: linear-gradient(135deg, #0369a1, #0c4a6e 55%, #0f172a); }
+.nr-yt .yt-th.b4, .nr-yt .yt-st.b4 { background: linear-gradient(135deg, #a21caf, #701a75 55%, #18181b); }
+.nr-yt .yt-th.b5, .nr-yt .yt-st.b5 { background: linear-gradient(135deg, #b45309, #78350f 55%, #18181b); }
+.nr-yt .yt-th i { font-style: normal; font-size: 22px; color: rgba(255, 255, 255, .85); background: rgba(0, 0, 0, .5); width: 56px; height: 38px; border-radius: 8px; display: flex; align-items: center; justify-content: center; }
+.nr-yt .yt-new { position: absolute; top: 8px; left: 8px; font-size: 11px; font-weight: 800; background: #cc0000; color: #fff; padding: 1px 6px; border-radius: 4px; }
+.nr-yt .yt-len { position: absolute; right: 8px; bottom: 8px; font-size: 11.5px; font-weight: 600; background: rgba(0, 0, 0, .8); color: #fff; padding: 1px 5px; border-radius: 4px; }
+.nr-yt .yt-info { display: flex; gap: 10px; align-items: flex-start; }
+.nr-yt .yt-ic { width: 36px; height: 36px; border-radius: 50%; flex: none; display: flex; align-items: center; justify-content: center; font-style: normal; font-weight: 700; font-size: 14px; color: #fff; }
+.nr-yt .yt-tt { font-size: 15px; font-weight: 600; line-height: 1.4; color: #f1f1f1; margin-bottom: 3px; }
+.nr-yt .yt-meta { font-size: 12.5px; color: #aaa; display: flex; flex-wrap: wrap; gap: 4px; }
+.nr-yt .yt-shelf { border-top: 4px solid #272727; padding-top: 14px; }
+.nr-yt .yt-sh-h { display: flex; align-items: center; gap: 6px; margin-bottom: 10px; font-size: 16px; font-weight: 700; }
+.nr-yt .yt-bolt { color: #ff0000; }
+.nr-yt .yt-sh-g { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 6px; scrollbar-width: thin; scrollbar-color: #717171 transparent; }
+.nr-yt .yt-sh-g.wrap { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); overflow: visible; }
+.nr-yt .yt-si { width: 112px; flex: none; display: flex; flex-direction: column; gap: 6px; }
+.nr-yt .yt-sh-g.wrap .yt-si { width: auto; }
+.nr-yt .yt-st { position: relative; width: 100%; aspect-ratio: 9 / 16; border-radius: 8px; border: 1px solid rgba(255, 255, 255, .1); }
+.nr-yt .yt-st::after { content: ""; position: absolute; inset: 0; border-radius: 8px; background: linear-gradient(to top, rgba(0, 0, 0, .8), transparent 55%); }
+.nr-yt .yt-sv { position: absolute; left: 6px; bottom: 6px; z-index: 1; font-size: 11px; font-weight: 500; color: #fff; text-shadow: 0 1px 2px rgba(0, 0, 0, .8); }
+.nr-yt .yt-stt { font-size: 12px; font-weight: 500; line-height: 1.4; color: #f1f1f1; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+
+/* 24.7：YouTube のチャンネルのアイコンの色 */
+.nr-yt .av-blue { background: linear-gradient(135deg, #2563eb, #38bdf8); }
+.nr-yt .av-pink { background: linear-gradient(135deg, #ec4899, #f43f5e); }
+.nr-yt .av-purple { background: linear-gradient(135deg, #7c3aed, #c084fc); }
+.nr-yt .av-emerald { background: linear-gradient(135deg, #059669, #34d399); }
+.nr-yt .av-amber { background: linear-gradient(135deg, #d97706, #fbbf24); }
+.nr-yt .av-slate { background: linear-gradient(135deg, #334155, #64748b); }
+.nr-yt .av-cyan { background: linear-gradient(135deg, #0891b2, #22d3ee); }
+/* 24.7：YouTube を1ページに入りやすく（スマホ） */
+.nr.nr-yt { padding: 12px; gap: 12px; }
+.nr-yt .yt-th { max-height: 190px; }
+.nr-yt .yt-tt { font-size: 14px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.nr-yt .yt-meta { font-size: 12px; }
+.nr-yt .yt-shelf { padding-top: 12px; }
+.nr-yt .yt-sh-h { font-size: 15px; margin-bottom: 8px; }
+.nr-yt .yt-si { width: 92px; gap: 5px; }
+.nr-yt .yt-stt { font-size: 11.5px; -webkit-line-clamp: 2; }
+@media (min-width: 900px) { .nr-yt .yt-th { max-height: 210px; } .nr-yt .yt-si { width: 96px; } }
