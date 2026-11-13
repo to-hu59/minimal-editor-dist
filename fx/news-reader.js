@@ -26,7 +26,7 @@ const avatar = (id, kind) => `<i class="nr-av k-${esc(kind || '')}">${esc(AV[kin
 
 function trend(a, R) {
   const tr = R.filter(r => r.k === 'トレンド'), ps = R.filter(r => r.k !== 'トレンド');
-  return `<div class="nr nr-trend"><div class="nr-h"><b>TRENDING NOW</b><small>トレンド</small></div>
+  return `<div class="nr nr-trend${ps.length < 6 ? ' nr-few' : ''}"><div class="nr-h"><b>TRENDING NOW</b><small>トレンド</small></div>
   <div class="nr-top nr-in"><span class="nr-rank">🔥 <em class="nr-rk" data-from="${esc(a.開始 || a.順位 || '1')}" data-to="${esc(a.順位 || '1')}">${esc(a.順位 || '1')}</em>位</span><b class="nr-tag" data-e="a:タグ">${tx(a.タグ || '#話題')}</b><small>${cnt(a.件数, 1)} posts</small></div>
   ${tr.length ? `<div class="nr-tl">${tr.map((r, i) => `<div class="nr-in"><em>${i + 2}</em><b data-e="r:${r.i}:v0">${tx(r.v[0])}</b><small>${esc(r.v[1] || '')}</small></div>`).join('')}</div>` : ''}
   <div class="nr-posts">${ps.map(r => {
@@ -59,7 +59,7 @@ function news(a, R, base) {
     + `</div>`;
   const head = part === 'cm' ? `<div class="nr-ych"><b>コメント</b><span>${cnt(total)}件</span>${a.見出し ? `<small class="nr-yof">${tx(a.見出し)}</small>` : ''}</div>` : `<div class="nr-ych"><b>コメント</b><span>${cnt(total)}件</span><small class="nr-ytab"><em>おすすめ順</em>｜新着順</small></div>`;
   const comments = cms.length ? `<div class="nr-ycm">${head}${cms.map(({ r, re }) => `<div class="nr-yc nr-in">${user(r)}${reacts(r.o)}${re.length ? `<div class="nr-yrl"><div class="nr-yrn">返信 ${re.length}件</div>${re.map(x => `<div class="nr-yr nr-in">${user(x, 1)}</div>`).join('')}</div>` : ''}</div>`).join('')}</div>` : '';
-  return `<div class="nr nr-news p-${part}${small ? ' small' : ''}">${part === 'cm' ? '' : art}${part === 'art' ? '' : comments}</div>`;
+  return `<div class="nr nr-news p-${part}${small ? ' small' : ''}${cms.length < 6 ? ' nr-few' : ''}">${part === 'cm' ? '' : art}${part === 'art' ? '' : comments}</div>`;
 }
 // 動画コメント欄（参考：急上昇動画のクリップのコメント欄）。返信は「└@名前｜本文」、ふつうは「@名前｜本文」
 function video(a, R) {
@@ -72,7 +72,7 @@ function video(a, R) {
   }
   const user = s => esc(s ? (String(s).startsWith('@') ? s : '@' + s) : '@user');
   const light = a.見た目 === '明るい';
-  return `<div class="nr nr-video${light ? ' light' : ''}${a.続き ? ' cont' : ''}">${a.続き ? '' : `<div class="nr-vh"><b><span class="nr-play">▶</span> <span data-e="a:題">${tx(a.題 || '急上昇動画 #1 クリップコメント欄')}</span></b><small>コメント ${cnt(a.件数 || String(groups.reduce((n, x) => n + 1 + x.replies.length, 0)))}件</small></div>`}
+  return `<div class="nr nr-video${light ? ' light' : ''}${a.続き ? ' cont' : ''}${groups.reduce((n, g) => n + (g.c ? 1 : 0) + g.replies.length, 0) < 6 ? ' nr-few' : ''}">${a.続き ? '' : `<div class="nr-vh"><b><span class="nr-play">▶</span> <span data-e="a:題">${tx(a.題 || '急上昇動画 #1 クリップコメント欄')}</span></b><small>コメント ${cnt(a.件数 || String(groups.reduce((n, x) => n + 1 + x.replies.length, 0)))}件</small></div>`}
   ${groups.map(x => `<div class="nr-vg">${x.c ? `<div class="nr-vc nr-in"><span class="nr-vu"${x.c.named ? ` data-e="r:${x.c.i}:u"` : ''}>${user(x.c.id)}</span><span class="nr-vt" data-e="r:${x.c.i}:t">${tx(x.c.text)}</span>${x.c.like ? `<span class="nr-vl">👍 ${cnt(x.c.like, 1)}</span>` : ''}</div>` : ''}${x.replies.map(r => `<div class="nr-vr nr-in"><span class="nr-vu"${r.named ? ` data-e="r:${r.i}:u"` : ''}>${user(r.id)}</span><span class="nr-vt" data-e="r:${r.i}:t">${tx(r.text)}</span></div>`).join('')}</div>`).join('')}</div>`;
 }
 // コラム（オピニオン・寄稿）。見た目＝マガジン（ふつう）／新聞／ダーク。1行＝1段落。**ここ** は蛍光ペン

@@ -874,6 +874,9 @@ p.fx-drama.fx-sfx { opacity:1; font-weight:700; font-size:1.15em; letter-spacing
 #editor-textarea-container { position:relative; }
 #ve-fx-layer { position:absolute; inset:0; pointer-events:none; z-index:0; overflow:hidden; }
 #reader-visual-editor { position:relative; z-index:1; background:transparent; }
+.ve-dr-scene { position:absolute; background:rgba(127,119,221,.08); border-left:3px solid rgba(127,119,221,.45); box-sizing:border-box; }
+.ve-dr-bar { position:absolute; width:3px; border-radius:2px; background:#7F77DD; }
+.ve-dr-title { position:absolute; border:2px solid rgba(127,119,221,.6); border-radius:8px; box-sizing:border-box; }
 .ve-fx-box { position:absolute; border:2px solid var(--fxc,#4aa3e0); border-radius:10px; background:var(--fxb,rgba(74,163,224,.09)); box-sizing:border-box; }
 .ve-fx-cap { position:absolute; top:-9px; left:12px; padding:0 8px; font:700 10px/16px sans-serif; color:var(--fxc,#4aa3e0); background:#fff; border-radius:8px; border:1px solid var(--fxc,#4aa3e0); }
 #modal-frame-menu { position:fixed; inset:0; z-index:70; background:rgba(0,0,0,.35); display:flex; align-items:flex-end; justify-content:center; }
@@ -2086,6 +2089,8 @@ p.fx-drama.fx-sfx { opacity:1; font-weight:700; font-size:1.15em; letter-spacing
                     <div class="pt-3 border-t border-woodBorder">
                         <span class="font-bold text-softMuted block mb-1">更新履歴</span>
                         <div id="changelog" class="text-[11px] text-softMuted leading-relaxed">
+<div class="mb-1.5"><b class="text-softText">Version 24.9（2026-11-13）</b><br>エディタでも、ドラマの場面（うすい紫の背景）、セリフ・効果音・音楽の行（左の紫の線）、タイトルの行（紫の枠）がわかるようにしました。</div>
+<div class="mb-1.5"><b class="text-softText">Version 24.8（2026-11-13）</b><br>PC で、コメントが5件までの動画コメント・トレンド・ニュース記事は、2段に分けず、幅もスマホくらいにしました。</div>
 <div class="mb-1.5"><b class="text-softText">Version 24.7（2026-11-13）</b><br>特殊演出に「YouTube」を足しました。本編の動画（長さ・NEW の印つき）と、ショートの棚が出ます（選んだ文から作る）。棚はエディタのボタンで、つけるかどうかを選べます。</div>
 <div class="mb-1.5"><b class="text-softText">Version 24.6（2026-11-13）</b><br>特殊演出に「おすすめショート一覧」（X・インスタ）を足しました。選んだ題名が、おすすめに次々と回ってくるショートの一覧になります（選んだ文から作る）。</div>
 <div class="mb-1.5"><b class="text-softText">Version 24.5（2026-11-13）</b><br>特殊演出に「見出しリスト」を足しました。選んだ行がニュースの見出しのように並び、下に行くほど薄くなります（選んだ文から作る）。</div>
@@ -8226,10 +8231,29 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                 layer.replaceChildren();
                 const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT), nodes = []; let flat = '', n;
                 while ((n = walker.nextNode())) { nodes.push({ node: n, start: flat.length }); flat += n.data; }
-                if (flat.indexOf('［') < 0) return;
+                if (flat.indexOf('［') < 0 && flat.indexOf('[') < 0) return;
                 const locate = off => { for (let i = nodes.length - 1; i >= 0; i--) if (off >= nodes[i].start) return [nodes[i].node, Math.min(nodes[i].node.length, off - nodes[i].start)]; return null; };
                 const lr = layer.getBoundingClientRect(), rr = root.getBoundingClientRect(), re = /［(窓|システム画面|ステータス|LINE通知|トーク|招待状|掲示板)([^］\n]*)］/g; let m;
                 const spans = [];
+                // ドラマ：場面（［ドラマ］〜［／ドラマ］）はうすい紫の背景、セリフ・効果音・音楽の行は左に紫の線、タイトルの行は紫の枠（読む画面と同じ決まりで見つける）
+                try {
+                    const rectsOf = (a0, b0) => { const a = locate(a0), b = locate(b0); if (!a || !b) return []; const rg = document.createRange(); try { rg.setStart(a[0], a[1]); rg.setEnd(b[0], b[1]); } catch (e) { return []; } return [...rg.getClientRects()].filter(r => r.width > 0 || r.height > 0); };
+                    const put = (cls, css) => { const d = document.createElement('div'); d.className = cls; d.style.cssText = css; layer.appendChild(d); };
+                    const scenes = []; { const ro = /［ドラマ(?:[\s　][^］\n]*)?］/g; let mo; while ((mo = ro.exec(flat))) { const cl = flat.indexOf('［／ドラマ］', mo.index); scenes.push([mo.index, cl < 0 ? flat.length : cl + 6]); } }
+                    for (const [a0, b0] of scenes) { const rs = rectsOf(a0, b0); if (!rs.length) continue; const top = Math.min(...rs.map(r => r.top)), bottom = Math.max(...rs.map(r => r.bottom)); put('ve-dr-scene', 'left:' + (rr.left - lr.left - 12) + 'px;top:' + (top - lr.top - 4) + 'px;width:' + (rr.width + 16) + 'px;height:' + (bottom - top + 8) + 'px'); }
+                    let pos = 0;
+                    for (const line of flat.split('\n')) {
+                        const a0 = pos, b0 = pos + line.length; pos = b0 + 1;
+                        const t = line.replace(/［／?ドラマ(?:[\s　][^］\n]*)?］/g, ''); if (!t.trim()) continue;
+                        const inScene = scenes.some(([x, y]) => a0 >= x && a0 < y);
+                        const title = DRAMA_TITLE_RE.test(t), dl = DRAMA_LINE_RE.test(t) || MUSIC_LINE_RE.test(t) || SFX_LINE_RE.test(t) || (inScene && (SCENE_Q_RE.test(t) || SCENE_SFX_RE.test(t) || SCENE_MUS_RE.test(t)));
+                        if (!title && !dl) continue;
+                        const rs = rectsOf(a0, b0); if (!rs.length) continue;
+                        const top = Math.min(...rs.map(r => r.top)), bottom = Math.max(...rs.map(r => r.bottom));
+                        if (title) { const left = Math.min(...rs.map(r => r.left)), right = Math.max(...rs.map(r => r.right)); put('ve-dr-title', 'left:' + (left - lr.left - 6) + 'px;top:' + (top - lr.top - 3) + 'px;width:' + (right - left + 12) + 'px;height:' + (bottom - top + 6) + 'px'); }
+                        else put('ve-dr-bar', 'left:' + (rr.left - lr.left - 8) + 'px;top:' + (top - lr.top) + 'px;height:' + (bottom - top) + 'px');
+                    }
+                } catch (e) {}
                 while ((m = re.exec(flat))) {
                     const after = m.index + m[0].length, nextOpen = (() => { const r2 = /［(窓|システム画面|ステータス|LINE通知|トーク|招待状|掲示板)[^］\n]*］/g; r2.lastIndex = after; const x = r2.exec(flat); return x ? x.index : -1; })();
                     const cl = flat.indexOf('［／' + m[1] + '］', after);
@@ -10831,8 +10855,8 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         // 話の終わり・戻る・本の終わりで、読み終えた話から言葉を拾い、件数を小さく知らせる。読書は止めない
         // ===== 更新の確認：新しい版があれば、魚に青い点とメニュー（版の番号は version.json。公開のたびに、番号が変わる。番号が入っていない開発中は、確かめない） =====
         // 表示用の版。更新の検出は引き続き APP_BUILD の日時番号を使う。
-        const APP_VERSION = '24.7';
-        const APP_BUILD = '20261113200901';
+        const APP_VERSION = '24.9';
+        const APP_BUILD = '20261113202053';
         let updateCheckAt = 0;
         function paintBuild() {
             const el = document.getElementById('app-build-info'); if (!el) return;

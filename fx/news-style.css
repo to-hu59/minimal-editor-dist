@@ -448,3 +448,9 @@
 .nr-yt .yt-si { width: 92px; gap: 5px; }
 .nr-yt .yt-stt { font-size: 11.5px; -webkit-line-clamp: 2; }
 @media (min-width: 900px) { .nr-yt .yt-th { max-height: 210px; } .nr-yt .yt-si { width: 96px; } }
+
+/* 24.8：PC で、コメントが5件までのときは2段にせず、幅もスマホくらいにする */
+@media (min-width: 900px) {
+  .fxnews .nr.nr-few { max-width: 600px; }
+  .fxnews .nr-video.nr-few, .fxnews .nr-trend.nr-few .nr-posts, .fxnews .nr-news.nr-few .nr-ycm { column-count: auto; }
+}
