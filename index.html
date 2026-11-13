@@ -2086,6 +2086,7 @@ p.fx-drama.fx-sfx { opacity:1; font-weight:700; font-size:1.15em; letter-spacing
                     <div class="pt-3 border-t border-woodBorder">
                         <span class="font-bold text-softMuted block mb-1">更新履歴</span>
                         <div id="changelog" class="text-[11px] text-softMuted leading-relaxed">
+<div class="mb-1.5"><b class="text-softText">Version 23.6（2026-11-13）</b><br>［ドラマ］と［／ドラマ］が文にくっついていても、場面の印として読むようにしました。「［ドラマ］「セリフ」［／ドラマ］」の1行だけの場面や、「［ドラマ］長いシーン〜」「〜長いシーン［／ドラマ］」のように前後の行についている書き方も使えます（本文は書きかえません）。場面の中で自動でセリフになるのは「」と “” の行だけにしました。『』の行は心の声として、ふつうの文のままです。</div>
 <div class="mb-1.5"><b class="text-softText">Version 23.5（2026-11-13）</b><br>ドラマのセリフと効果音を、地の文とちがう字で、少しななめにしました。地の文が明朝体ならゴシック体、ゴシック体・丸ゴシック体なら明朝体になります（自分で入れたフォントは、名前に「明朝」「Serif」などがあれば明朝体とみなします）。［ドラマ］〜［／ドラマ］の場面の中では、[ ] がなくても「…」だけの行はセリフ、「―ドン！」のような短い「―」の行は効果音、♩ ♪ ♫ ♬ だけの行は音楽になります。場面の外は今までどおりです。</div>
 <div class="mb-1.5"><b class="text-softText">Version 23.4（2026-11-13）</b><br>ドラマの場面全体を分けて見せられるようにしました。場面の前後を ［ドラマ］ と ［／ドラマ］ ではさむと、あいだの地の文もふくめて、うすい紫の背景と左の線が付きます。はじめに「📺 ドラマ」（［ドラマ 題=君と僕の空間］なら題名）、終わりに「― ここまで ―」と出ます。ページをまたいでも続きます。「選んだ文から作る」の「ドラマの場面」で、選んだところをはさめます。「ドラマのセリフ」のボタンは、「…」] のように [ が片方だけの行もそろえるようにしました。</div>
 <div class="mb-1.5"><b class="text-softText">Version 23.3（2026-11-13）</b><br>ドラマのタイトルの見た目を足しました。『君と僕の空間。EP 01。』のように、[ ] がなく『』の中に EP と番号がある行は、テレビの枠になります。上の細い帯に 📺 と題名、黒い画面に白い字で題名と「EP 01」がゆっくり浮かび上がります。題名がなく『EP 02』だけなら、画面には EP だけが出ます。[『…』] はセリフのまま、ふつうの『…』の行も今までどおりです。</div>
@@ -6995,7 +6996,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         const MUSIC_LINE_RE = /^\s*[\[［](?=[^\]］\n]*[♩♪♫♬🎵🎶])[\s♩♪♫♬🎵🎶～〜]+[\]］]\s*$/u;
         // ドラマのタイトル：[ ] がなく、『』の中に EP と番号がある行（『君と僕の空間。EP 01。』）
         const DRAMA_TITLE_RE = /^\s*『\s*(.*?)[\s。．.、]*(?:EP|Ep|ep)\.?\s*([0-9０-９]{1,4})[\s。．.]*』\s*$/;
-        const SCENE_Q_RE = /^\s*[「“"『][\s\S]*[」”"』]\s*$/, SCENE_SFX_RE = /^\s*[―—─]+\s*\S[^\n]{0,19}$/, SCENE_MUS_RE = /^\s*[♩♪♫♬🎵🎶][\s♩♪♫♬🎵🎶～〜]*$/u;
+        const SCENE_Q_RE = /^\s*[「“"][\s\S]*[」”"]\s*$/, SCENE_SFX_RE = /^\s*[―—─]+\s*\S[^\n]{0,19}$/, SCENE_MUS_RE = /^\s*[♩♪♫♬🎵🎶][\s♩♪♫♬🎵🎶～〜]*$/u;
         const SFX_LINE_RE = /^\s*[\[［]\s*[―—─]+\s*[^\]］\n]{1,20}[\]］]\s*$/;
         function buildInteractiveSentencesHtml(rawText, frames) {
             if (!rawText.trim()) return '<span class="text-softMuted">本文がありません</span>';
@@ -7564,7 +7565,11 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         // ふつうの本文では、演出の印を目立たなくする：印だけの行は消す。画面系のはじまりは「〔名前〕」。文中の印は消す
         // frames に配列を渡すと、枠の位置（表示する行の番号）が入る。印の行は、表示からは消える（朗読の行とも同じにそろう）
         function fxDisplayText(text, frames) {
-            const t = String(text == null ? '' : text); if (t.indexOf('［') < 0) return t;
+            let t = String(text == null ? '' : text); if (t.indexOf('［') < 0) return t;
+            if (/［／?ドラマ/.test(t)) t = t.replace(/[ \t　]*(［ドラマ(?:[\s　][^］\n]*)?］|［／ドラマ］)[ \t　]*/g, (m, k, off, str) => {
+                const a = off > 0 && str[off - 1] !== '\n' && str[off - 1] !== '\r', z = off + m.length < str.length && str[off + m.length] !== '\n' && str[off + m.length] !== '\r';
+                return (a ? '\n' : '') + k + (z ? '\n' : '');
+            });
             const out = []; let open = null; const L = t.split('\n'); let pendingFx = null, pendingTx = null;
             const hasCloser = i => { for (let j = i + 1; j < L.length; j++) { const tj = L[j].trim(); if (/^［／(窓|システム画面|ステータス|LINE通知|トーク|招待状)］$/.test(tj)) return true; if (/^［(窓|システム画面|ステータス|LINE通知|トーク|招待状)[^］\n]*］$/.test(tj)) return false; } return false; };
             for (let li = 0; li < L.length; li++) {
@@ -10760,8 +10765,8 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         // 話の終わり・戻る・本の終わりで、読み終えた話から言葉を拾い、件数を小さく知らせる。読書は止めない
         // ===== 更新の確認：新しい版があれば、魚に青い点とメニュー（版の番号は version.json。公開のたびに、番号が変わる。番号が入っていない開発中は、確かめない） =====
         // 表示用の版。更新の検出は引き続き APP_BUILD の日時番号を使う。
-        const APP_VERSION = '23.5';
-        const APP_BUILD = '20261113120832';
+        const APP_VERSION = '23.6';
+        const APP_BUILD = '20261113124331';
         let updateCheckAt = 0;
         function paintBuild() {
             const el = document.getElementById('app-build-info'); if (!el) return;
