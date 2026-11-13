@@ -117,7 +117,7 @@
 .nr-video.cont { margin-top: -6px; }
 .fxnews [data-e] { cursor: text; border-radius: 4px; }
 .fxnews [data-e]:hover { background: rgba(35, 89, 78, .07); }
-.fxnews .nr-editing { outline: 2px solid #23594e; outline-offset: 1px; background: #fffbe8 !important; cursor: text; }
+.fxnews .nr-editing { outline: 2px solid #3a9d88; outline-offset: 1px; background: rgba(127,127,127,.18) !important; cursor: text; }
 /* 17.8：本文の文字サイズに合わせて、カードをまとめて大きくする（--nr-zoom は読む画面が入れる） */
 .fxnews .nr { zoom: var(--nr-zoom, 1); }
 /* 18：コラム（マガジン／新聞／ダーク） */
