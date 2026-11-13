@@ -619,6 +619,14 @@
 .page-reading #reader-page-indicator { display:none; }
 .page-reading:not(.editing) #reader-content-text,.reader-page-measure { overflow:hidden; overflow-wrap:anywhere; box-sizing:border-box; padding:8px; }
 .page-reading #reader-content-text p,.reader-page-measure p { margin-block-start:0; }
+p.fx-drama { margin-bottom:0 !important; padding-bottom:.75rem; border-inline-start:3px solid #7F77DD; padding-inline-start:.7em; opacity:.82; }
+p.fx-drama + .h-4:has(+ p.fx-drama) { border-inline-start:3px solid #7F77DD; }
+p.fx-drama.fx-music { opacity:1; color:#7F77DD; letter-spacing:.35em; }
+p.fx-drama.fx-music .fx-note { font-style:normal; display:inline-block; animation:fxNoteBob 1.6s ease-in-out infinite; }
+p.fx-drama.fx-music .fx-note:nth-of-type(2) { animation-delay:.2s; } p.fx-drama.fx-music .fx-note:nth-of-type(3) { animation-delay:.4s; } p.fx-drama.fx-music .fx-note:nth-of-type(4) { animation-delay:.6s; }
+@keyframes fxNoteBob { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-.25em); } }
+@media (prefers-reduced-motion: reduce) { p.fx-drama.fx-music .fx-note { animation:none; } }
+p.fx-drama.fx-sfx { opacity:1; font-weight:700; font-size:1.15em; letter-spacing:.06em; }
 /* 話の境目の扉 */
 .chapter-edge { height:100%; width:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1.2em; text-align:center; font-family:'Hiragino Mincho ProN','Yu Mincho','Noto Serif JP',serif; }
 .chapter-edge .ce-title { font-size:1.6em; font-weight:700; letter-spacing:.08em; line-height:1.6; }#reader-content-text ruby,.reader-page-measure ruby { break-inside:avoid; }
@@ -2065,6 +2073,9 @@
                     <div class="pt-3 border-t border-woodBorder">
                         <span class="font-bold text-softMuted block mb-1">更新履歴</span>
                         <div id="changelog" class="text-[11px] text-softMuted leading-relaxed">
+<div class="mb-1.5"><b class="text-softText">Version 23.1（2026-11-13）</b><br>ドラマの中の音楽と効果音も、地の文と分けて見せるようにしました。[♩ ♪ ♫ ♬] の行は、紫の線の中で音符がゆっくり揺れます（本文はそのままで変わります）。[―퍽!] のように [ ] でかこんだ効果音は、線の中で少し大きな太字になります。「選んだ文から作る」に「ドラマの効果音」を足しました。選んだところの「―퍽!」のような短い行に [ ] を付けます。</div>
+<div class="mb-1.5"><b class="text-softText">Version 23（2026-11-13）</b><br>本文を選んでから特殊演出を開くと、いちばん上に「選んだ文から作る」が出るようにしました。X（ダーク・ライト）・インスタ・フェイスブック・動画コメント・カカオトーク・LINE・コラム・ドラマのセリフから選ぶと、選んだ文を読みとってメーカーで開きます。ちがうところは手で直して、本文に入れます。「―」が投稿、「└」が返信です。地の文をはさんで何か所もあるときは、まとめて変えます。「―퍽!」のような短い1行は効果音として残します。ㅋㅋ→ｗｗ、ㅠㅠ→TT、ㅇㅇ→うん、ㄷㄷ→やば、ㅅㄱ→おつ などの韓国語の字と、「耽羅」→「TL」も直します。</div>
+<div class="mb-1.5"><b class="text-softText">Version 22.1（2026-11-13）</b><br>ドラマの中のセリフを、地の文と分けて見せるようにしました。本文の [「…」] や [“…”] だけの行は、読む画面で左に紫の線が付き、少し薄い字になります（かっこの [ ] は出しません）。続くセリフは、線がつながります。[全国民が…] のように「」がない行は、今までどおりです。</div>
 <div class="mb-1.5"><b class="text-softText">Version 22（2026-11-12）</b><br>特殊演出に「タイムライン」を足しました。X（ダーク・ライト）・インスタ・Facebook風です。メーカーの「タイムラインを作る」で、見た目のまま触って作れます。返信のスレッド・返信への返信・画像の枠・アイコンの色も、その場で変えられます。読む画面では、投稿と返信が順に流れてきます。</div>
 <div class="mb-1.5"><b class="text-softText">Version 21.3（2026-11-12）</b><br>読んだ記録の「よく読んだ作品・ジャンル・作家」の数を、ちがう話の数にしました（例：29話）。別の日にもう一度読んだ分も入れた数は、下に小さく「のべ 47 回」と出ます。並び順も、ちがう話の数で決めます。パワポ・エクセルの書き出しも同じ数え方です。</div>
 <div class="mb-1.5"><b class="text-softText">Version 21.2（2026-11-12）</b><br>Wikiの本文のひな形のボタンを、自分で作れるようにしました。ボタンの並びの「＋ ボタンを作る」で、名前（例：仲間）と入れる中身を書くと、その作品だけで使えるボタンになります。中身が空なら「## ▸ ボタンの名前」の見出しが入ります。作ったボタンは長押し（PCは右クリック）で、直したり消したりできます。ひな形のボタンとエディタの道具は、いっしょに上にとまるようにしました。</div>
@@ -6961,6 +6972,11 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             if (b) { ev.preventDefault(); ev.stopPropagation(); if (b.dataset.wkc === 'open') { const id = b.dataset.id; wikiCardClose(); wikiOpen('list'); wikiAct('page', { dataset: { id } }); } else if (b.dataset.wkc === 'entry') { wikiCardOpen(b.dataset.id); } else wikiCardClose(); return; }
             const c = document.getElementById('wk-card'); if (c && !c.hidden && !ev.target.closest('#wk-card')) wikiCardClose();
         }, true);
+        // ドラマの中のセリフ（原文の [“…”]）。かっこの中に「」や “” があるときだけ。［全国民が…］のような題名は、ちがう
+        const DRAMA_LINE_RE = /^\s*[\[［]\s*[「『“"][\s\S]*[」』”"]\s*[\]］]\s*$/;
+        // ドラマの中の音楽 [♩ ♪ ♫ ♬] と、効果音 [―퍽!]
+        const MUSIC_LINE_RE = /^\s*[\[［](?=[^\]］\n]*[♩♪♫♬🎵🎶])[\s♩♪♫♬🎵🎶～〜]+[\]］]\s*$/u;
+        const SFX_LINE_RE = /^\s*[\[［]\s*[―—─]+\s*[^\]］\n]{1,20}[\]］]\s*$/;
         function buildInteractiveSentencesHtml(rawText, frames) {
             if (!rawText.trim()) return '<span class="text-softMuted">本文がありません</span>';
             const paragraphs = rawText.split('\n');
@@ -7047,6 +7063,13 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                 if (te) {   // 1行ぜんぶ
                     if (/[SL]/.test(te[0])) return pre + '<p class="mb-3">' + oriStair(paraHtml, te[0] === 'L') + '</p>' + post;
                     return pre + `<p${oriAttrs(te[0], te[1], true).replace('class="tx', 'class="mb-3 tx')}${efAttr}>${paraHtml}</p>` + post;
+                }
+                if (!fb && (DRAMA_LINE_RE.test(para) || MUSIC_LINE_RE.test(para) || SFX_LINE_RE.test(para))) {
+                    const mus = MUSIC_LINE_RE.test(para), sfx = !mus && SFX_LINE_RE.test(para);
+                    paraHtml = paraHtml.replace(/^(<span[^>]*>)\s*[\[［]/, '$1').replace(/[\]］]\s*(<\/span>)$/, '$1');
+                    if (mus) paraHtml = paraHtml.replace(/[♩♪♫♬🎵🎶]/gu, '<i class="fx-note">$&</i>');
+                    if (sfx) paraHtml = paraHtml.replace(/^(<span[^>]*>)\s*[―—─]+\s*/, '$1');
+                    return `<p class="mb-3 fx-drama${mus ? ' fx-music' : sfx ? ' fx-sfx' : ''}"${efAttr}>${paraHtml}</p>`;
                 }
                 return pre + `<p class="mb-3"${efAttr}>${paraHtml}</p>` + post;
             }).join('');
@@ -8024,6 +8047,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             const m = document.createElement('div'); m.id = 'modal-frame-menu';
             const has = sel.end > sel.start;
             m.innerHTML = '<div><h4>' + (only ? '特殊な文字' : '特殊演出') + '</h4><small>' + (only ? (has ? '選んだ文字に、かけます。' : '文字を選んでいないので、いまの行の、次の1行にかけます。') : (has ? '選んだ文を、枠で囲みます。' : '文字を選んでいないので、空の枠を入れます。（あとで、中に打ち込めます）')) + '</small>'
+                + (only || !has ? '' : '<details class="fg" data-g="選んだ文から作る" open><summary>選んだ文から作る<span class="fgn">選んだところを読みとって、メーカーで開きます。ちがうところは手で直して入れます</span></summary>' + [['tl-xd', 'X（ダーク）', '―が投稿、└が返信。地の文ははさんだまま'], ['tl-xl', 'X（ライト）', ''], ['tl-ig', 'インスタ', ''], ['tl-fb', 'フェイスブック', ''], ['video', '動画コメント', '―がコメント、└が返信'], ['kakao', 'カカオトーク', '―が相手、「」が自分'], ['line', 'LINE', '―が相手、「」が自分'], ['column', 'コラム', '1行目が題、最後の「寄稿：〇〇記者」が署名'], ['drama', 'ドラマのセリフ', '「」や “” だけの行に [ ] を付けて、線で分けます'], ['sfx', 'ドラマの効果音', '「―퍽!」のような短い「―」の行に [ ] を付けます']].map(([k, n, d]) => '<button type="button" class="fm" data-conv="' + k + '">' + n + (d ? '<span>' + d + '</span>' : '') + '</button>').join('') + '</details>')
                 + (only ? '' : fxTplGroupHtml(has, fxBlockAt(draftSource(), sel.start)))
                 + (only ? '' : '<details class="fg" data-g="メーカー" open><summary>メーカー<span class="fgn">手紙・調査票・メール・LINE／カカオ・ニュース・トレンド・動画コメント・タイムラインを画面で作る</span></summary><button type="button" class="fm" data-maker="letter">手紙を作る<span>便箋の見た目のまま編集し、書いているように再生</span></button><button type="button" class="fm" data-maker="report">調査票を作る<span>項目・本文・印を編集</span></button><button type="button" class="fm" data-maker="email">メールを作る<span>PC・スマホ表示や件名・宛先・本文を編集</span></button><button type="button" class="fm" data-maker="line">LINE／カカオ風メーカー<span>写真・プロフィール・返信・複数のトークを編集</span></button><button type="button" class="fm" data-maker="news-trend">トレンド（SNS）を作る<span>トレンドの順位と、SNSの投稿が並ぶ画面</span></button><button type="button" class="fm" data-maker="news-article">ニュース記事を作る<span>芸能ニュースの見出し・写真・本文・コメント</span></button><button type="button" class="fm" data-maker="news-video">動画コメントを作る<span>動画のコメント欄。返信のツリー・時刻の青字。本文を貼り付けて作れる</span></button><button type="button" class="fm" data-maker="news-column">コラムを作る<span>オピニオン・寄稿のコラム。マガジン・新聞・ダークの3つの見た目</span></button><button type="button" class="fm" data-maker="timeline">タイムラインを作る<span>X（ダーク・ライト）・インスタ・Facebook風。返信のスレッド・画像の枠。画面を触って作る</span></button></details>')
                 + (() => { const op = frameGroupsOpen(); return FRAME_GROUPS.filter(gr => only ? only.includes(gr.g) : gr.g !== '文字の向き').map(gr => '<details class="fg" data-g="' + escapeHtml(gr.g) + '"' + ((op[gr.g] || only) ? ' open' : '') + '><summary>' + escapeHtml(gr.g) + '<span class="fgn">' + escapeHtml(gr.note) + '</span></summary>' + gr.ids.map(id => FRAME_KINDS.find(k => k.id === id)).filter(Boolean).map(k => '<button type="button" class="fm" data-k="' + k.id + '">' + escapeHtml(k.name) + '<span>' + escapeHtml(k.note) + '</span></button>').join('') + '</details>').join(''); })()
@@ -8051,6 +8075,8 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                     else { if (!confirm('テンプレート「' + t.name + '」を消しますか？（本文に入れたものは消えません）')) return; book.fx = Object.assign({}, book.fx || {}, { styles: list.filter(x => x !== t) }); save(); }
                     m.remove(); openFramePicker(); return;
                 }
+                const conv = e.target.closest('button[data-conv]');
+                if (conv) { m.remove(); fxConvertSelection(conv.dataset.conv, sel); return; }
                 const maker = e.target.closest('button[data-maker]');
                 if (maker) {
                     m.remove(); fxPickCtx = {start:sel.start,end:sel.end,block:fxBlockAt(draftSource(),sel.start)};
@@ -8234,6 +8260,112 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             'news-column': '［報道 形=コラム 見た目=マガジン 分類=オピニオン／芸能コラム 題=【コラム】ここに題が入ります 署名=コラム／寄稿：OOO記者］\nここに段落が入ります。1行が1段落です。\n**ここ** のように書くと、蛍光ペンになります。\n［／報道］',
             'news-article': '［報道 形=ニュース 媒体=STAR　NEWS 分類=ENTERTAINMENT 印=速報 見出し=ここに見出しが入ります 日時=2026.11.09　18:00 記者=芸能担当記者 閲覧=12,480］\n写真：md_stage｜写真の説明\nここに本文が入ります。\n関連：関連記事の見出し\nコメント：名無し｜コメントが入ります｜共感=120｜反対=8\n［／報道］'
         };
+        // ===== 選んだ文から演出を作る =====
+        // 韓国語のネットの字を日本語に（はじめの候補を入れる。違うときはメーカーで手で直す）
+        const KO_NET_TABLE = [
+            [/[ㅋ]+/g, m => 'ｗ'.repeat(m.length)], [/[ㅎ]+/g, m => 'ｗ'.repeat(m.length)],
+            [/[ㅠㅜ]+/g, m => 'T'.repeat(Math.max(2, m.length))],
+            [/ㅇㅇ/g, 'うん'], [/ㄷㄷ+/g, 'やば'], [/ㅇㅋ/g, 'おけ'], [/ㄴㄴ/g, 'いやいや'], [/ㅊㅋ/g, 'おめ'], [/ㅅㄱ/g, 'おつ'],
+            [/[ㄱ-ㅎㅏ-ㅣ]/g, '']
+        ];
+        function fxKoNet(t, sns) {
+            t = String(t || '');
+            for (const [re, to] of KO_NET_TABLE) t = t.replace(re, to);
+            t = t.replace(/耽羅/g, 'TL');
+            if (sns) t = t.replace(/ク{2,}/g, m => 'ｗ'.repeat(m.length));
+            return t;
+        }
+        const FXC_POST = /^\s*(?:[―—─ー]+|-{1,2}(?=\S))\s*/, FXC_REPLY = /^\s*└+\s*/;
+        // ―（投稿）と └（返信）が続くところを、まとまりに分ける。あいだの空いた行は、ひと続き
+        function fxConvRuns(text) {
+            const lines = String(text).split('\n'), out = []; let run = null, gap = [];
+            for (const ln of lines) {
+                const kind = FXC_REPLY.test(ln) ? 'r' : FXC_POST.test(ln) ? 'p' : '';
+                if (kind) { if (!run) { run = { rows: [] }; out.push(run); gap = []; } else gap = []; run.rows.push({ k: kind, t: ln.replace(kind === 'r' ? FXC_REPLY : FXC_POST, '').trim() }); run.src = (run.src === undefined ? '' : run.src + '\n') + ln; continue; }
+                if (!ln.trim() && run) { gap.push(ln); continue; }
+                if (run) { out.push(...gap.map(g => ({ text: g }))); run = null; gap = []; }
+                out.push({ text: ln });
+            }
+            if (run && gap.length) out.push(...gap.map(g => ({ text: g })));
+            return out;
+        }
+        const fxcAttr = v => String(v || '').replace(/[\s]+/g, '　').replace(/[［］]/g, '').trim();
+        const fxcBody = v => String(v || '').replace(/｜/g, '|').replace(/／/g, '/');
+        function fxConvSns(run, kind) {
+            let np = 0, nr = 0;
+            const who = k => { const n = k === 'p' ? ++np : ++nr; return k === 'p' ? ['名無し' + n, '@user' + String(n).padStart(2, '0')] : ['通りすがり' + n, '@reply' + String(n).padStart(2, '0')]; };
+            if (kind === 'video') {
+                const rows = run.rows.map(r => { const [, id] = who(r.k); return (r.k === 'r' ? '└' : '') + id + '｜' + fxcBody(fxKoNet(r.t, true)); });
+                return '［報道 形=動画 題=コメント 件数=' + run.rows.length + '］\n' + rows.join('\n') + '\n［／報道］';
+            }
+            const look = { 'tl-xd': 'Xダーク', 'tl-xl': 'Xライト', 'tl-ig': 'インスタ', 'tl-fb': 'フェイスブック' }[kind] || 'Xダーク';
+            let hasPost = false;
+            const rows = run.rows.map(r => { const [nm, id] = who(r.k); const k = r.k === 'r' && hasPost ? '返信' : '投稿'; if (k === '投稿') hasPost = true; return k + '：' + nm + '｜' + id + '｜' + fxcBody(fxKoNet(r.t, true)); });
+            return '［報道 形=タイムライン 見た目=' + look + '］\n' + rows.join('\n') + '\n［／報道］';
+        }
+        function fxConvColumn(text) {
+            const ls = String(text).split('\n').map(x => x.trim()).filter(Boolean); if (!ls.length) return '';
+            const title = ls.shift().replace(/^[\[［【]\s*(?:칼럼|コラム)\s*[\]］】]\s*/, '');
+            let sign = '';
+            if (ls.length && /(?:칼럼|コラム|기고|寄稿|기자|記者)/.test(ls[ls.length - 1]) && ls[ls.length - 1].length <= 40) sign = ls.pop();
+            const body = ls.filter(l => !/^[*＊]\s*[*＊]\s*[*＊]$/.test(l));
+            return '［報道 形=コラム 見た目=マガジン 分類=オピニオン 題=【コラム】' + fxcAttr(title) + (sign ? ' 署名=' + fxcAttr(sign) : '') + '］\n' + body.join('\n') + '\n［／報道］';
+        }
+        function fxConvTalk(text, app, name) {
+            const rows = [];
+            for (const ln of String(text).split('\n')) {
+                const t = ln.trim(); if (!t) continue;
+                const q = t.match(/^[「“"『](.*)[」”"』]$/);
+                if (q) rows.push('自分：' + fxKoNet(q[1]));
+                else rows.push('相手：' + fxKoNet(t.replace(FXC_REPLY, '').replace(FXC_POST, '')));
+            }
+            return '［トーク 見た目=' + app + ' 相手=' + fxcAttr(name || '相手') + ' 履歴］\n' + rows.join('\n') + '\n［／トーク］';
+        }
+        function fxConvDrama(text) {
+            return String(text).split('\n').map(ln => {
+                const t = ln.trim();
+                if (!t || /^[\[［]/.test(t) || !/^[「“"『].*[」”"』]$/.test(t)) return ln;
+                return '[' + t + ']';
+            }).join('\n');
+        }
+        function fxConvSfx(text) {
+            return String(text).split('\n').map(ln => { const t = ln.trim(); return /^[―—─]+\s*\S/.test(t) && t.length <= 21 ? '[' + t + ']' : ln; }).join('\n');
+        }
+        // 選んだところを、行の頭から行の終わりまでに広げる
+        function fxConvRange(src, sel) {
+            let a = sel.start, b = sel.end;
+            a = src.lastIndexOf('\n', a - 1) + 1;
+            if (b > a && src[b - 1] === '\n') b--;
+            const e = src.indexOf('\n', b); b = e < 0 ? src.length : e;
+            return { start: a, end: b, text: src.slice(a, b) };
+        }
+        function fxConvertSelection(kind, sel) {
+            const src = draftSource(), r = fxConvRange(src, sel);
+            if (!r.text.trim()) { toast('先に、変えたいところを選んでください'); return; }
+            if (kind === 'drama') {
+                const out = fxConvDrama(r.text); if (out === r.text) { toast('「」や “” だけの行が、見つかりませんでした'); return; }
+                fxPickCtx = null; fxInsertIntoEditor(out, { start: r.start, end: r.end }); toast('ドラマのセリフにしました'); return;
+            }
+            if (kind === 'sfx') {
+                const out = fxConvSfx(r.text); if (out === r.text) { toast('「―」で始まる短い行が、見つかりませんでした'); return; }
+                fxPickCtx = null; fxInsertIntoEditor(out, { start: r.start, end: r.end }); toast('ドラマの効果音にしました'); return;
+            }
+            if (kind === 'column') { fxOpenMaker({ src: fxConvColumn(r.text), title: 'コラム', replace: { start: r.start, end: r.end } }); return; }
+            if (kind === 'kakao' || kind === 'line') {
+                const name = prompt('相手の名前（トークの上に出ます）', '相手'); if (name === null) return;
+                const out = fxConvTalk(r.text, kind === 'kakao' ? 'カカオ' : 'LINE', name.trim());
+                fxPickCtx = { start: r.start, end: r.end }; openLineEditor({ src: out, replace: { start: r.start, end: r.end } }); return;
+            }
+            // 「―퍽!」「―뚝.」のような、短い1行だけの「―」は効果音。投稿にしないで、そのまま残す
+            const sfx = p => p.rows && p.rows.length === 1 && p.rows[0].k === 'p' && p.rows[0].t.length <= 15;
+            const parts = fxConvRuns(r.text).map(p => sfx(p) ? { text: p.src } : p), runs = parts.filter(p => p.rows);
+            if (!runs.length) { toast('「―」や「└」で始まる行が、見つかりませんでした'); return; }
+            const onlyRun = runs.length === 1 && parts.every(p => p.rows || !p.text.trim());
+            if (onlyRun) { fxOpenMaker({ src: fxConvSns(runs[0], kind), tl: kind !== 'video', title: kind === 'video' ? '動画コメント' : 'タイムライン', replace: { start: r.start, end: r.end } }); return; }
+            const out = parts.map(p => p.rows ? fxConvSns(p, kind) : p.text).join('\n');
+            fxPickCtx = null; fxInsertIntoEditor(out, { start: r.start, end: r.end });
+            toast(runs.length + 'か所を変えました。直すときは、その場所で🎬の「この演出を、画面で直す」を押してください');
+        }
         // 演出をつくる画面（iframe）
         function fxOpenMaker(opts) {
             if(window.LineMaker?.isSource(opts.src||'')){openLineEditor(opts);return;}
@@ -10580,8 +10712,8 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         // 話の終わり・戻る・本の終わりで、読み終えた話から言葉を拾い、件数を小さく知らせる。読書は止めない
         // ===== 更新の確認：新しい版があれば、魚に青い点とメニュー（版の番号は version.json。公開のたびに、番号が変わる。番号が入っていない開発中は、確かめない） =====
         // 表示用の版。更新の検出は引き続き APP_BUILD の日時番号を使う。
-        const APP_VERSION = '22';
-        const APP_BUILD = '20261112193502';
+        const APP_VERSION = '23.1';
+        const APP_BUILD = '20261113105641';
         let updateCheckAt = 0;
         function paintBuild() {
             const el = document.getElementById('app-build-info'); if (!el) return;
