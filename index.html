@@ -371,6 +371,10 @@
         .wiki-sheet .wk-h4 { font-size: 14px; font-weight: 700; margin: 8px 0 2px; color: #4a3a22; }
         .wiki-sheet details.wk-tg.lv4 > summary { font-size: 13.5px; }
         .wiki-sheet .wk-tg-b { margin: 0 0 8px 1.35em; }
+/* 24.13：たためる見出しの「▸」は左の余白に出して、番号と中身の位置を、ふつうの見出しとそろえる（▸ 項目は今までどおり） */
+.wk-tg:not(.item) > summary { position: relative; padding-left: 0; margin-left: -4px; }
+.wk-tg:not(.item) > summary::before { position: absolute; left: -1.05em; top: .55em; width: 1em; font-size: 11px; }
+.wk-tg:not(.item) > .wk-tg-b { margin-left: 0; }
         .wiki-sheet .wk-tg-b .wk-panel { margin-top: 2px; }
         .wiki-sheet .wk-tgbar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin: 14px 0 2px; padding-top: 10px; border-top: 1px solid #e2d6bd; font-size: 12px; color: #8a7a68; }
         .wiki-sheet .wk-tgbar button { border: 1px solid #b8923f; background: #fff; color: #7a5c1e; border-radius: 8px; padding: 3px 10px; font-size: 12px; font-weight: 700; cursor: pointer; }
@@ -2089,6 +2093,7 @@ p.fx-drama.fx-sfx { opacity:1; font-weight:700; font-size:1.15em; letter-spacing
                     <div class="pt-3 border-t border-woodBorder">
                         <span class="font-bold text-softMuted block mb-1">更新履歴</span>
                         <div id="changelog" class="text-[11px] text-softMuted leading-relaxed">
+<div class="mb-1.5"><b class="text-softText">Version 24.13（2026-11-13）</b><br>Wiki の関係を、下の「関連」の枠ではなく、本文の「関係」の見出しの中に出すようにしました（相手から付けられた関係もいっしょ）。たためる見出しの番号の位置を、ふつうの見出しとそろえました。報告書（書き起こし）で、文ごとに改行された発言が1つの発言になるようにしました。</div>
 <div class="mb-1.5"><b class="text-softText">Version 24.12（2026-11-13）</b><br>特殊演出に「報告書（書き起こし）」を足しました。紙の報告書に録音の書き起こしの枠が入り、字が印字されるように出て、最後に判が押されます（選んだ文から作る）。1日分の枠は、ページの途中で切れません。</div>
 <div class="mb-1.5"><b class="text-softText">Version 24.11（2026-11-13）</b><br>Wiki の一覧に「古い形の項目を、まとめて新しい形にする」ボタンを足しました。項目のページの関連の欄に、まだ項目がない [[名前]] が出るようにしました（押すと作れます）。</div>
 <div class="mb-1.5"><b class="text-softText">Version 24.10（2026-11-13）</b><br>Wiki の「＋ ボタンを作る」で、中身の欄にはじめから見本（見出しと [[ ]] の行）が入るようにしました。欄の上の「[[ ]] リンク」「## ▸ 見出し」「- 行」で、カーソルのところに足せます。</div>
@@ -6264,7 +6269,14 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         }
         // ---- 説明文の書式：見出し（# ）・箇条書き（- ）・太字（**）・引用（> ）・区切り線（---）・話へのリンク（{{3話}}）。人物・用語の名前は、自動でリンク ----
         function wikiRich(bookId, text, selfId, opt) {
-            const src = String(text || '').split(String.fromCharCode(13, 10)).join(String.fromCharCode(10)), lines = src.split(String.fromCharCode(10));
+            let src = String(text || '').split(String.fromCharCode(13, 10)).join(String.fromCharCode(10));
+            if (opt && opt.relSlot) {
+                const L = src.split('\n'); let hi = -1, lv = 0;
+                for (let i = 0; i < L.length; i++) { const hm = L[i].match(/^\s{0,3}(#{1,4})\s+(.*)$/); if (hm && /関係/.test(hm[2].replace(/^[▸▶►]\s*/, '').replace(/\{\{[^}]*\}\}/g, ''))) { hi = i; lv = hm[1].length; break; } }
+                if (hi >= 0) { let end = hi + 1; while (end < L.length && !((L[end].match(/^\s{0,3}(#{1,4})\s/) || [, '#####'])[1].length <= lv)) end++; L.splice(hi + 1, end - hi - 1, 'WKRELSLOT', ''); src = L.join('\n'); }
+                else src = src.replace(/\s+$/, '') + (src.trim() ? '\n\n' : '') + '## ▸ 関係\nWKRELSLOT\n';
+            }
+            const lines = src.split(String.fromCharCode(10));
             const book = state.books.find(b => b.id === bookId), flat = book ? getFlatChapters(book) : [];
             let lockL = 0;
             const fns = [], fnBase = 'wkfn' + Math.random().toString(36).slice(2, 7);
@@ -6319,7 +6331,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                 const ln = raw.replace(/\s+$/, '');
                 if (isHeadL(ln)) { flush(i); seg++; blkEp = 0; lstack.length = 0; }
                 // 項目のページでは、本文の「関係」は、下の「関連」の欄にまとめて出す（同じ見た目にする）
-                if (tgOn && selfId) { const hm = ln.match(/^\s{0,3}(#{1,4})\s+(.*)$/); if (hm) { const lv = hm[1].length; if (relLv && lv <= relLv) relLv = 0; if (!relLv && /関係/.test(hm[2].replace(/^[▸▶►]\s*/, ''))) { relLv = lv; skipL.add(i); return; } } if (relLv) { skipL.add(i); return; } }
+                if (tgOn && selfId && !(opt && 'relSlot' in opt)) { const hm = ln.match(/^\s{0,3}(#{1,4})\s+(.*)$/); if (hm) { const lv = hm[1].length; if (relLv && lv <= relLv) relLv = 0; if (!relLv && /関係/.test(hm[2].replace(/^[▸▶►]\s*/, ''))) { relLv = lv; skipL.add(i); return; } } if (relLv) { skipL.add(i); return; } }
                 if (isHeadL(ln)) return;
                 if (!ln.trim()) { blkEp = 0; return; }
                 const only = ln.trim().match(/^\{\{\s*第?\s*(\d{1,4})\s*話\s*から\s*\}\}$/); if (only) { blkEp = Number(only[1]); skipL.add(i); return; }
@@ -8474,7 +8486,9 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                 const days = []; let k = 0, f = 0;
                 for (const l of ls) {
                     if (isDate(l)) { f++; k = 0; days.push(['記録：添付資料：音声記録ファイル ' + String(f).padStart(2, '0') + '｜' + fxcBody(l)]); continue; }
-                    const t = l.replace(FXC_REPLY, '').replace(FXC_POST, '').trim(); if (!t) continue;
+                    // 「―」のない行は、すぐ上の発言の続き（文ごとに改行されていても、1つの発言にする）
+                    const isTalk = FXC_POST.test(l) || FXC_REPLY.test(l), t = l.replace(FXC_REPLY, '').replace(FXC_POST, '').trim(); if (!t) continue;
+                    if (!isTalk && days.length) { const cur = days[days.length - 1], li = cur.length - 1; if (li > 0 && cur[li].startsWith('話：')) { cur[li] += fxcBody(fxKoNet(t)); continue; } }
                     if (!days.length) days.push(['記録：添付資料：音声記録ファイル 01｜—']);
                     const sp = names.length ? names[k++ % names.length] : '';
                     days[days.length - 1].push('話：' + (sp ? fxcBody(sp) + '｜' : '') + fxcBody(fxKoNet(t)));
@@ -9998,7 +10012,8 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                 h += '\uE070WKINFO\uE071';
                 // バックリンク（ほかの項目の説明・欄・追記に、この項目が出てくる数）
                 { let n = 0; for (const o of entries) { if (o.id === e.id) continue; const txt = [o.basic].concat((o.notes || []).map(x => x.text), (o.sections || []).flatMap(sc => (sc.rows || []).map(r => r.v))).join('\n'); if (wikiMentions(e, txt)) n++; } if (n) h += '<button type="button" class="wk-blk" data-w="go-backlinks">↙ ' + n + '個のバックリンク</button>'; }
-                if (e.basic) h += '<div class="wk-note" style="margin-top:10px;white-space:normal">' + wikiRich(bookId, e.basic, e.id, { toggles: true }) + '</div>';
+                const hasRelSlot = wikiRelView(bookId, e.id, cur).length > 0 || wikiUnlinkedRelNames(bookId, e).length > 0;
+                if (e.basic || hasRelSlot) h += '<div class="wk-note" style="margin-top:10px;white-space:normal">' + wikiRich(bookId, e.basic || '', e.id, { toggles: true, relSlot: hasRelSlot }) + '</div>';
                 let lockedRows = 0, wkp = { secs: [] };
                 {
                     const secs = [];
@@ -10045,6 +10060,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                     }
                     if (unl.length) h += '<div style="margin-top:8px"><div class="wk-muted" style="font-weight:700">まだ項目がない名前</div>' + unl.map(n => '<div style="margin:2px 0 0 6px"><button type="button" class="wk-chip" data-w="newname" data-name="' + wEsc(n) + '" style="border:1px dashed #c9b88f;background:transparent;cursor:pointer;opacity:.75" title="押すと、この名前で項目を作ります">' + wEsc(n) + '</button><span class="wk-muted" style="font-size:12px">（まだ項目がありません。押すと作れます。名前が同じ項目があるなら、別名に入れるとつながります）</span></div>').join('') + '</div>';
                     h += '</div>'; wkp.rel = h; h = hRel0;
+                    if (h.includes('WKRELSLOT')) { const relH = wkp.rel.replace(/^<div class="wk-sec">/, '<div class="wk-sec wk-relin">'); h = h.replace(/<p[^>]*>\s*WKRELSLOT\s*<\/p>|WKRELSLOT(?:<br>)?/, () => relH); wkp.rel = ''; }
                 }
                 // 経歴・変遷：この項目の出来事と、時期のある関連（出演ドラマなど）を、時期の順に
                 {
@@ -10924,8 +10940,8 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         // 話の終わり・戻る・本の終わりで、読み終えた話から言葉を拾い、件数を小さく知らせる。読書は止めない
         // ===== 更新の確認：新しい版があれば、魚に青い点とメニュー（版の番号は version.json。公開のたびに、番号が変わる。番号が入っていない開発中は、確かめない） =====
         // 表示用の版。更新の検出は引き続き APP_BUILD の日時番号を使う。
-        const APP_VERSION = '24.12';
-        const APP_BUILD = '20261113215553';
+        const APP_VERSION = '24.13';
+        const APP_BUILD = '20261113221423';
         let updateCheckAt = 0;
         function paintBuild() {
             const el = document.getElementById('app-build-info'); if (!el) return;
