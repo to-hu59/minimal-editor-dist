@@ -2089,6 +2089,8 @@ p.fx-drama.fx-sfx { opacity:1; font-weight:700; font-size:1.15em; letter-spacing
                     <div class="pt-3 border-t border-woodBorder">
                         <span class="font-bold text-softMuted block mb-1">更新履歴</span>
                         <div id="changelog" class="text-[11px] text-softMuted leading-relaxed">
+<div class="mb-1.5"><b class="text-softText">Version 24.11（2026-11-13）</b><br>Wiki の一覧に「古い形の項目を、まとめて新しい形にする」ボタンを足しました。項目のページの関連の欄に、まだ項目がない [[名前]] が出るようにしました（押すと作れます）。</div>
+<div class="mb-1.5"><b class="text-softText">Version 24.10（2026-11-13）</b><br>Wiki の「＋ ボタンを作る」で、中身の欄にはじめから見本（見出しと [[ ]] の行）が入るようにしました。欄の上の「[[ ]] リンク」「## ▸ 見出し」「- 行」で、カーソルのところに足せます。</div>
 <div class="mb-1.5"><b class="text-softText">Version 24.9（2026-11-13）</b><br>エディタでも、ドラマの場面（うすい紫の背景）、セリフ・効果音・音楽の行（左の紫の線）、タイトルの行（紫の枠）がわかるようにしました。</div>
 <div class="mb-1.5"><b class="text-softText">Version 24.8（2026-11-13）</b><br>PC で、コメントが5件までの動画コメント・トレンド・ニュース記事は、2段に分けず、幅もスマホくらいにしました。</div>
 <div class="mb-1.5"><b class="text-softText">Version 24.7（2026-11-13）</b><br>特殊演出に「YouTube」を足しました。本編の動画（長さ・NEW の印つき）と、ショートの棚が出ます（選んだ文から作る）。棚はエディタのボタンで、つけるかどうかを選べます。</div>
@@ -9865,6 +9867,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                 if (gs.length && !String(wikiState.groupBy || '').startsWith('rel:')) h += '<div class="wk-chips">' + ['all'].concat(gs, ['未分類']).map(g => '<button type="button" class="wk-fc' + ((wikiState.filter || 'all') === g ? ' on' : '') + '" data-w="gfilter" data-g="' + wEsc(g) + '">' + (g === 'all' ? 'すべて' : wEsc(g)) + '</button>').join('') + '</div>';
                 h += '<div id="wk-list">' + wikiListHtml(bookId) + '</div></details>';
                 h += '<button class="wk-btn" data-w="new">＋ 項目を手で追加</button>';
+                { const nl = entries.filter(wikiIsLegacy).length; if (nl) h += '<button class="wk-btn" data-w="legacyall" title="前の形（欄・関連を別に入れる形）の項目を、本文の形にそろえます。前の中身は控えとして残ります">古い形の項目（' + nl + '件）を、まとめて新しい形にする</button>'; }
                 if (entries.some(x => (x.rels || []).length)) h += '<button class="wk-btn" data-w="graph"><span>相関図（関連の図）</span><span>›</span></button>';
                 if (entries.some(x => x.year || (x.events || []).some(ev => ev.year))) h += '<button class="wk-btn" data-w="timeline"><span>年表（時期の順に見る）</span><span>›</span></button>';
                 h += '<button class="wk-btn" data-w="groups"><span>カテゴリを整える（重要人物・勢力・第1部…）</span><span>›</span></button>';
@@ -10007,8 +10010,8 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                     wkp = { secs };
                     h += '\uE070WKP\uE071';
                 }
-                const relV = wikiRelView(bookId, e.id, cur);
-                if (relV.length) {
+                const relV = wikiRelView(bookId, e.id, cur), unl = wikiUnlinkedRelNames(bookId, e);
+                if (relV.length || unl.length) {
                     const hRel0 = h; h = '<div class="wk-sec">';
                     for (const g of relV) {
                         // 期間のある関連が、2つ以上あるとき：時期の順に、矢印でつなぐ（移籍・転職など）
@@ -10021,6 +10024,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                         for (const i of rest) h += '<div style="margin:2px 0 0 6px">' + chip(i) + '</div>' + detail(i);
                         h += '</div>';
                     }
+                    if (unl.length) h += '<div style="margin-top:8px"><div class="wk-muted" style="font-weight:700">まだ項目がない名前</div>' + unl.map(n => '<div style="margin:2px 0 0 6px"><button type="button" class="wk-chip" data-w="newname" data-name="' + wEsc(n) + '" style="border:1px dashed #c9b88f;background:transparent;cursor:pointer;opacity:.75" title="押すと、この名前で項目を作ります">' + wEsc(n) + '</button><span class="wk-muted" style="font-size:12px">（まだ項目がありません。押すと作れます。名前が同じ項目があるなら、別名に入れるとつながります）</span></div>').join('') + '</div>';
                     h += '</div>'; wkp.rel = h; h = hRel0;
                 }
                 // 経歴・変遷：この項目の出来事と、時期のある関連（出演ドラマなど）を、時期の順に
@@ -10218,6 +10222,33 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             ['リンク', '', '', 1]
         ];
         // 今までの欄・関連（自分で入れたもの）・出来事を、本文の形にする。期間や詳細の付いた関連は、そのまま残す
+        // 古い形（欄・出来事・手で入れた関連）が残っている項目か
+        function wikiIsLegacy(e) {
+            const keepType = r => (r.attrs && r.attrs.length) || r.fy || r.ty || r.back || r.shared;
+            return (e.sections || []).some(sec => (sec.rows || []).some(r => String(r.k || '').trim() || String(r.v || '').trim())) || (e.events || []).some(v => String(v.text || '').trim()) || (e.rels || []).some(r => r.src !== 'text' && !keepType(r));
+        }
+        // 古い形の項目を、まとめて本文の形にする（前の中身は legacyBackup に残す）
+        function wikiConvertAllLegacy(bookId) {
+            const ents = wikiEntries(bookId); let n = 0;
+            const next = ents.map(e => {
+                if (!wikiIsLegacy(e)) return e;
+                const r = wikiLegacyToText(bookId, e); if (!r.text) return e;
+                n++;
+                return { ...e, legacyBackup: e.legacyBackup || { sections: e.sections || [], rels: e.rels || [], events: e.events || [], at: Date.now() }, basic: (String(e.basic || '').trim() ? String(e.basic).replace(/\s+$/, '') + '\n\n' : '') + r.text + '\n', sections: [], events: [], rels: r.keep, upd: Date.now() };
+            });
+            if (n && wikiSetEntries(bookId, next)) { try { wikiSyncTextRels(bookId); } catch (x) {} }
+            return n;
+        }
+        // 本文の「関係」「家族」の見出しの中の [[名前]] で、まだ項目がないもの
+        function wikiUnlinkedRelNames(bookId, e) {
+            const names = new Set(); wikiEntries(bookId).forEach(x => [x.name].concat(x.aliases || []).forEach(n => names.add(String(n || '').trim())));
+            const out = []; let inRel = false;
+            for (const raw of String(e.basic || '').split('\n')) {
+                const hm = raw.match(/^\s{0,3}#{1,4}\s+(.*)$/); if (hm) { inRel = /家族|関係/.test(hm[1]); continue; } if (!inRel) continue;
+                for (const m of raw.matchAll(/\[\[([^\]]+)\]\]/g)) { const n = m[1].trim(); if (n && !names.has(n) && !out.includes(n)) out.push(n); }
+            }
+            return out;
+        }
         function wikiLegacyToText(bookId, d) {
             const ents = wikiEntries(bookId), byId = new Map(ents.map(x => [x.id, x])), parts = [], ep = n => n ? ' {{' + n + '話から}}' : '';
             for (const sec of (d.sections || [])) {
@@ -10273,11 +10304,24 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             ov.innerHTML = '<div style="width:100%;max-width:480px;background:#f5ede0;border-radius:16px;padding:16px;color:#3b2f1e;font-size:14px">'
                 + '<div style="font-weight:700;margin-bottom:8px">' + (cur ? 'ボタンを直す' : 'ボタンを作る（この作品だけ）') + '</div>'
                 + '<label style="display:block;font-size:12px;opacity:.8">ボタンの名前</label><input id="wk-insmk-name" type="text" placeholder="例：仲間" style="width:100%;margin:4px 0 10px;padding:9px 10px;border-radius:10px;border:1px solid #c9b88f;background:#fff;font-size:15px">'
-                + '<label style="display:block;font-size:12px;opacity:.8">入れる中身（空なら「## ▸ ボタンの名前」の見出しが入ります）</label><textarea id="wk-insmk-body" rows="6" placeholder="## ▸ 仲間&#10;- [[名前]]（ひとこと）" style="width:100%;margin:4px 0 10px;padding:9px 10px;border-radius:10px;border:1px solid #c9b88f;background:#fff;font-size:15px;line-height:1.7"></textarea>'
+                + '<label style="display:block;font-size:12px;opacity:.8">入れる中身（空なら「## ▸ ボタンの名前」の見出しが入ります。上のボタンで [[ ]] などを足せます）</label><div id="wk-insmk-add" style="display:flex;gap:6px;flex-wrap:wrap;margin:4px 0 2px"><button type="button" data-add="link" style="padding:5px 10px;border-radius:8px;border:1px solid #c9b88f;background:#fff;font-size:13px">[[ ]] リンク</button><button type="button" data-add="head" style="padding:5px 10px;border-radius:8px;border:1px solid #c9b88f;background:#fff;font-size:13px">## ▸ 見出し</button><button type="button" data-add="row" style="padding:5px 10px;border-radius:8px;border:1px solid #c9b88f;background:#fff;font-size:13px">- 行</button></div><textarea id="wk-insmk-body" rows="6" placeholder="## ▸ 仲間&#10;- [[名前]]（ひとこと）" style="width:100%;margin:4px 0 10px;padding:9px 10px;border-radius:10px;border:1px solid #c9b88f;background:#fff;font-size:15px;line-height:1.7"></textarea>'
                 + '<div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap">' + (cur ? '<button type="button" data-mk="del" style="margin-right:auto;padding:9px 14px;border-radius:10px;border:1px solid #c0392b;background:#fff;color:#c0392b">消す</button>' : '') + '<button type="button" data-mk="cancel" style="padding:9px 14px;border-radius:10px;border:1px solid #c9b88f;background:#fff">やめる</button><button type="button" data-mk="ok" style="padding:9px 16px;border-radius:10px;border:0;background:#23594e;color:#fff;font-weight:700">' + (cur ? '直す' : '作る') + '</button></div></div>';
             document.body.appendChild(ov);
             const nm = ov.querySelector('#wk-insmk-name'), bd = ov.querySelector('#wk-insmk-body');
             if (cur) { nm.value = cur.name; bd.value = cur.body; }
+            // 新しく作るときは、はじめから見本を入れておく。名前を打つと、見出しの名前も同じになる（見出しを自分で直したら、もう変えない）
+            else { const tpl = n => '## ▸ ' + (n || 'ボタンの名前') + '\n- [[]]（ひとこと）'; bd.value = tpl(''); let last = tpl(''); nm.addEventListener('input', () => { if (bd.value === last) { last = tpl(nm.value.trim()); bd.value = last; } }); }
+            ov.querySelector('#wk-insmk-add').addEventListener('mousedown', e => e.preventDefault());
+            ov.querySelector('#wk-insmk-add').addEventListener('click', e => {
+                const k = (e.target.closest('[data-add]') || {}).dataset?.add; if (!k) return;
+                const v = bd.value, a = bd.selectionStart ?? v.length, b = bd.selectionEnd ?? a, sel = v.slice(a, b);
+                const lineStart = !a || v[a - 1] === '\n', nl = lineStart ? '' : '\n';
+                let ins = '', c0, c1;
+                if (k === 'link') { ins = '[[' + sel + ']]'; c0 = a + 2; c1 = c0 + sel.length; }
+                else if (k === 'head') { ins = nl + '## ▸ ' + (sel || '見出し'); c0 = a + nl.length + 5; c1 = c0 + (sel || '見出し').length; }
+                else { ins = nl + '- ' + sel; c0 = c1 = a + ins.length; }
+                bd.value = v.slice(0, a) + ins + v.slice(b); bd.focus(); bd.setSelectionRange(c0, c1);
+            });
             setTimeout(() => nm.focus(), 30);
             ov.addEventListener('click', e => {
                 const b = e.target.closest('[data-mk]'); if (e.target === ov) { ov.remove(); return; } if (!b) return;
@@ -10433,6 +10477,12 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             if (act === 'asof-reset') { wikiState.asOf = null; wikiRender(); return; }
             if (act === 'ins') { wikiInsert(el.dataset.k); return; }
             if (act === 'insnew') { wikiInsEdit(null); return; }
+            if (act === 'legacyall') {
+                const nl = wikiEntries(bookId).filter(wikiIsLegacy).length; if (!nl) { toast('古い形の項目はありません'); return; }
+                if (!confirm('古い形の項目 ' + nl + '件を、本文の形にそろえます。\n欄・関連・年表は、本文の「## ▸ 見出し」の中に入ります。\n期間や詳細の付いた関連は、そのまま残します。\n前の中身は、項目の中に控えとして残ります。よいですか？')) return;
+                const n = wikiConvertAllLegacy(bookId); wikiRender(); toast(n + '件を新しい形にそろえました'); return;
+            }
+            if (act === 'newname') { wikiNewFromName(el.dataset.name); return; }
             if (act === 'legacy') {
                 wikiReadDraft(); const d = wikiState.draft; if (!d) return;
                 const r = wikiLegacyToText(bookId, d); if (!r.text) { toast('本文に書きかえるものがありません'); return; }
@@ -10855,8 +10905,8 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         // 話の終わり・戻る・本の終わりで、読み終えた話から言葉を拾い、件数を小さく知らせる。読書は止めない
         // ===== 更新の確認：新しい版があれば、魚に青い点とメニュー（版の番号は version.json。公開のたびに、番号が変わる。番号が入っていない開発中は、確かめない） =====
         // 表示用の版。更新の検出は引き続き APP_BUILD の日時番号を使う。
-        const APP_VERSION = '24.9';
-        const APP_BUILD = '20261113202053';
+        const APP_VERSION = '24.11';
+        const APP_BUILD = '20261113204446';
         let updateCheckAt = 0;
         function paintBuild() {
             const el = document.getElementById('app-build-info'); if (!el) return;
