@@ -454,3 +454,35 @@
   .fxnews .nr.nr-few { max-width: 600px; }
   .fxnews .nr-video.nr-few, .fxnews .nr-trend.nr-few .nr-posts, .fxnews .nr-news.nr-few .nr-ycm { column-count: auto; }
 }
+
+/* 24.12：報告書（形=報告書）。紙の報告書と、録音の書き起こしの枠 */
+.nr.nr-rp { max-width: 700px; background: #fefefe; color: #111; padding: 28px 30px; border: 1px solid #ccc; box-shadow: 0 0 0 1px #fff, 0 0 0 4px #444, 0 10px 25px rgba(0, 0, 0, .15); position: relative; overflow: hidden; word-break: break-word; font-family: "Yu Gothic", "Hiragino Sans", "MS Gothic", sans-serif; }
+@media (max-width: 600px) { .nr.nr-rp { padding: 20px 16px; } }
+.nr-rp .rp-stamp { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-15deg); font-size: 5.5em; color: rgba(220, 38, 38, .1); font-weight: 900; pointer-events: none; z-index: 0; border: 8px solid rgba(220, 38, 38, .1); padding: 4px 28px; border-radius: 12px; letter-spacing: .3em; text-indent: .3em; white-space: nowrap; transition: opacity .3s cubic-bezier(.175, .885, .32, 1.275), transform .3s cubic-bezier(.175, .885, .32, 1.275); }
+.nr-rp.nr-playing .rp-stamp:not(.on) { opacity: 0; transform: translate(-50%, -50%) rotate(-15deg) scale(3); }
+.nr-rp .rp-head { border-bottom: 3px double #333; padding-bottom: 12px; margin-bottom: 22px; position: relative; z-index: 1; }
+.nr-rp .rp-title { font-size: 1.4em; font-weight: 900; text-align: center; letter-spacing: .3em; text-indent: .3em; }
+.nr-rp .rp-meta { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 6px; font-size: .85em; margin-top: 12px; color: #444; }
+.nr-rp .rp-info { margin-bottom: 22px; position: relative; z-index: 1; }
+.nr-rp .rp-row { display: flex; border-bottom: 1px dotted #999; padding: 7px 0; font-size: .95em; }
+.nr-rp .rp-lb { width: 25%; flex: none; font-weight: bold; color: #333; }
+.nr-rp .rp-v { flex: 1; min-width: 0; }
+.nr-rp .rp-box { position: relative; z-index: 1; border: 2px solid #555; padding: 22px 18px 12px; background: rgba(0, 0, 0, .02); margin: 20px 0 8px; }
+.nr-rp .rp-bt { position: absolute; top: -.8em; left: 12px; background: #fefefe; padding: 0 8px; font-weight: bold; font-size: .9em; }
+.nr-rp .rp-bm { font-size: .85em; font-weight: bold; color: #444; margin-bottom: 12px; border-bottom: 1px solid #ddd; padding-bottom: 6px; }
+.nr-rp .rp-dl { display: flex; margin-bottom: 10px; font-size: .95em; line-height: 1.6; }
+.nr-rp .rp-sp { width: 6.5em; flex: none; font-weight: bold; color: #111; }
+.nr-rp .rp-sp:empty { display: none; }
+.nr-rp .rp-sp:not(:empty)::after { content: ":"; }
+.nr-rp .rp-tx { flex: 1; min-width: 0; }
+.nr-rp .rp-tx::before { content: "「"; } .nr-rp .rp-tx::after { content: "」"; }
+@media (max-width: 600px) { .nr-rp .rp-sp { width: 5.2em; } }
+.nr-rp.nr-playing .nr-in:not(.on) { opacity: 0; transform: none; }
+.nr-rp.nr-playing .nr-in.on { animation: rpType var(--d, 300ms) steps(var(--n, 10)) both; }
+@keyframes rpType { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+
+.nr.nr-rp { border-radius: 0; }
+.nr-rp .rp-ct { position: relative; z-index: 1; text-align: right; font-size: .8em; color: #666; margin: -8px 0 4px; }
+.nr-rp.rp-cont .rp-box:first-of-type { margin-top: 14px; }
+@media (max-width: 600px) { .nr-rp .rp-dl { font-size: .88em; line-height: 1.55; margin-bottom: 7px; } .nr-rp .rp-box { padding: 20px 12px 8px; } .nr-rp .rp-sp { width: 4.6em; } .nr-rp .rp-title { font-size: 1.2em; letter-spacing: .15em; text-indent: .15em; } .nr-rp .rp-head { margin-bottom: 14px; } .nr-rp .rp-info { margin-bottom: 14px; } }
+@media (max-width: 600px) { .nr-rp .rp-sp { width: auto; min-width: 6em; margin-right: .3em; white-space: nowrap; } }

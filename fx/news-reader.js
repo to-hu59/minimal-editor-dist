@@ -3,7 +3,7 @@
    NewsReader.isSource(src) / html(src,{base}) / plain(src) / scan(root,settings,key) / play(el,{sound}) */
 (function (global) {
 'use strict';
-const KINDS = ['炎上', 'ニュース', '動画', 'コラム', 'タイムライン', '見出し', 'おすすめ', 'YouTube'];
+const KINDS = ['炎上', 'ニュース', '動画', 'コラム', 'タイムライン', '見出し', 'おすすめ', 'YouTube', '報告書'];
 const RE = /^［報道[ \t]([^］\n]*)］\n?([\s\S]*?)\n?［／報道］\s*$/;
 const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 function attrs(s) { const a = {}; String(s || '').trim().split(/[ \t]+/).filter(Boolean).forEach(t => { const i = t.indexOf('='); if (i > 0) a[t.slice(0, i)] = t.slice(i + 1); else if (t === '続き') a.続き = '1'; }); return a; }
@@ -199,13 +199,30 @@ function ytube(a, R) {
   }
   return h + '</div>';
 }
+// 報告書（形=報告書）：紙の報告書に、録音の書き起こしの枠が入る。字が印字されるように出て、最後に判が押される
+// 欄：項目｜中身　　記録：添付資料：音声記録ファイル 01｜20XX. X. X.　　話：話す人｜セリフ（話す人がいなければ、セリフだけ）
+function report(a, R) {
+  const cont = !!a.続き;
+  let h = '<div class="nr nr-rp' + (cont ? ' rp-cont' : '') + '">' + (a.印 === 'なし' ? '' : '<div class="rp-stamp"><span data-e="a:印">' + esc(a.印 || '極 秘') + '</span></div>') + (cont ? '<div class="rp-ct">（つづき）</div>' : '')
+    + (cont ? '' : '<div class="rp-head nr-in"><div class="rp-title" data-e="a:題">' + esc(a.題 || '報告書') + '</div><div class="rp-meta"><span>文書番号: <span data-e="a:番号">' + esc(a.番号 || '—') + '</span></span><span>作成: <span data-e="a:作成">' + esc(a.作成 || '—') + '</span></span></div></div>');
+  const fields = R.filter(r => r.k === '欄');
+  if (fields.length) h += '<div class="rp-info">' + fields.map(r => '<div class="rp-row nr-in"><div class="rp-lb" data-e="r:' + r.i + ':v0">' + esc(r.v[0] || '') + '</div><div class="rp-v" data-e="r:' + r.i + ':v1">' + esc(r.v[1] || '') + '</div></div>').join('') + '</div>';
+  const boxes = []; let box = null;
+  for (const r of R) { if (r.k === '記録') { box = { r, lines: [] }; boxes.push(box); } else if (r.k === '話') { if (!box) { box = { r: null, lines: [] }; boxes.push(box); } box.lines.push(r); } }
+  for (const b of boxes) {
+    h += '<div class="rp-box">' + (b.r ? '<div class="rp-bt nr-in"><span>📼</span> <span data-e="r:' + b.r.i + ':v0">' + esc(b.r.v[0] || '') + '</span></div><div class="rp-bm nr-in">【記録日時】 <span data-e="r:' + b.r.i + ':v1">' + esc(b.r.v[1] || '') + '</span></div>' : '')
+      + b.lines.map(r => { const two = r.v.length >= 2; return '<div class="rp-dl nr-in"><div class="rp-sp"' + (two ? ' data-e="r:' + r.i + ':v0"' : '') + '>' + esc(two ? r.v[0] : '') + '</div><div class="rp-tx" data-e="r:' + r.i + ':v' + (two ? 1 : 0) + '">' + esc(two ? r.v[1] : r.v[0] || '') + '</div></div>'; }).join('') + '</div>';
+  }
+  return h + '</div>';
+}
 // 読む画面は改行をそのまま空白として出すので、部品の HTML の改行は取り除く
-function html(src, opt = {}) { const d = parse(src); if (!d) return ''; const base = opt.base == null ? 'fx/' : opt.base; return (d.a.形 === 'ニュース' ? news(d.a, d.R, base) : d.a.形 === '動画' ? video(d.a, d.R) : d.a.形 === 'コラム' ? column(d.a, d.R) : d.a.形 === 'タイムライン' ? timeline(d.a, d.R, base, !!opt.edit) : d.a.形 === '見出し' ? heads(d.a, d.R) : d.a.形 === 'おすすめ' ? recfeed(d.a, d.R) : d.a.形 === 'YouTube' ? ytube(d.a, d.R) : trend(d.a, d.R)).replace(/>\s*\n\s*</g, '><').replace(/\n\s*/g, ''); }
+function html(src, opt = {}) { const d = parse(src); if (!d) return ''; const base = opt.base == null ? 'fx/' : opt.base; return (d.a.形 === 'ニュース' ? news(d.a, d.R, base) : d.a.形 === '動画' ? video(d.a, d.R) : d.a.形 === 'コラム' ? column(d.a, d.R) : d.a.形 === 'タイムライン' ? timeline(d.a, d.R, base, !!opt.edit) : d.a.形 === '見出し' ? heads(d.a, d.R) : d.a.形 === 'おすすめ' ? recfeed(d.a, d.R) : d.a.形 === 'YouTube' ? ytube(d.a, d.R) : d.a.形 === '報告書' ? report(d.a, d.R) : trend(d.a, d.R)).replace(/>\s*\n\s*</g, '><').replace(/\n\s*/g, ''); }
 // 読み上げ・文字数用の、ふつうの文
 function plain(src) {
   const d = parse(src); if (!d) return ''; const a = d.a, out = [];
   if (a.形 === '炎上') { out.push((a.タグ || '') + ' トレンド' + (a.順位 || '1') + '位'); d.R.forEach(r => { if (r.k === 'トレンド') out.push(r.v[0] || ''); else if (r.k === '削除済み') out.push('このポストは削除されました。'); else out.push(r.v.length >= 2 ? r.v[1] : r.v[0] || ''); }); }
   else if (a.形 === 'ニュース') { out.push(a.見出し || ''); if (a.副題) out.push(a.副題); d.R.forEach(r => { if (!r.k) out.push(r.v.join('｜')); else if (r.k === '関連') out.push(r.v.join('｜')); else if (r.k === 'コメント' || r.k === '返信') out.push(r.v.slice(1).join('｜')); }); }
+  else if (a.形 === '報告書') { out.push(a.題 || '報告書'); d.R.forEach(r => { if (r.k === '欄') out.push((r.v[0] || '') + '　' + (r.v[1] || '')); else if (r.k === '記録') out.push(r.v.join('　')); else if (r.k === '話') out.push(r.v.length >= 2 ? r.v[1] : (r.v[0] || '')); }); }
   else if (a.形 === 'YouTube') d.R.forEach(r => { if (r.k === '動画') out.push((r.v[0] || '').replace(/\|/g, ' ')); else if (r.k === 'ショート' && a.ショート !== 'なし') out.push(r.v[0] || ''); });
   else if (a.形 === 'おすすめ') d.R.forEach(r => out.push(r.k ? (r.v[0] || '') : r.raw.trim().replace(/^[\[［]\s*|\s*[\]］]$/g, '')));
   else if (a.形 === '見出し') d.R.forEach(r => out.push(r.raw.trim().replace(/^[\[［]\s*|\s*[\]］]$/g, '')));
@@ -228,6 +245,15 @@ function play(el, opt = {}) {
   if (global.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) { stop(); return { cancel() {} }; }
   if (!items.length) { stop(); return { cancel() {} }; }
   root.classList.add('nr-playing'); items.forEach(x => x.classList.remove('on'));
+  if (root.classList.contains('nr-rp')) {
+    const stamp = root.querySelector('.rp-stamp'); if (stamp) stamp.classList.remove('on');
+    let t = 150;
+    items.forEach((x, i) => { const n = Math.max(4, Math.min(160, (x.textContent || '').length)), d = n * 12; x.style.setProperty('--n', n); x.style.setProperty('--d', d + 'ms'); timers.push(setTimeout(() => { if (!root.isConnected) { stop(); return; } x.classList.add('on'); pop(opt.sound, i); }, t)); t += d + 60; });
+    timers.push(setTimeout(() => { if (done) return; if (stamp) stamp.classList.add('on'); pop(opt.sound, items.length); }, t + 200));
+    timers.push(setTimeout(tell, t + 500)); timers.push(setTimeout(stop, t + 1600));
+    root.addEventListener('click', stop, { once: true });
+    return { cancel: stop };
+  }
   const fast = root.classList.contains('nr-video') ? 170 : root.classList.contains('nr-col') ? 330 : root.classList.contains('nr-tml') ? 420 : root.classList.contains('nr-hl') ? 150 : root.classList.contains('nr-rf') ? 110 : root.classList.contains('nr-yt') ? 160 : 260;
   // 画面から消えたら（ページを切りかえたら）、そこで止める。音も鳴らさない
   items.forEach((x, i) => timers.push(setTimeout(() => { if (!root.isConnected) { stop(); return; } x.classList.add('on'); pop(opt.sound, i); }, 120 + i * fast)));
@@ -286,7 +312,7 @@ function edit(src, key, val) {
   if (b === 'all') v = [val];
   else if (b === 'u') { if (v.length >= 2) v[0] = (/^\s*└/.test(v[0]) ? '└' : '') + val; }
   else if (b === 'cap') v = val ? [v[0] || '', val] : [v[0] || ''];
-  else if (/^v\d$/.test(b)) { const n = +b.slice(1); while (v.length < n) v.push(''); v[n] = val.replace(/｜/g, '|'); if (n === 1 && v[1] && !v[1].startsWith('@') && r.k !== 'ショート' && r.k !== '動画') v[1] = '@' + v[1]; }
+  else if (/^v\d$/.test(b)) { const n = +b.slice(1); while (v.length < n) v.push(''); v[n] = val.replace(/｜/g, '|'); if (n === 1 && v[1] && !v[1].startsWith('@') && r.k !== 'ショート' && r.k !== '動画' && r.k !== '話' && r.k !== '記録' && r.k !== '欄') v[1] = '@' + v[1]; }
   else if (b === 't') v = v.length >= 2 ? [v[0], val] : [pre + val];
   const opts = Object.entries(r.o).map(([x, y]) => x + '=' + y);
   lines[j] = lead + (r.k ? r.k + '：' : '') + v.concat(opts).join('｜');
