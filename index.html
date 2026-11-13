@@ -341,7 +341,22 @@
         /* Notion のような、たためる見出し（▸ 見出し） */
         .wiki-sheet details.wk-tg { margin: 2px 0; }
         /* ナムウィキ風：プロフィール表・目次・脚注・ネタバレの帯・番号 */
-        .wiki-sheet .wk-pv-old { color: #9a8b78; font-weight: 400; }
+.ycall { max-width: 420px; margin: 1.2em auto; background: rgba(28,28,30,.95); border: 1px solid rgba(255,255,255,.15); border-radius: 16px; padding: .7rem 1rem; display: flex; align-items: center; justify-content: space-between; gap: .6rem; color: #fff; box-shadow: 0 8px 25px rgba(0,0,0,.25); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; text-indent: 0; line-height: 1.35; }
+.ycall .ycl { display: flex; align-items: center; gap: .75rem; min-width: 0; }
+.ycall .ycav { width: 38px; height: 38px; flex: none; border-radius: 50%; background: #8e8e93; display: flex; align-items: center; justify-content: center; font-size: 1rem; font-weight: 700; color: #fff; }
+.ycall .yct { font-size: .7rem; color: #a1a1aa; font-weight: 600; }
+.ycall .ycn { font-size: .95rem; font-weight: 600; color: #fff; overflow-wrap: anywhere; }
+.ycall .ycb { display: flex; gap: .5rem; flex: none; }
+.ycall button { width: 34px; height: 34px; border-radius: 50%; border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0; }
+.ycall button svg { width: 16px; height: 16px; fill: #fff; }
+.ycall .ycno { background: #ff3b30; } .ycall .ycno svg { transform: rotate(135deg); }
+.ycall .ycyes { background: #34c759; }
+.ycall.ring { animation: ycpulse 1.5s infinite; }
+@keyframes ycpulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.03); box-shadow: 0 0 15px rgba(52,199,89,.4); } }
+.ycall.on .yct { color: #34c759; } .ycall.on .ycno { display: none; } .ycall.on .ycyes { background: #ff3b30; } .ycall.on .ycyes svg { transform: rotate(135deg); }
+.ycall.off .ycb, .ycall.miss .ycb { display: none; } .ycall.off, .ycall.miss { opacity: .75; } .ycall.miss .yct { color: #ff6961; }
+@media (prefers-reduced-motion: reduce) { .ycall.ring { animation: none; } }
+.wk-pv-old { color: #9a8b78; font-weight: 400; }
 .wk-pv .wk-hist-a { margin: 0 4px; color: #b39a6a; }
 .wk-info-raw { padding: 4px 12px 6px; font-size: 14px; }
 .wk-info-raw > :first-child { margin-top: 0; }
@@ -2104,6 +2119,7 @@ p.fx-drama.fx-sfx { opacity:1; font-weight:700; font-size:1.15em; letter-spacing
                     <div class="pt-3 border-t border-woodBorder">
                         <span class="font-bold text-softMuted block mb-1">更新履歴</span>
                         <div id="changelog" class="text-[11px] text-softMuted leading-relaxed">
+<div class="mb-1.5"><b class="text-softText">Version 24.18（2026-11-13）</b><br>本文の中に挟める、1行の着信バナーを足しました（［着信 相手=母］）。応答・拒否を押せます。種類=ビデオ・結果=不在も書けます。今までの［着信］…［／着信］（文字がゆれる着信）は、そのままです。</div>
 <div class="mb-1.5"><b class="text-softText">Version 24.17（2026-11-13）</b><br>Wiki の人物の項目で、本文の「ステータス」「スキル」「装備」「アイテム」も上の表に入るようにしました。まだ先の話の見出しは、今までどおり本文で鍵がかかります。変わった値は「なし → 魔法使い → 大賢者」のように流れで出ます。ステータスとスキルは今の値だけで、流れは「変遷を見る」で見られます（ステータス画面をそのまま貼ったものも、そのままの並びで出ます）。</div>
 <div class="mb-1.5"><b class="text-softText">Version 24.16（2026-11-13）</b><br>Wiki の項目で、本文の「プロフィール」をいちばん上の表に出すようにしました（「変遷を見る」の話数も、ebook の章の名前で出ます）。中身はその時点のいちばん新しい値です。呼び名・肩書き・称号・クラス・職業は、名前の下にも出ます（押すと流れが見られます）。いちばん上の説明文も、行の頭に {{N話から}} を付けると、その時点の新しい説明に置きかわります。</div>
 <div class="mb-1.5"><b class="text-softText">Version 24.15（2026-11-13）</b><br>Wiki の「何話から」などのボタンで入る印を、ebook の章なら {{1巻CHAPTER1から}} の形で入れるようにしました。</div>
@@ -4950,8 +4966,8 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             window.NewsReader?.scan(document.getElementById('view-reader'),stg,state.currentBookId+':'+state.currentChapterId);
             window.LineMaker?.scan?.(document.getElementById('view-reader'),{enabled:stg.enabled!==false&&stg.typeBbs!==false});
             if (stg.enabled === false) return;
-            const boards = document.querySelectorAll('#view-reader [data-fxe]:not([data-fxt])' + (stg.typeBbs !== false ? ', #view-reader .fxbbs:not([data-fxt]):not(.notype), #view-reader .fxkk:not([data-fxt]):not(.notype), #view-reader .fxnote:not([data-fxt]), #view-reader .az-board-reader:not([data-fxt]):not(.notype):not([data-effect="none"])' : '')); if (!boards.length) return;
-            if (!fxBbsIO) fxBbsIO = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting && e.target.isConnected && e.target.dataset.fxt === 'wait') { fxBbsIO.unobserve(e.target); (e.target.dataset.fxe ? fxEffectRun : e.target.classList.contains('fxkk') ? fxKkType : e.target.classList.contains('fxnote') ? fxNoteShow : fxBbsType)(e.target); } }), { threshold: 0.3 });
+            const boards = document.querySelectorAll('#view-reader [data-fxe]:not([data-fxt]), #view-reader .ycall:not([data-fxt])' + (stg.typeBbs !== false ? ', #view-reader .fxbbs:not([data-fxt]):not(.notype), #view-reader .fxkk:not([data-fxt]):not(.notype), #view-reader .fxnote:not([data-fxt]), #view-reader .az-board-reader:not([data-fxt]):not(.notype):not([data-effect="none"])' : '')); if (!boards.length) return;
+            if (!fxBbsIO) fxBbsIO = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting && e.target.isConnected && e.target.dataset.fxt === 'wait') { fxBbsIO.unobserve(e.target); (e.target.dataset.fxe ? fxEffectRun : e.target.classList.contains('ycall') ? fxCallRun : e.target.classList.contains('fxkk') ? fxKkType : e.target.classList.contains('fxnote') ? fxNoteShow : fxBbsType)(e.target); } }), { threshold: 0.3 });
             boards.forEach(b => {
                 if(b.classList.contains('az-board-reader')&&window.matchMedia?.('(prefers-reduced-motion: reduce)').matches){b.dataset.fxt='done';return;}
                 if (fxBbsSeen.has(fxBbsKey(b))) { b.dataset.fxt = 'done'; return; }
@@ -5070,6 +5086,33 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             const tick = () => { if (stop || !el.isConnected) return; const c = chars[i++]; if (!c) { finish(); return; } c.style.opacity = ''; if (stg.sound && /\S/.test(c.textContent)) fxKey(false); setTimeout(tick, ms * (0.7 + Math.random() * 0.6)); };
             tick();
         }
+        // 着信バナー（1行）：［着信 相手=母 種類=ビデオ アイコン=M 結果=不在］
+        function fxCallAttrs(s) { const a = {}; String(s || '').split(/[\s　]+/).forEach(x => { const j = x.search(/[=＝]/); if (j > 0) a[x.slice(0, j)] = x.slice(j + 1); }); return a; }
+        function fxCallHtml(a) {
+            const nm = a.相手 || '', ic = a.アイコン || [...nm][0] || '?', PH = '<svg viewBox="0 0 24 24"><path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/></svg>';
+            return '<div class="ycall" data-miss="' + (/不在/.test(a.結果 || '') ? '1' : '') + '"><div class="ycl"><div class="ycav">' + escapeHtml(ic) + '</div><div class="yci"><div class="yct">' + (a.種類 === 'ビデオ' ? 'ビデオ通話' : '音声通話') + ' 着信...</div><div class="ycn">' + escapeHtml(nm) + '</div></div></div><div class="ycb"><button type="button" class="ycno" data-ya="n" aria-label="拒否">' + PH + '</button><button type="button" class="ycyes" data-ya="y" aria-label="応答">' + PH + '</button></div></div>';
+        }
+        function fxHang() { try { fxAC = fxAC || new (window.AudioContext || window.webkitAudioContext)(); if (fxAC.state === 'suspended') fxAC.resume(); const t = fxAC.currentTime; [0, 0.2].forEach(d => { const o = fxAC.createOscillator(), g = fxAC.createGain(); o.type = 'sine'; o.frequency.value = 480; g.gain.setValueAtTime(0.0001, t + d); g.gain.exponentialRampToValueAtTime(0.1, t + d + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + d + 0.12); o.connect(g); g.connect(fxDest()); o.start(t + d); o.stop(t + d + 0.14); }); } catch (e) {} }
+        function fxCallStop(el) { if (el._ring) { clearInterval(el._ring); el._ring = 0; } el.classList.remove('ring'); }
+        // 見えたら鳴る（演出オンのとき。音・振動は設定しだい）。押すか8回で止まる。結果=不在は、3回鳴ったら「不在着信」
+        function fxCallRun(el) {
+            el.dataset.fxt = 'done'; fxBbsSeen.add(fxBbsKey(el));
+            const stg = (() => { try { return fxSettingsFor(state.books.find(b => b.id === state.currentBookId)); } catch (e) { return {}; } })(), miss = el.dataset.miss === '1';
+            el.classList.add('ring'); let n = 0;
+            const ring = () => {
+                if (!el.isConnected || el.dataset.st) return fxCallStop(el);
+                if (miss && n >= 3) { fxCallStop(el); el.dataset.st = 'miss'; el.classList.add('miss'); el.querySelector('.yct').textContent = '不在着信'; return; }
+                if (n++ >= 8) return fxCallStop(el);
+                if (stg.sound) fxRing(1.2); if (stg.vibrate) { try { navigator.vibrate && navigator.vibrate([500, 300, 500]); } catch (e) {} }
+            };
+            ring(); el._ring = setInterval(ring, 2400);
+        }
+        document.addEventListener('click', e => {
+            const b = e.target.closest && e.target.closest('.ycall button'); if (!b) return; const el = b.closest('.ycall'); if (el.dataset.st) return;
+            e.stopPropagation(); fxCallStop(el); const stg = (() => { try { return fxSettingsFor(state.books.find(x => x.id === state.currentBookId)); } catch (x) { return {}; } })(), t = el.querySelector('.yct');
+            if (b.dataset.ya === 'y') { el.dataset.st = 'on'; el.classList.add('on'); let sec = 0; const pad = v => String(v).padStart(2, '0'); const tick = () => { if (!el.isConnected) return clearInterval(el._tm); t.textContent = '通話中 ' + pad(sec / 60 | 0) + ':' + pad(sec % 60); sec++; }; tick(); el._tm = setInterval(tick, 1000); }
+            else { el.dataset.st = 'off'; el.classList.add('off'); t.textContent = '拒否しました'; if (stg.sound) fxHang(); }
+        }, true);
         function fxEffectRun(el) {
             el.dataset.fxt = 'done'; fxBbsSeen.add(fxBbsKey(el));
             const k = el.dataset.fxe || '', has = c => k.indexOf(c) >= 0, sec = Number(el.dataset.fxs) || fxDefSec(k), inl = el.classList.contains('fxi');
@@ -7160,6 +7203,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             function renderPara(para, li, inScene) {
                 const providedFrame=frameOf(li);
                 if(providedFrame?.kind==='provided-line') {if(para.trim())globalSentenceIndex+=splitSentencesSafe(para).length;return li===providedFrame.from?LineMaker.html(providedFrame.lineSource):'';}
+                if(providedFrame?.kind==='call') {if(para.trim())globalSentenceIndex+=splitSentencesSafe(para).length;return li===providedFrame.from?fxCallHtml(providedFrame.callA):'';}
                 if(providedFrame?.kind==='news') {if(para.trim())globalSentenceIndex+=splitSentencesSafe(para).length;return li===providedFrame.from?'<div class="fxnews" data-nri="'+(providedFrame.nri||0)+'">'+NewsReader.html(providedFrame.newsSource,{base:'fx/'})+'</div>':'';}
                 if(providedFrame?.kind==='provided-document') {if(para.trim())globalSentenceIndex+=splitSentencesSafe(para).length;return li===providedFrame.from?'<div class="ymdoc">'+ProvidedDocument.rendered(providedFrame.documentHtml)+'</div>':'';}
                 if(providedFrame?.kind==='bbs'&&providedFrame.boardModel?.presentation&&typeof AzBoardEditor!=='undefined'){
@@ -7673,6 +7717,8 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             for (let li = 0; li < L.length; li++) {
                 let line = L[li];
                 if (open && !open.closed && !line.trim() && out.length > open.from) { if (frames) frames.push({ from: open.from, to: out.length - 1, color: open.color, label: open.label, small: open.small }); open = null; }
+                { const cm = line.trim().match(/^［着信[\s　]+([^］]*相手[=＝][^］]*)］$/);
+                  if (cm) { const a = fxCallAttrs(cm[1]), from = out.length; out.push('（' + (a.相手 || '') + 'から' + (a.種類 === 'ビデオ' ? 'ビデオ通話の' : '') + '着信）'); if (frames) frames.push({ from, to: from, kind: 'call', callA: a }); continue; } }
                 if (line.indexOf('［') >= 0 && /［(タイピング音|タイピング|カタカタ)[\s　]/.test(line)) line = fxTypeOneTag(line);
                 // ［着信］（音・振動・文字がゆれる）／［バイブ］（振動・文字がゆれる）／［着信 バイブ］（同時）。印の行は消え、次の行に効く。秒=3 で長さも決められる
                 { const em = line.trim().match(/^［(着信|バイブ|怒鳴り|どなる|ノイズ|ジジッ?|頭痛|どくん|心臓|タイピング音|タイピング|カタカタ)([\s　][^］]*)?］$/);
@@ -8158,6 +8204,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             { id: 'kakao-invite', name: 'ゲームへの招待（カカオ）', note: 'カカオトークの通知→会話→「はい／いいえ」。メッセージは、「ゲームに参加しますか？」だけ（演出ビュー🎬で動く）', block: '［招待状 見た目=カカオ 問い=ゲームに参加しますか？］', close: '［／招待状］', tmpl: '' },
             { id: 'line-notice', name: 'LINEの通知', note: '上から降りてくる通知（緑の枠）', block: '［LINE通知 アプリ=LINE 秒=3.5］', close: '［／LINE通知］', tmpl: '相手：' },
             { id: 'line-talk', name: 'LINE（会話画面）', note: '吹き出しの会話（緑の枠）', block: '［トーク 見た目=LINE 相手=相手の名前］', close: '［／トーク］', tmpl: '相手：\n自分：' },
+            { id: 'call-banner', name: '着信バナー（1行）', note: '本文の中に挟む、黒い1行の着信。応答・拒否を押せる（結果=不在で不在着信に）', line: '［着信 相手=', end: '］' },
             { id: 'sys', name: '通知（1行）', note: '「〜を獲得しました」などの、1行のシステムの声', line: '［システム 文=', end: '］' },
             { id: 'sys-warn', name: '警告（1行）', note: '赤い、1行の警告', line: '［システム 種類=警告 文=', end: '］' },
             { id: 'sys-item', name: 'アイテム入手（1行）', note: '「アイテムを手に入れました」', line: '［システム 種類=アイテム 文=', end: '］' },
@@ -8171,7 +8218,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             { g: 'ホラー・ぐちゃぐちゃ', note: '文字化け・文字が崩れる・めくれない・巻き戻る（🎬で動く）', ids: ['err-sys', 'crash-chat', 'page-lock', 'page-rewind'] },
             { g: 'システム画面', note: '青・茶・赤・黒の枠', ids: ['win-blue', 'win-brown', 'win-red', 'win-black'] },
             { g: 'ゲームの画面', note: 'クエスト・アイテム購入・ステータス', ids: ['quest', 'shop', 'status'] },
-            { g: 'チャット・通知', note: 'カカオトーク・LINE', ids: ['kakao-notice', 'kakao-talk', 'kakao-invite', 'line-notice', 'line-talk'] },
+            { g: 'チャット・通知', note: 'カカオトーク・LINE・着信バナー', ids: ['kakao-notice', 'kakao-talk', 'kakao-invite', 'line-notice', 'line-talk', 'call-banner'] },
             { g: '1行の通知', note: '通知・警告・アイテム入手・スキル獲得', ids: ['sys', 'sys-warn', 'sys-item', 'sys-skill'] },
             { g: '掲示板', note: '2ch／5ch型・返信ツリー型', ids: ['bbs', 'bbs-tree'] }
         ];
@@ -11018,8 +11065,8 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         // 話の終わり・戻る・本の終わりで、読み終えた話から言葉を拾い、件数を小さく知らせる。読書は止めない
         // ===== 更新の確認：新しい版があれば、魚に青い点とメニュー（版の番号は version.json。公開のたびに、番号が変わる。番号が入っていない開発中は、確かめない） =====
         // 表示用の版。更新の検出は引き続き APP_BUILD の日時番号を使う。
-        const APP_VERSION = '24.17';
-        const APP_BUILD = '20261113231137';
+        const APP_VERSION = '24.18';
+        const APP_BUILD = '20261113232310';
         let updateCheckAt = 0;
         function paintBuild() {
             const el = document.getElementById('app-build-info'); if (!el) return;
