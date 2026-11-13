@@ -2086,6 +2086,8 @@ p.fx-drama.fx-sfx { opacity:1; font-weight:700; font-size:1.15em; letter-spacing
                     <div class="pt-3 border-t border-woodBorder">
                         <span class="font-bold text-softMuted block mb-1">更新履歴</span>
                         <div id="changelog" class="text-[11px] text-softMuted leading-relaxed">
+<div class="mb-1.5"><b class="text-softText">Version 24.2（2026-11-13）</b><br>「選んだ文から作る」のタイムライン（X・インスタ・FB）で、[全国民が…] のような [ ] の題名の行が続くところも変えるようにしました。投稿1つ（おすすめに流れてきたショート）と、題名のショートのカードになります。ドラマのセリフ・音楽・効果音の行はそのままです。ページでめくる形のとき、タイムラインの「投稿＋返信」（動画コメントは「コメント＋返信」）のまとまりの途中ではページを切らないようにしました。まとまりごと次のページに行きます（まとまりが1ページに入らないほど長いときだけ、途中で切れます）。</div>
+<div class="mb-1.5"><b class="text-softText">Version 24.1（2026-11-13）</b><br>読む画面でタイムラインの投稿や返信の本文をその場で直すとき、Enter で改行できるようにしました（スマホでも改行できます）。直し終わるときは、枠の外を押すか、PC なら Ctrl＋Enter を押します。名前や数など1行のところは、今までどおり Enter で終わります。</div>
 <div class="mb-1.5"><b class="text-softText">Version 24（2026-11-13）</b><br>タイムラインに、新しい見た目「YouTubeショート」「インスタリール」を足しました。投稿が縦長の動画の画面になり、場面の題・下の字・チャンネル登録（リールはフォローする）・説明・🎵 音源・いいね・コメント・共有が出ます。返信は動画の下のコメント欄になります。投稿の下に「動画：場面の題｜下の字｜背景=紫｜音源=…」と書きます（メーカーで見た目を切りかえると自動で入ります）。X の見た目では、上に「おすすめ／フォロー中」のタブが出て、その下にタグが出ます。「おすすめ」のときは、投稿の上の一行（✨ 韓国ドラマ・トレンド · おすすめ表示）とフォローボタンも出せます（投稿の ✨ ボタン）。見本の3つの場面も新しくしました。</div>
 <div class="mb-1.5"><b class="text-softText">Version 23.12（2026-11-13）</b><br>タイムラインに、YouXbe ショートの縦長カードを足しました。投稿の下に「ショート：題名｜384万回視聴｜背景=紺」の行を書くと、赤い「▶ Shorts」の印と再生ボタンの付いたカードが3つずつ並びます（背景は紺・赤・青緑）。メーカーでは投稿の「📱 ショート」で3つ入り、もう一度押すとはずれます。カードの 🎨 で背景、＋ でとなりにもう1つ、× で消せます。題名と再生回数は押して直せます。見本の3つの場面も、新しい形（バイラルの場面にショート）にそろえました。</div>
 <div class="mb-1.5"><b class="text-softText">Version 23.11（2026-11-13）</b><br>読む画面でタイムラインやニュースの字をその場で直すとき、直している枠の背景がクリーム色になって、Xダークなどの白い字が読めなかったのを直しました。枠の背景はうすい半透明の色になり、字はその見た目の色のまま読めます。</div>
@@ -8347,6 +8349,20 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             if (run && gap.length) out.push(...gap.map(g => ({ text: g })));
             return out;
         }
+        // [全国民が…] のような、[ ] だけの題名の行が続くところを、ひとまとめにする（ドラマのセリフ・音楽・効果音の行はのぞく）
+        const FXC_TITLE_RE = /^\s*[\[［]\s*([^\]］\n]{2,}?)\s*[\]］]\s*$/;
+        const fxcIsTitle = t => FXC_TITLE_RE.test(t) && !DRAMA_LINE_RE.test(t) && !MUSIC_LINE_RE.test(t) && !SFX_LINE_RE.test(t);
+        function fxConvTitles(parts) {
+            const out = []; let g = null, gap = [];
+            for (const p of parts) {
+                if (!p.rows && fxcIsTitle(p.text)) { if (!g) { g = { rows: [{ k: 'p', t: 'おすすめに流れてきたショート' }], titles: [], src: '' }; out.push(g); } gap = []; g.titles.push(p.text.match(FXC_TITLE_RE)[1]); g.src += (g.src ? '\n' : '') + p.text; continue; }
+                if (g && !p.rows && !p.text.trim()) { gap.push(p); continue; }
+                if (g) { out.push(...gap); g = null; gap = []; }
+                out.push(p);
+            }
+            if (gap.length) out.push(...gap);
+            return out;
+        }
         const fxcAttr = v => String(v || '').replace(/[\s]+/g, '　').replace(/[［］]/g, '').trim();
         const fxcBody = v => String(v || '').replace(/｜/g, '|').replace(/／/g, '/');
         function fxConvSns(run, kind) {
@@ -8359,6 +8375,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             const look = { 'tl-xd': 'Xダーク', 'tl-xl': 'Xライト', 'tl-ig': 'インスタ', 'tl-fb': 'フェイスブック' }[kind] || 'Xダーク';
             let hasPost = false;
             const rows = run.rows.map(r => { const [nm, id] = who(r.k); const k = r.k === 'r' && hasPost ? '返信' : '投稿'; if (k === '投稿') hasPost = true; return k + '：' + nm + '｜' + id + '｜' + fxcBody(fxKoNet(r.t, true)); });
+            if (run.titles) rows.splice(1, 0, ...run.titles.map((t, i) => 'ショート：' + fxcBody(fxKoNet(t, true)) + '｜背景=' + ['紺', '赤', '青緑'][i % 3]));
             return '［報道 形=タイムライン 見た目=' + look + '］\n' + rows.join('\n') + '\n［／報道］';
         }
         function fxConvColumn(text) {
@@ -8422,8 +8439,10 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             }
             // 「―퍽!」「―뚝.」のような、短い1行だけの「―」は効果音。投稿にしないで、そのまま残す
             const sfx = p => p.rows && p.rows.length === 1 && p.rows[0].k === 'p' && p.rows[0].t.length <= 15;
-            const parts = fxConvRuns(r.text).map(p => sfx(p) ? { text: p.src } : p), runs = parts.filter(p => p.rows);
-            if (!runs.length) { toast('「―」や「└」で始まる行が、見つかりませんでした'); return; }
+            let parts = fxConvRuns(r.text).map(p => sfx(p) ? { text: p.src } : p);
+            if (kind !== 'video') parts = fxConvTitles(parts);
+            const runs = parts.filter(p => p.rows);
+            if (!runs.length) { toast(kind === 'video' ? '「―」や「└」で始まる行が、見つかりませんでした' : '「―」「└」で始まる行や、[ ] の題名の行が、見つかりませんでした'); return; }
             const onlyRun = runs.length === 1 && parts.every(p => p.rows || !p.text.trim());
             if (onlyRun) { fxOpenMaker({ src: fxConvSns(runs[0], kind), tl: kind !== 'video', title: kind === 'video' ? '動画コメント' : 'タイムライン', replace: { start: r.start, end: r.end } }); return; }
             const out = parts.map(p => p.rows ? fxConvSns(p, kind) : p.text).join('\n');
@@ -10776,8 +10795,8 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         // 話の終わり・戻る・本の終わりで、読み終えた話から言葉を拾い、件数を小さく知らせる。読書は止めない
         // ===== 更新の確認：新しい版があれば、魚に青い点とメニュー（版の番号は version.json。公開のたびに、番号が変わる。番号が入っていない開発中は、確かめない） =====
         // 表示用の版。更新の検出は引き続き APP_BUILD の日時番号を使う。
-        const APP_VERSION = '24';
-        const APP_BUILD = '20261113141709';
+        const APP_VERSION = '24.2';
+        const APP_BUILD = '20261113161133';
         let updateCheckAt = 0;
         function paintBuild() {
             const el = document.getElementById('app-build-info'); if (!el) return;
@@ -11751,6 +11770,8 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             const beforeHtml = el.innerHTML;
             el.querySelectorAll('mark.nr-chl').forEach(mk => mk.replaceWith('**' + mk.textContent + '**'));
             const before = el.innerText; let ended = false;
+            // タイムラインの投稿・返信の本文は、Enter で改行（スマホには Shift がないため）。外を押すか Ctrl＋Enter で終わる
+            const multi = /:v2$/.test(el.dataset.e || '') && !!el.closest('.nr-tml');
             try { el.contentEditable = 'plaintext-only'; } catch (e) { el.contentEditable = 'true'; }
             if (el.contentEditable !== 'plaintext-only') el.contentEditable = 'true';
             el.classList.add('nr-editing'); el.spellcheck = false; el.focus();
@@ -11763,7 +11784,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                 if (!ok || now === before) { el.innerHTML = beforeHtml; return; }
                 commit(el.dataset.e, now);
             };
-            const key = e => { e.stopPropagation(); if (e.isComposing) return; if ((e.ctrlKey || e.metaKey) && (e.key === 'a' || e.key === 'A')) { e.preventDefault(); const r = document.createRange(); r.selectNodeContents(el); const sl = getSelection(); sl.removeAllRanges(); sl.addRange(r); return; } if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); end(true); } else if (e.key === 'Escape') { e.preventDefault(); end(false); } };
+            const key = e => { e.stopPropagation(); if (e.isComposing) return; if ((e.ctrlKey || e.metaKey) && (e.key === 'a' || e.key === 'A')) { e.preventDefault(); const r = document.createRange(); r.selectNodeContents(el); const sl = getSelection(); sl.removeAllRanges(); sl.addRange(r); return; } if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); end(true); } else if (e.key === 'Enter' && !e.shiftKey && !multi) { e.preventDefault(); end(true); } else if (e.key === 'Escape') { e.preventDefault(); end(false); } };
             const blur = () => end(true);
             el.addEventListener('keydown', key); el.addEventListener('blur', blur); ['beforeinput', 'input', 'paste', 'keyup', 'keypress'].forEach(t => el.addEventListener(t, stop));
         }
@@ -12294,7 +12315,7 @@ class ReaderPaginator {
    [...node.childNodes].forEach(visit);
   };visit(this.root);this.length=offset;
   // 枠（fx〜のdiv）の中の文字には、一番外の枠の目印をつける。ページの切れ目が枠の途中にならないように使う
-  for(const u of this.units){let e=u.node.nodeType===3?u.node.parentElement:u.node,fr=null;while(e&&e!==this.root){if((e.tagName==='DIV'&&/(^|\s)fx/.test(e.className||''))||(e.classList&&(e.classList.contains('tx')||e.classList.contains('az-board-view')||e.classList.contains('letter-container')||e.classList.contains('report-container')||e.classList.contains('email-container'))))fr=e;e=e.parentElement;}if(!fr&&u.atomic&&u.node.nodeType===1&&u.node.matches&&u.node.matches('.ym-line-view'))fr=u.node;u.frame=fr;}
+  for(const u of this.units){let e=u.node.nodeType===3?u.node.parentElement:u.node,fr=null;while(e&&e!==this.root){if((e.tagName==='DIV'&&/(^|\s)fx/.test(e.className||''))||(e.classList&&(e.classList.contains('tx')||e.classList.contains('az-board-view')||e.classList.contains('letter-container')||e.classList.contains('report-container')||e.classList.contains('email-container'))))fr=e;e=e.parentElement;}if(!fr&&u.atomic&&u.node.nodeType===1&&u.node.matches&&u.node.matches('.ym-line-view'))fr=u.node;u.frame=fr;{let g=u.node.nodeType===3?u.node.parentElement:u.node;u.grp=g&&g.closest?g.closest('.fxnews .tl-p,.fxnews .nr-vg'):null;if(u.grp&&!this.root.contains(u.grp))u.grp=null;}}
   // 演出ごとに、番号を付ける（縮めるときに使う）
   this.frameIds=new Map();let frameN=0;
   for(const u of this.units){if(u.frame&&!this.frameIds.has(u.frame)){this.frameIds.set(u.frame,++frameN);u.frame.setAttribute('data-fxpg',String(frameN));}}
@@ -12351,6 +12372,11 @@ class ReaderPaginator {
    if(low<this.units.length&&this.units[low].frame&&this.units[low].frame===this.units[low-1].frame){
     const fr=this.units[low].frame;let fs=low-1;while(fs>start&&this.units[fs-1].frame===fr)fs--;
     if(fs>start){let fe=low;while(fe<this.units.length&&this.units[fe].frame===fr)fe++;if(this.fits(fs,fe))low=fs;}
+   }
+   // 切れ目が「投稿＋返信」のまとまりの途中なら、まとまりのはじめまで戻す（まとまりが1ページに入るときだけ）
+   if(low<this.units.length&&this.units[low].grp&&this.units[low].grp===this.units[low-1].grp){
+    const g=this.units[low].grp;let gs=low-1;while(gs>start&&this.units[gs-1].grp===g)gs--;
+    if(gs>start){let ge=low;while(ge<this.units.length&&this.units[ge].grp===g)ge++;if(this.fits(gs,ge))low=gs;}
    }
    this.pages.push({start,end:low,offset:this.units[start].offset});start=low;
    if(this.pages.length%6===0)await new Promise(requestAnimationFrame);
