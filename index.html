@@ -341,7 +341,7 @@
         /* Notion のような、たためる見出し（▸ 見出し） */
         .wiki-sheet details.wk-tg { margin: 2px 0; }
         /* ナムウィキ風：プロフィール表・目次・脚注・ネタバレの帯・番号 */
-.ycall { max-width: 420px; margin: 1.2em auto; background: rgba(28,28,30,.95); border: 1px solid rgba(255,255,255,.15); border-radius: 16px; padding: .7rem 1rem; display: flex; align-items: center; justify-content: space-between; gap: .6rem; color: #fff; box-shadow: 0 8px 25px rgba(0,0,0,.25); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; text-indent: 0; line-height: 1.35; }
+.ycall { max-width: 420px; margin: .9em 0; background: rgba(28,28,30,.95); border: 1px solid rgba(255,255,255,.15); border-radius: 16px; padding: .7rem 1rem; display: flex; align-items: center; justify-content: space-between; gap: .6rem; color: #fff; box-shadow: 0 8px 25px rgba(0,0,0,.25); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; text-indent: 0; line-height: 1.35; }
 .ycall .ycl { display: flex; align-items: center; gap: .75rem; min-width: 0; }
 .ycall .ycav { width: 38px; height: 38px; flex: none; border-radius: 50%; background: #8e8e93; display: flex; align-items: center; justify-content: center; font-size: 1rem; font-weight: 700; color: #fff; }
 .ycall .yct { font-size: .7rem; color: #a1a1aa; font-weight: 600; }
@@ -2119,6 +2119,7 @@ p.fx-drama.fx-sfx { opacity:1; font-weight:700; font-size:1.15em; letter-spacing
                     <div class="pt-3 border-t border-woodBorder">
                         <span class="font-bold text-softMuted block mb-1">更新履歴</span>
                         <div id="changelog" class="text-[11px] text-softMuted leading-relaxed">
+<div class="mb-1.5"><b class="text-softText">Version 24.19（2026-11-13）</b><br>着信バナーを直しました。文の左端にそろえ、章を開くたびに鳴るようにしました。通話中に赤を押すと「通話終了」で止まります。LINE・カカオの通知も開くたびに鳴り、トークの吹き出しは出るたびに「ポン」と鳴ります（音を出す がオンのとき）。</div>
 <div class="mb-1.5"><b class="text-softText">Version 24.18（2026-11-13）</b><br>本文の中に挟める、1行の着信バナーを足しました（［着信 相手=母］）。応答・拒否を押せます。種類=ビデオ・結果=不在も書けます。今までの［着信］…［／着信］（文字がゆれる着信）は、そのままです。</div>
 <div class="mb-1.5"><b class="text-softText">Version 24.17（2026-11-13）</b><br>Wiki の人物の項目で、本文の「ステータス」「スキル」「装備」「アイテム」も上の表に入るようにしました。まだ先の話の見出しは、今までどおり本文で鍵がかかります。変わった値は「なし → 魔法使い → 大賢者」のように流れで出ます。ステータスとスキルは今の値だけで、流れは「変遷を見る」で見られます（ステータス画面をそのまま貼ったものも、そのままの並びで出ます）。</div>
 <div class="mb-1.5"><b class="text-softText">Version 24.16（2026-11-13）</b><br>Wiki の項目で、本文の「プロフィール」をいちばん上の表に出すようにしました（「変遷を見る」の話数も、ebook の章の名前で出ます）。中身はその時点のいちばん新しい値です。呼び名・肩書き・称号・クラス・職業は、名前の下にも出ます（押すと流れが見られます）。いちばん上の説明文も、行の頭に {{N話から}} を付けると、その時点の新しい説明に置きかわります。</div>
@@ -4964,13 +4965,13 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             const stg = (() => { try { return fxSettingsFor(state.books.find(b => b.id === state.currentBookId)); } catch (e) { return { enabled: true, typeBbs: true }; } })();
             ProvidedDocumentReader.scan(document.getElementById('view-reader'),stg,state.currentBookId+':'+state.currentChapterId);
             window.NewsReader?.scan(document.getElementById('view-reader'),stg,state.currentBookId+':'+state.currentChapterId);
-            window.LineMaker?.scan?.(document.getElementById('view-reader'),{enabled:stg.enabled!==false&&stg.typeBbs!==false});
+            window.LineMaker?.scan?.(document.getElementById('view-reader'),{enabled:stg.enabled!==false&&stg.typeBbs!==false,sound:!!stg.sound&&stg.enabled!==false});
             if (stg.enabled === false) return;
             const boards = document.querySelectorAll('#view-reader [data-fxe]:not([data-fxt]), #view-reader .ycall:not([data-fxt])' + (stg.typeBbs !== false ? ', #view-reader .fxbbs:not([data-fxt]):not(.notype), #view-reader .fxkk:not([data-fxt]):not(.notype), #view-reader .fxnote:not([data-fxt]), #view-reader .az-board-reader:not([data-fxt]):not(.notype):not([data-effect="none"])' : '')); if (!boards.length) return;
             if (!fxBbsIO) fxBbsIO = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting && e.target.isConnected && e.target.dataset.fxt === 'wait') { fxBbsIO.unobserve(e.target); (e.target.dataset.fxe ? fxEffectRun : e.target.classList.contains('ycall') ? fxCallRun : e.target.classList.contains('fxkk') ? fxKkType : e.target.classList.contains('fxnote') ? fxNoteShow : fxBbsType)(e.target); } }), { threshold: 0.3 });
             boards.forEach(b => {
                 if(b.classList.contains('az-board-reader')&&window.matchMedia?.('(prefers-reduced-motion: reduce)').matches){b.dataset.fxt='done';return;}
-                if (fxBbsSeen.has(fxBbsKey(b))) { b.dataset.fxt = 'done'; return; }
+                if (!b.classList.contains('ycall') && !b.classList.contains('fxnote') && !b.classList.contains('fxkk') && fxBbsSeen.has(fxBbsKey(b))) { b.dataset.fxt = 'done'; return; }
                 b.dataset.fxt = 'wait';
                 if ((b.dataset.fxe || '').includes('t') && !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) b.style.visibility = 'hidden';
                 b.querySelectorAll('.bpost, .kkm, .pnote, .bbs-res').forEach(p => { p.style.visibility = 'hidden'; });
@@ -5016,6 +5017,8 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                 tone(1568, t, 0.08); tone(2093, t + 0.085, 0.2);
             } catch (e) {}
         }
+        // トークの吹き出しの「ポン」
+        window.fxLinePop = function () { try { fxAC = fxAC || new (window.AudioContext || window.webkitAudioContext)(); if (fxAC.state === 'suspended') fxAC.resume(); const t = fxAC.currentTime, o = fxAC.createOscillator(), g = fxAC.createGain(); o.type = 'sine'; o.frequency.setValueAtTime(880, t); o.frequency.exponentialRampToValueAtTime(1320, t + 0.06); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.11, t + 0.005); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.12); o.connect(g); g.connect(fxDest()); o.start(t); o.stop(t + 0.14); } catch (e) {} };
         function fxNoteShow(el) {
             el.dataset.fxt = 'done'; fxBbsSeen.add(fxBbsKey(el)); el.style.opacity = '';
             try { el.animate([{ opacity: 0, transform: 'translateY(-10px)' }, { opacity: 1, transform: 'none' }], { duration: 320, easing: 'cubic-bezier(.2,.9,.3,1.2)' }); } catch (e) {}
@@ -5096,7 +5099,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         function fxCallStop(el) { if (el._ring) { clearInterval(el._ring); el._ring = 0; } el.classList.remove('ring'); }
         // 見えたら鳴る（演出オンのとき。音・振動は設定しだい）。押すか8回で止まる。結果=不在は、3回鳴ったら「不在着信」
         function fxCallRun(el) {
-            el.dataset.fxt = 'done'; fxBbsSeen.add(fxBbsKey(el));
+            el.dataset.fxt = 'done';
             const stg = (() => { try { return fxSettingsFor(state.books.find(b => b.id === state.currentBookId)); } catch (e) { return {}; } })(), miss = el.dataset.miss === '1';
             el.classList.add('ring'); let n = 0;
             const ring = () => {
@@ -5108,7 +5111,9 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             ring(); el._ring = setInterval(ring, 2400);
         }
         document.addEventListener('click', e => {
-            const b = e.target.closest && e.target.closest('.ycall button'); if (!b) return; const el = b.closest('.ycall'); if (el.dataset.st) return;
+            const b = e.target.closest && e.target.closest('.ycall button'); if (!b) return; const el = b.closest('.ycall');
+            if (el.dataset.st === 'on') { e.stopPropagation(); clearInterval(el._tm); el.dataset.st = 'end'; el.classList.remove('on'); el.classList.add('off'); const t0 = el.querySelector('.yct'); t0.textContent = t0.textContent.replace('通話中', '通話終了'); try { if (fxSettingsFor(state.books.find(x => x.id === state.currentBookId)).sound) fxHang(); } catch (x) {} return; }
+            if (el.dataset.st) return;
             e.stopPropagation(); fxCallStop(el); const stg = (() => { try { return fxSettingsFor(state.books.find(x => x.id === state.currentBookId)); } catch (x) { return {}; } })(), t = el.querySelector('.yct');
             if (b.dataset.ya === 'y') { el.dataset.st = 'on'; el.classList.add('on'); let sec = 0; const pad = v => String(v).padStart(2, '0'); const tick = () => { if (!el.isConnected) return clearInterval(el._tm); t.textContent = '通話中 ' + pad(sec / 60 | 0) + ':' + pad(sec % 60); sec++; }; tick(); el._tm = setInterval(tick, 1000); }
             else { el.dataset.st = 'off'; el.classList.add('off'); t.textContent = '拒否しました'; if (stg.sound) fxHang(); }
@@ -11065,8 +11070,8 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         // 話の終わり・戻る・本の終わりで、読み終えた話から言葉を拾い、件数を小さく知らせる。読書は止めない
         // ===== 更新の確認：新しい版があれば、魚に青い点とメニュー（版の番号は version.json。公開のたびに、番号が変わる。番号が入っていない開発中は、確かめない） =====
         // 表示用の版。更新の検出は引き続き APP_BUILD の日時番号を使う。
-        const APP_VERSION = '24.18';
-        const APP_BUILD = '20261113232310';
+        const APP_VERSION = '24.19';
+        const APP_BUILD = '20261113234336';
         let updateCheckAt = 0;
         function paintBuild() {
             const el = document.getElementById('app-build-info'); if (!el) return;
