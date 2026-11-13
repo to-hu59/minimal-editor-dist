@@ -372,3 +372,32 @@
 .nr-tml .tl-vgrid .sv-side i { width: 24px; height: 24px; font-size: 11px; }
 .nr-tml .tl-vgrid .sv-side div:last-child, .nr-tml.t-ys .tl-vgrid .sv-side div:nth-child(2), .nr-tml .tl-vgrid .sv-fb { display: none; }
 .nr-tml .tl-vgrid .sv-mid { top: 34%; }
+
+/* 24.5：見出しリスト（形=見出し）。下に行くほど薄くして「無数にある」感じ */
+.nr.nr-hl { max-width: 500px; background: #fff; color: #1f2937; border-radius: 8px; padding: 14px 22px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, .1); border-left: 4px solid #1d9bf0; display: flex; flex-direction: column; gap: 6px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans", "Yu Gothic", sans-serif; }
+.nr-hl .hl-i { font-size: 15px; font-weight: 700; color: #1d9bf0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.5; }
+.nr-hl .hl-i:nth-child(4) span { opacity: .7; }
+.nr-hl .hl-i:nth-child(5) span { opacity: .4; }
+.nr-hl .hl-i:nth-child(n+6) span { opacity: .15; }
+
+/* 24.6：おすすめショート一覧（形=おすすめ） */
+.nr.nr-rf { max-width: 500px; background: #000; color: #e7e9ea; border: 1px solid #2f3336; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 20px rgba(0, 0, 0, .4); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans", "Yu Gothic", sans-serif; }
+.nr-rf .rf-tabs { display: flex; border-bottom: 1px solid #2f3336; font-size: 13.5px; font-weight: 700; color: #71767b; text-align: center; }
+.nr-rf .rf-tabs span { flex: 1; padding: 12px 0; position: relative; }
+.nr-rf .rf-tabs span.on { color: #e7e9ea; }
+.nr-rf .rf-tabs span.on::after { content: ""; position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); width: 56px; height: 4px; border-radius: 999px; background: #1d9bf0; }
+.nr-rf.rf-ig .rf-tabs span.on::after { background: linear-gradient(90deg, #f09433, #dc2743, #bc1888); }
+.nr-rf .rf-algo { font-size: 11.5px; color: #71767b; font-weight: 700; padding: 10px 16px 4px; display: flex; align-items: center; gap: 5px; border-bottom: 1px solid rgba(47, 51, 54, .4); }
+.nr-rf .rf-row { display: flex; align-items: center; gap: 13px; padding: 13px 16px; border-bottom: 1px solid #2f3336; }
+.nr-rf .rf-row:last-child { border-bottom: 0; }
+.nr-rf .rf-row:nth-child(4) > * { opacity: .7; }
+.nr-rf .rf-row:nth-child(5) > * { opacity: .4; }
+.nr-rf .rf-row:nth-child(n+6) > * { opacity: .15; }
+.nr-rf .rf-th { width: 48px; height: 64px; border-radius: 8px; flex: none; position: relative; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 6px rgba(0, 0, 0, .3); }
+.nr-rf .rf-th.b1 { background: linear-gradient(135deg, #1e1b4b, #4338ca); } .nr-rf .rf-th.b2 { background: linear-gradient(135deg, #7f1d1d, #dc2626); } .nr-rf .rf-th.b3 { background: linear-gradient(135deg, #064e3b, #0284c7); } .nr-rf .rf-th.b4 { background: linear-gradient(135deg, #3b0764, #a855f7); } .nr-rf .rf-th.b5 { background: linear-gradient(135deg, #78350f, #f59e0b); }
+.nr-rf .rf-th i { font-style: normal; font-size: 10px; color: #fff; background: rgba(0, 0, 0, .65); width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+.nr-rf .rf-bd { position: absolute; top: 3px; left: 3px; font-size: 8px; font-weight: 900; background: #ff0000; color: #fff; padding: 0 3px; border-radius: 3px; }
+.nr-rf.rf-ig .rf-bd { background: linear-gradient(45deg, #f09433, #dc2743); }
+.nr-rf .rf-c { flex: 1; min-width: 0; }
+.nr-rf .rf-t { font-size: 14px; font-weight: 700; color: #e7e9ea; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.nr-rf .rf-s { font-size: 11px; color: #71767b; margin-top: 4px; }

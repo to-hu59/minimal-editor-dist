@@ -3,7 +3,7 @@
    NewsReader.isSource(src) / html(src,{base}) / plain(src) / scan(root,settings,key) / play(el,{sound}) */
 (function (global) {
 'use strict';
-const KINDS = ['炎上', 'ニュース', '動画', 'コラム', 'タイムライン'];
+const KINDS = ['炎上', 'ニュース', '動画', 'コラム', 'タイムライン', '見出し', 'おすすめ'];
 const RE = /^［報道[ \t]([^］\n]*)］\n?([\s\S]*?)\n?［／報道］\s*$/;
 const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 function attrs(s) { const a = {}; String(s || '').trim().split(/[ \t]+/).filter(Boolean).forEach(t => { const i = t.indexOf('='); if (i > 0) a[t.slice(0, i)] = t.slice(i + 1); else if (t === '続き') a.続き = '1'; }); return a; }
@@ -161,13 +161,34 @@ function timeline(a, R, base, ed) {
   if (vh) h += grid ? '<div class="tl-vgrid">' + vh + '</div>' : vh;
   return h + '</div>';
 }
+// 見出しリスト（形=見出し）：1行が1つの見出し。書いたとおりに出す。下に行くほど薄くなる
+function heads(a, R) {
+  return '<div class="nr nr-hl">' + R.map(r => '<div class="hl-i nr-in" data-r="' + r.i + '"><span data-e="r:' + r.i + ':raw">' + esc(r.raw.trim()) + '</span></div>').join('') + '</div>';
+}
+// おすすめショート一覧（形=おすすめ）：X の「おすすめ」／インスタの「発見」に、ショートが次々と回ってくる一覧
+// ショート：題名｜急上昇 #1 · 384万回視聴｜背景=紺　（2つめは、題名の下の小さい字。自由に書ける）
+const RF_BG = { 紺: 'b1', 赤: 'b2', 青緑: 'b3', 紫: 'b4', 橙: 'b5' };
+function recfeed(a, R) {
+  const ig = a.見た目 === 'インスタ', bgs = Object.values(RF_BG);
+  const tabs = ig ? ['発見', 'リール'] : ['おすすめ', 'フォロー中'];
+  let h = '<div class="nr nr-rf' + (ig ? ' rf-ig' : '') + '"><div class="rf-tabs"><span class="on">' + tabs[0] + '</span><span>' + tabs[1] + '</span></div>'
+    + '<div class="rf-algo"><span>✨</span><span data-e="a:一行">' + esc(a.一行 || (ig ? '発見タブ · おすすめのリール' : 'あなたの「おすすめ」 · 関連する話題')) + '</span></div><div class="rf-list">';
+  R.forEach((r, n) => {
+    const t = r.k ? r.v[0] : r.raw.trim().replace(/^[\[［]\s*|\s*[\]］]$/g, '');
+    h += '<div class="rf-row nr-in" data-r="' + r.i + '"><div class="rf-th ' + (RF_BG[r.o.背景] || bgs[n % bgs.length]) + '"><span class="rf-bd">' + (ig ? 'Reels' : 'Shorts') + '</span><i>▶</i></div>'
+      + '<div class="rf-c"><div class="rf-t"' + (r.k ? ' data-e="r:' + r.i + ':v0"' : ' data-e="r:' + r.i + ':raw"') + '>' + esc(t) + '</div>' + (r.k && r.v[1] ? '<div class="rf-s" data-e="r:' + r.i + ':v1">' + esc(r.v[1]) + '</div>' : '') + '</div></div>';
+  });
+  return h + '</div></div>';
+}
 // 読む画面は改行をそのまま空白として出すので、部品の HTML の改行は取り除く
-function html(src, opt = {}) { const d = parse(src); if (!d) return ''; const base = opt.base == null ? 'fx/' : opt.base; return (d.a.形 === 'ニュース' ? news(d.a, d.R, base) : d.a.形 === '動画' ? video(d.a, d.R) : d.a.形 === 'コラム' ? column(d.a, d.R) : d.a.形 === 'タイムライン' ? timeline(d.a, d.R, base, !!opt.edit) : trend(d.a, d.R)).replace(/>\s*\n\s*</g, '><').replace(/\n\s*/g, ''); }
+function html(src, opt = {}) { const d = parse(src); if (!d) return ''; const base = opt.base == null ? 'fx/' : opt.base; return (d.a.形 === 'ニュース' ? news(d.a, d.R, base) : d.a.形 === '動画' ? video(d.a, d.R) : d.a.形 === 'コラム' ? column(d.a, d.R) : d.a.形 === 'タイムライン' ? timeline(d.a, d.R, base, !!opt.edit) : d.a.形 === '見出し' ? heads(d.a, d.R) : d.a.形 === 'おすすめ' ? recfeed(d.a, d.R) : trend(d.a, d.R)).replace(/>\s*\n\s*</g, '><').replace(/\n\s*/g, ''); }
 // 読み上げ・文字数用の、ふつうの文
 function plain(src) {
   const d = parse(src); if (!d) return ''; const a = d.a, out = [];
   if (a.形 === '炎上') { out.push((a.タグ || '') + ' トレンド' + (a.順位 || '1') + '位'); d.R.forEach(r => { if (r.k === 'トレンド') out.push(r.v[0] || ''); else if (r.k === '削除済み') out.push('このポストは削除されました。'); else out.push(r.v.length >= 2 ? r.v[1] : r.v[0] || ''); }); }
   else if (a.形 === 'ニュース') { out.push(a.見出し || ''); if (a.副題) out.push(a.副題); d.R.forEach(r => { if (!r.k) out.push(r.v.join('｜')); else if (r.k === '関連') out.push(r.v.join('｜')); else if (r.k === 'コメント' || r.k === '返信') out.push(r.v.slice(1).join('｜')); }); }
+  else if (a.形 === 'おすすめ') d.R.forEach(r => out.push(r.k ? (r.v[0] || '') : r.raw.trim().replace(/^[\[［]\s*|\s*[\]］]$/g, '')));
+  else if (a.形 === '見出し') d.R.forEach(r => out.push(r.raw.trim().replace(/^[\[［]\s*|\s*[\]］]$/g, '')));
   else if (a.形 === 'タイムライン') { if (a.タグ) out.push(a.タグ); d.R.forEach(r => { if (r.k === '投稿' || r.k === '返信' || r.k === '返信の返信') out.push(r.v[2] || ''); else if (r.k === '画像') out.push(r.v.slice(0, 2).join(' ')); else if (r.k === 'ショート') out.push(r.v[0] || ''); else if (r.k === '動画') out.push(r.v.slice(0, 2).join(' ')); }); }
   else if (a.形 === 'コラム') { if (a.分類) out.push(a.分類); out.push(a.題 || ''); d.R.forEach(r => out.push(String(r.raw || '').trim().replace(/\*\*/g, ''))); if (a.署名) out.push(a.署名); }
   else { if (!a.続き) out.push(a.題 || '動画のコメント欄'); d.R.forEach(r => out.push(r.v.length >= 2 ? r.v.slice(1).join('｜') : String(r.v[0] || '').replace(/^\s*[―—─－]{1,3}\s*/, ''))); }
@@ -187,7 +208,7 @@ function play(el, opt = {}) {
   if (global.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) { stop(); return { cancel() {} }; }
   if (!items.length) { stop(); return { cancel() {} }; }
   root.classList.add('nr-playing'); items.forEach(x => x.classList.remove('on'));
-  const fast = root.classList.contains('nr-video') ? 170 : root.classList.contains('nr-col') ? 330 : root.classList.contains('nr-tml') ? 420 : 260;
+  const fast = root.classList.contains('nr-video') ? 170 : root.classList.contains('nr-col') ? 330 : root.classList.contains('nr-tml') ? 420 : root.classList.contains('nr-hl') ? 150 : root.classList.contains('nr-rf') ? 110 : 260;
   // 画面から消えたら（ページを切りかえたら）、そこで止める。音も鳴らさない
   items.forEach((x, i) => timers.push(setTimeout(() => { if (!root.isConnected) { stop(); return; } x.classList.add('on'); pop(opt.sound, i); }, 120 + i * fast)));
   root.querySelectorAll('.nr-cnt').forEach(c => { const v = +c.dataset.v || 0, k = c.dataset.k === '1'; c.dataset.final = c.textContent; if (!v) return; const from = Math.round(v * 0.82), steps = 18; for (let s = 0; s <= steps; s++) timers.push(setTimeout(() => { if (!done) c.textContent = s === steps ? c.dataset.final : fmt(Math.round(from + (v - from) * s / steps), k); }, 200 + s * 70)); });
