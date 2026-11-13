@@ -44,6 +44,9 @@ body.dark .note{color:#a1a1aa}
 .ctl button.del:hover{background:#ef4444}
 .tl-r>.ctl{top:0;right:0}
 .tl-m>.ctl{top:auto;bottom:8px}
+.tl-sv>.ctl{top:auto;bottom:auto;top:44px;right:8px}#stage.ed .tl-tab,#stage.ed .tl-fl{cursor:pointer}
+.t-ys .tl-p>.ctl [data-op=img],.t-ys .tl-p>.ctl [data-op=shorts],.t-ys .tl-p>.ctl [data-op=algo],.t-ir .tl-p>.ctl [data-op=img],.t-ir .tl-p>.ctl [data-op=shorts],.t-ir .tl-p>.ctl [data-op=algo],.t-ig .tl-p>.ctl [data-op=algo],.t-fb .tl-p>.ctl [data-op=algo]{display:none}
+.tl-sc>.ctl{top:4px;right:4px;max-width:none;gap:2px}.tl-sc>.ctl button{padding:1px 6px;min-height:20px;font-size:10px}
 .tl-r{position:relative}
 #stage.ed .tl-r{padding-right:56px}
 #stage.ed .tl-p{padding-top:34px}
@@ -59,7 +62,7 @@ footer button.main{background:var(--acc);border-color:var(--acc);color:#1b140c}
 <body>
 <header><h1>タイムラインメーカー</h1><button type="button" id="btnUndo">↶ もどす</button><button type="button" id="btnBack">とじる</button></header>
 <div class="tools">
-  <div class="row" id="looks"><button type="button" data-look="Xダーク">𝕏 ダーク</button><button type="button" data-look="Xライト">𝕏 ライト</button><button type="button" data-look="インスタ">📸 インスタ</button><button type="button" data-look="フェイスブック">📘 Facebook</button></div>
+  <div class="row" id="looks"><button type="button" data-look="Xダーク">𝕏 ダーク</button><button type="button" data-look="Xライト">𝕏 ライト</button><button type="button" data-look="YouTubeショート">▶ ショート</button><button type="button" data-look="インスタリール">🎞 リール</button><button type="button" data-look="インスタ">📸 インスタ</button><button type="button" data-look="フェイスブック">📘 Facebook</button></div>
   <div class="row"><button type="button" class="add" id="btnAdd">＋ 投稿を足す</button><select id="scene" aria-label="見本"><option value="">見本を読みこむ…</option><option value="ep1">① 1話直後のTL衝撃</option><option value="viral">② バイラル＆レスバ</option><option value="variety">③ バラエティときめき</option><option value="blank">まっさら（投稿1つ）</option></select></div>
   <div class="row"><button type="button" class="play" id="btnPlay">▶ 再生してみる</button><label><input type="checkbox" id="snd"> 音</label></div>
 </div>
@@ -81,8 +84,8 @@ const SCENES = {
 返信：返信する人｜@reply_user｜返信の本文を入れます｜時間=たった今｜いいね=5
 ［／報道］`,
   ep1: `［報道 形=タイムライン 見た目=Xダーク 題=おすすめ タグ=#ユナゴン　#ユ・スルホ］
-投稿：韓ドラ実況民｜@live_yunagon｜TLに誰もいないのか 頼む｜時間=2分前｜返信=312｜RP=4,910｜いいね=1.4万｜表示=58万｜色=青｜字=実｜反応=😮😱
-画像：📺 〈君と僕の空間〉第1話 リアルタイム放送中｜カン・ミヌ初登場シーンの衝撃｜背景=ステージ｜出す=インスタ
+投稿：韓ドラ実況民｜@live_yunagon｜TLに誰もいないのか 頼む｜時間=2分前｜返信=312｜RP=4,910｜いいね=1.4万｜色=青｜字=実
+動画：📺 〈君と僕の空間〉第1話 切り抜きクリップ｜カン・ミヌ初登場シーン（0:47）｜背景=紺｜説明=今すぐテレビつけて見ろ！！『ユ・スルホが演技が上手い』 #ユナゴン #ユ・スルホ
 返信：非ドラマ勢の友人｜@friend_02｜なんで｜時間=2分前｜いいね=84｜色=灰｜字=友
 返信：韓ドラ実況民｜@live_yunagon｜まじかよ 人間だ！！！おいおいおい お前今ユナゴン見てる？？？｜時間=2分前｜いいね=412｜色=青｜字=実
 返信：非ドラマ勢の友人｜@friend_02｜ううん 俺ドラマ見ない｜時間=1分前｜いいね=95｜色=灰｜字=友
@@ -92,28 +95,32 @@ const SCENES = {
 返信：非ドラマ勢の友人｜@friend_02｜わかったから落ち着け；；何でそんなに｜時間=30秒前｜いいね=145｜色=灰｜字=友
 返信：韓ドラ実況民｜@live_yunagon｜衝撃受けるなよ よく聞け… それはまさに… **『ユ・スルホが演技が上手い』**｜時間=15秒前｜いいね=8,420｜色=青｜字=実
 返信：非ドラマ勢の友人｜@friend_02｜？｜時間=たった今｜いいね=5,310｜色=灰｜字=友
-投稿：ドラマ視聴垢｜@drama_shock_k｜何だこれ？？本気で何なの？？／俺は何を見たんだ 夢でも見たのか／いや、俺だけが鳥肌立ったんじゃないよな？？？｜時間=1分前｜返信=840｜RP=1.2万｜いいね=3.1万｜表示=92万｜色=紫｜字=鳥｜反応=😮👍
-画像：⚡ 1話エンディング カン・ミヌ登場カット｜「うちのスルホが変わった…？」コミュニティサーバーがパンク寸前｜背景=ネオン｜出す=インスタ
+投稿：ドラマ視聴垢｜@drama_shock_k｜何だこれ？？本気で何なの？？／俺は何を見たんだ 夢でも見たのか／いや、俺だけが鳥肌立ったんじゃないよな？？？｜時間=1分前｜返信=840｜RP=1.2万｜いいね=3.1万｜色=紫｜字=鳥｜おすすめ=韓国ドラマ・トレンド · おすすめ表示
+動画：⚡ 1話エンディング 衝撃の表情演技｜「うちのスルホが変わった…？」｜背景=紫｜説明=何だこれ？？本気で何なの？？俺だけが鳥肌立ったんじゃないよな？？？ #君と僕の空間
 返信：呆然視聴者｜@user_w｜俺ほんとにオーバーに言いたくないけどマジで呆れて言葉も出ないｗｗｗｗ何なんだよマジでｗｗｗ｜時間=40秒前｜いいね=1,290｜色=水｜字=呆
-返信：古参オタク｜@old_fan｜うちのスルホが変わった…？｜時間=12秒前｜いいね=2,410｜色=ピンク｜字=古｜先=@drama_shock_k
+返信：古参オタク｜@old_fan｜うちのスルホが変わった…？｜時間=12秒前｜いいね=2,410｜色=ピンク｜字=古
 ［／報道］`,
   viral: `［報道 形=タイムライン 見た目=Xダーク 題=おすすめ タグ=#君と僕の空間　#カン・ミヌ］
-投稿：バズ動画まとめbot｜@viral_shorts_kr｜今アルゴリズムに無限に流れてくる切り抜きショート一覧ｗｗｗ／▶ [全国民が現実否認中という無駄演技の最近の近況]／▶ [見ても信じられない昨日の『君と僕の空間』ユ・スルホのクリップ映像]／▶ [衝撃注意！ユ・スルホの演技はどう変わったのか？ビフォーアフター比較]｜時間=2時間前｜返信=4,120｜RP=2.4万｜いいね=6.7万｜表示=210万｜色=黄｜字=動｜反応=🔥😮😂
-画像：🎬 「私の弟が両親を殺したんだ。」｜〈君と僕の空間〉2話エンディング クリップ再生数 420万回突破｜背景=夕焼け
+投稿：通りすがりの一般人｜@casual_scroll_jp｜ドラマ全然興味ないのに、おすすめのアルゴリズムにこの切り抜きばっかり回ってくるんだけど何事ｗｗｗ／特に何も考えずにスマホいじってたのに気づいたら3本連続で見てたんだが｜時間=2時間前｜返信=4,120｜RP=2.4万｜いいね=6.7万｜色=黄｜字=通｜おすすめ=あなたの「おすすめ」に表示 · フォロー外
+動画：🔥 急上昇ショート #1 · 384万回再生｜過去の無駄演技 vs 今回の覚醒シーン比較｜背景=赤｜説明=全国民が現実否認中という無駄演技の最近の近況 #ユ・スルホ #君と僕の空間
+ショート：全国民が現実否認中という無駄演技の最近の近況｜384万回視聴｜背景=紺
+ショート：見ても信じられない昨日の『君と僕の空間』ユ・スルホのクリップ映像｜512万回視聴｜背景=赤
+ショート：衝撃注意！ユ・スルホの演技はどう変わったのか？ビフォーアフター比較｜296万回視聴｜背景=青緑
 返信：冷静な通行人｜@skeptic_01｜みんなオーバーしすぎじゃない？俳優なら元々これくらいの演技はするもんだよみんな；｜時間=1時間前｜いいね=340｜色=灰｜字=冷
 返信の返信：辛口批評垢｜@anti_w｜正直演技のレベルはそこそこだけど、無駄演技だから余計上手く見えるって錯覚してると思うｗㄱｗｗ｜時間=52分前｜いいね=215｜色=紫｜字=辛
 返信の返信：アンチ古参｜@hater_99｜そこそこでもないｗｗｗ 作為的な感じがこんなに強いのに演技が上手いと思うのも不思議だｗㄲｗ｜時間=41分前｜いいね=89｜色=黄｜字=疑
 返信の返信：ドラマガチ勢｜@viewer_true｜え、作為的な感じが全くないんだけど何言ってるの。おい俺も無駄演技好きじゃないけど、今回は演技上手かったけど｜時間=28分前｜いいね=1,840｜色=青｜字=真
-投稿：青春ドラマ愛好家｜@youth_drama_love｜私はこんなドラマを待ってたのよㅠㅠ 主演俳優がみんな20代なのがどれくらいぶりよㅠ／医者でも警察でもなく平凡な大学生のオリジナル脚本、しかもカン・ミヌが間に入ることで救済の叙事がめちゃくちゃ深くなってる…！｜時間=45分前｜返信=530｜RP=1.6万｜いいね=4.2万｜表示=89万｜色=緑｜字=作｜反応=❤️😭
-画像：🎓 〈君と僕の空間〉20代主演キャスト陣｜クラシックな青春ロマンス×緊迫の心理描写｜背景=スタジオ｜出す=インスタ
+投稿：青春ドラマ愛好家｜@youth_drama_love｜私はこんなドラマを待ってたのよㅠㅠ 主演俳優がみんな20代なのがどれくらいぶりよㅠ／医者でも警察でもなく平凡な大学生のオリジナル脚本、しかもカン・ミヌが間に入ることで救済の叙事がめちゃくちゃ深くなってる…！｜時間=45分前｜返信=530｜RP=1.6万｜いいね=4.2万｜色=緑｜字=作｜おすすめ=話題のトピック · おすすめに表示
+動画：🎬 「私の弟が両親を殺したんだ。」｜2話エンディング クリップ再生数420万回突破｜背景=青緑｜説明=見ても信じられない昨日の『君と僕の空間』ユ・スルホのクリップ映像 #ユナゴン
 返信：王道好き｜@classic_taste｜10年前に出てたらありきたりだと罵られただろうに、なんでこんなに面白いの。クラシックな味がむしろ新鮮に感じられるみたい｜時間=19分前｜いいね=920｜色=水｜字=王
 ［／報道］`,
   variety: `［報道 形=タイムライン 見た目=Xダーク 題=おすすめ タグ=#ウチェユ　#賢明な熱湯冷湯］
-投稿：賢明な熱湯冷湯 公式｜@hot_cold_show｜【EP.37 公開】ユナゴンの代わりにウチェユ！（ウ・ジュンソ×チェ・ラン×ユ・スルホ）| 賢明な熱湯冷湯 EP.37／清涼な笑顔から伝説のドッキリカメラ回まで完全収録✨／#ユ・スルホ #ウ・ジュンソ #チェ・ラン #イ・スルギ｜時間=30分前｜返信=3,210｜RP=3.8万｜いいね=8.9万｜表示=185万｜色=ピンク｜字=熱｜反応=❤️😍🤯
+投稿：賢明な熱湯冷湯 公式｜@hot_cold_show｜【EP.37 公開】ユナゴンの代わりにウチェユ！（ウ・ジュンソ×チェ・ラン×ユ・スルホ）|賢明な熱湯冷湯 EP.37／清涼な笑顔から伝説のドッキリカメラ回まで完全収録✨／#ユ・スルホ #ウ・ジュンソ #チェ・ラン #イ・スルギ｜時間=30分前｜返信=3,210｜RP=3.8万｜いいね=8.9万｜色=ピンク｜字=熱｜おすすめ=バラエティ · おすすめに表示
+動画：🎥 賢明な熱湯冷湯 EP.37 ドッキリカメラ回｜イ・スルギを真っ直ぐ見つめるユ・スルホの眼差し｜背景=紫｜音源=賢明な熱湯冷湯 EP.37 公式クリップ音源｜説明=ユナゴンの代わりにウチェユ！清涼な笑顔から伝説のドッキリまで完全収録✨ #ウチェユ #ユ・スルホ
 画像：🎥 賢明な熱湯冷湯 EP.37 ドッキリカメラ名場面｜イ・スルギを真っ直ぐに見つめるユ・スルホの眼差し｜背景=夕焼け
 返信：動揺する視聴者｜@doki_panic｜いや、私なんでときめいてる……？｜時間=21分前｜いいね=4,120｜色=ピンク｜字=恋
-返信：元アンチ民｜@former_anti｜私になんでこんなことするの… 私あなたのこと嫌いだったじゃない…｜時間=14分前｜いいね=6,850｜色=紫｜字=元｜先=@hot_cold_show
-返信：顔面被害者｜@face_genius｜くそ；イケメンすぎてめちゃくちゃイケメンだな；誰かこの映像を見ない方法を教えてくれㅠㅠ｜時間=5分前｜いいね=9,340｜色=黄｜字=顔｜先=@hot_cold_show
+返信：元アンチ民｜@former_anti｜私になんでこんなことするの… 私あなたのこと嫌いだったじゃない…｜時間=14分前｜いいね=6,850｜色=紫｜字=元
+返信：顔面被害者｜@face_genius｜くそ；イケメンすぎてめちゃくちゃイケメンだな；誰かこの映像を見ない方法を教えてくれㅠㅠ｜時間=5分前｜いいね=9,340｜色=黄｜字=顔
 ［／報道］`
 };
 let src = SCENES.blank, title = 'タイムライン', playing = null;
@@ -144,9 +151,9 @@ function render() {
   st.querySelectorAll('[data-e]').forEach(el => { try { el.contentEditable = 'plaintext-only'; } catch (e) { el.contentEditable = 'true'; } if (el.contentEditable !== 'plaintext-only') el.contentEditable = 'true'; el.spellcheck = false; });
   const p = parts();
   st.querySelectorAll('.tl-p').forEach(el => {
-    const i = +el.dataset.r, end = postEnd(p.lines, i), hasImg = p.lines.slice(i + 1, end).some(l => kindOf(l) === '画像');
+    const i = +el.dataset.r, end = postEnd(p.lines, i), hasImg = p.lines.slice(i + 1, end).some(l => kindOf(l) === '画像'), hasSh = p.lines.slice(i + 1, end).some(l => kindOf(l) === 'ショート');
     const c = document.createElement('div'); c.className = 'ctl';
-    c.innerHTML = '<button type="button" data-op="reply" data-i="' + i + '">💬 返信</button><button type="button" data-op="img" data-i="' + i + '">🖼 ' + (hasImg ? '画像をはずす' : '画像の枠') + '</button><button type="button" data-op="letter" data-i="' + i + '">字</button><button type="button" data-op="up" data-i="' + i + '" aria-label="上へ">↑</button><button type="button" data-op="down" data-i="' + i + '" aria-label="下へ">↓</button><button type="button" class="del" data-op="delpost" data-i="' + i + '" aria-label="この投稿を消す">×</button>';
+    c.innerHTML = '<button type="button" data-op="reply" data-i="' + i + '">💬 返信</button><button type="button" data-op="img" data-i="' + i + '">🖼 ' + (hasImg ? '画像をはずす' : '画像の枠') + '</button><button type="button" data-op="shorts" data-i="' + i + '">📱 ' + (hasSh ? 'ショートをはずす' : 'ショート') + '</button><button type="button" data-op="algo" data-i="' + i + '" title="X の「おすすめ」タブのとき、投稿の上に出る一行とフォローボタン">✨ ' + (optOf(p.lines[i] || '', 'おすすめ') ? 'おすすめをはずす' : 'おすすめ') + '</button><button type="button" data-op="letter" data-i="' + i + '">字</button><button type="button" data-op="up" data-i="' + i + '" aria-label="上へ">↑</button><button type="button" data-op="down" data-i="' + i + '" aria-label="下へ">↓</button><button type="button" class="del" data-op="delpost" data-i="' + i + '" aria-label="この投稿を消す">×</button>';
     el.prepend(c);
   });
   st.querySelectorAll('.tl-r').forEach(el => {
@@ -158,6 +165,16 @@ function render() {
     const i = +el.dataset.m, l = p.lines[i] || '', c = document.createElement('div'); c.className = 'ctl';
     c.innerHTML = '<button type="button" data-op="bg" data-i="' + i + '">🎨 背景</button><button type="button" data-op="photo" data-i="' + i + '">📷 ' + (optOf(l, '写真') ? '写真をはずす' : '写真') + '</button><button type="button" data-op="igonly" data-i="' + i + '">' + (optOf(l, '出す') === 'インスタ' ? 'インスタだけ ✓' : 'インスタだけ') + '</button>';
     el.append(c);
+  });
+  st.querySelectorAll('.tl-sv[data-v]').forEach(el => {
+    const i = +el.dataset.v, c = document.createElement('div'); c.className = 'ctl';
+    c.innerHTML = '<button type="button" data-op="vbg" data-i="' + i + '">🎨 映像の背景</button>';
+    el.prepend(c);
+  });
+  st.querySelectorAll('.tl-sc').forEach(el => {
+    const i = +el.dataset.sh, c = document.createElement('div'); c.className = 'ctl';
+    c.innerHTML = '<button type="button" data-op="sbg" data-i="' + i + '" title="背景の色">🎨</button><button type="button" data-op="addshort" data-i="' + i + '" title="となりにもう1つ">＋</button><button type="button" class="del" data-op="delshort" data-i="' + i + '" aria-label="このショートを消す">×</button>';
+    el.prepend(c);
   });
   const look = lookOf();
   document.querySelectorAll('[data-look]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.look === look)));
@@ -180,7 +197,7 @@ $('#stage').addEventListener('focusout', e => {
 // ---------- ボタン ----------
 let pickAt = -1;
 // ボタンを押しても、打っている所から離れない（先に、打った分を入れてから、ボタンの仕事をする）
-$('#stage').addEventListener('mousedown', e => { if (e.target.closest('[data-op],[data-av]')) e.preventDefault(); });
+$('#stage').addEventListener('mousedown', e => { if (e.target.closest('[data-op],[data-av],[data-tab],[data-fl]')) e.preventDefault(); });
 function commit() {
   const el = document.activeElement; if (!el || !el.dataset || !el.dataset.e || !$('#stage').contains(el)) return;
   const next = NR.edit(src, el.dataset.e, el.innerText.replace(/ /g, ' ').replace(/\n+$/, ''));
@@ -189,7 +206,11 @@ function commit() {
 }
 $('#stage').addEventListener('click', e => {
   if (playing) return;
-  if (e.target.closest('[data-op],[data-av]')) commit();
+  if (e.target.closest('[data-op],[data-av],[data-tab],[data-fl]')) commit();
+  const tb = e.target.closest('[data-tab]');
+  if (tb) { change(NR.edit(src, 'a:タブ', tb.dataset.tab === 'フォロー中' ? 'フォロー中' : '')); toast(tb.dataset.tab === 'フォロー中' ? '「フォロー中」のタブにしました' : '「おすすめ」のタブにしました。✨ の一行とフォローボタンが出ます'); return; }
+  const fl = e.target.closest('[data-fl]');
+  if (fl) { const i = +fl.dataset.fl; setOpt(i, 'フォロー', optOf(parts().lines[i] || '', 'フォロー') === '中' ? '' : '中'); return; }
   const av = e.target.closest('[data-av]');
   if (av) { const i = +av.dataset.av, l = parts().lines[i] || '', cols = NR.TL_COLS, cur = optOf(l, '色'); setOpt(i, '色', cols[(cols.indexOf(cur) + 1) % cols.length]); return; }
   const b = e.target.closest('[data-op]'); if (!b) return;
@@ -207,6 +228,12 @@ $('#stage').addEventListener('click', e => {
     setLines(p, head.concat(B, A, tail)); return;
   }
   if (op === 'delpost') { const end = postEnd(L, i); if (end - i > 1 && !confirm('この投稿と、ついている返信を消します。よいですか？（「↶ もどす」で戻せます）')) return; L.splice(i, end - i); setLines(p, L); toast('投稿を消しました'); return; }
+  if (op === 'shorts') { const end = postEnd(L, i), ks = []; for (let j = i + 1; j < end; j++) if (kindOf(L[j]) === 'ショート') ks.push(j); if (ks.length) { if (ks.length > 1 && !confirm('この投稿のショートを、ぜんぶはずします。よいですか？（「↶ もどす」で戻せます）')) return; ks.reverse().forEach(j => L.splice(j, 1)); setLines(p, L); toast('ショートをはずしました'); return; } let at = i + 1; while (at < end && kindOf(L[at]) === '画像') at++; L.splice(at, 0, 'ショート：ショートの題名を入れます｜100万回視聴｜背景=紺', 'ショート：ショートの題名を入れます｜50万回視聴｜背景=赤', 'ショート：ショートの題名を入れます｜30万回視聴｜背景=青緑'); setLines(p, L); toast('ショートを3つ足しました。題名と回数を押して直せます'); return; }
+  if (op === 'algo') { const cur = optOf(L[i], 'おすすめ'); setOpt(i, 'おすすめ', cur ? '' : '韓国ドラマ・トレンド · おすすめ表示'); if (!cur && /^X/.test(lookOf()) && (src.match(/タブ=フォロー中/))) toast('「おすすめ」のタブのときに出ます'); return; }
+  if (op === 'vbg') { const bgs = NR.TL_VBG, cur = optOf(L[i], '背景') || bgs[0]; setOpt(i, '背景', bgs[(bgs.indexOf(cur) + 1) % bgs.length]); return; }
+  if (op === 'sbg') { const bgs = NR.TL_SBG, cur = optOf(L[i], '背景') || bgs[0]; setOpt(i, '背景', bgs[(bgs.indexOf(cur) + 1) % bgs.length]); return; }
+  if (op === 'addshort') { L.splice(i + 1, 0, 'ショート：ショートの題名を入れます｜10万回視聴｜背景=紺'); setLines(p, L); return; }
+  if (op === 'delshort') { L.splice(i, 1); setLines(p, L); toast('ショートを消しました'); return; }
   if (op === 'delrow') { L.splice(i, 1); setLines(p, L); toast('返信を消しました'); return; }
   if (op === 'bg') { const bgs = NR.TL_BG, cur = optOf(L[i], '背景') || bgs[0]; setOpt(i, '背景', bgs[(bgs.indexOf(cur) + 1) % bgs.length]); return; }
   if (op === 'igonly') { setOpt(i, '出す', optOf(L[i], '出す') === 'インスタ' ? '' : 'インスタ'); toast(optOf(parts().lines[i], '出す') ? 'インスタの見た目のときだけ出ます' : 'どの見た目でも出ます'); return; }
@@ -215,7 +242,19 @@ $('#stage').addEventListener('click', e => {
 // 画像を小さくする（横 720px まで、JPEG）。本文の印に入るので、大きいままにしない
 function shrinkPhoto(file) { return new Promise((ok, ng) => { const r = new FileReader(); r.onerror = ng; r.onload = () => { const im = new Image(); im.onerror = ng; im.onload = () => { const w = Math.min(720, im.naturalWidth), h = Math.round(im.naturalHeight * w / im.naturalWidth), c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, w, h); g.drawImage(im, 0, 0, w, h); ok(c.toDataURL('image/jpeg', 0.78)); }; im.src = r.result; }; r.readAsDataURL(file); }); }
 $('#photoFile').addEventListener('change', e => { const file = e.target.files && e.target.files[0], i = pickAt; e.target.value = ''; if (!file || i < 0) return; shrinkPhoto(file).then(url => setOpt(i, '写真', url)).catch(() => alert('この画像は読み込めませんでした')); });
-$('#looks').addEventListener('click', e => { const b = e.target.closest('[data-look]'); if (b) change(NR.edit(src, 'a:見た目', b.dataset.look)); });
+$('#looks').addEventListener('click', e => {
+  const b = e.target.closest('[data-look]'); if (!b) return;
+  let next = NR.edit(src, 'a:見た目', b.dataset.look);
+  if (/ショート|リール/.test(b.dataset.look)) {
+    const m = next.match(/^([^\n]*)\n([\s\S]*)\n［／報道］\s*$/);
+    if (m) {
+      const L = m[2].split('\n'); let added = 0;
+      for (let i = L.length - 1; i >= 0; i--) { if (kindOf(L[i]) !== '投稿') continue; const end = postEnd(L, i); if (L.slice(i + 1, end).some(l => kindOf(l) === '動画')) continue; L.splice(i + 1, 0, '動画：🎬 場面の題を入れます｜場面の下の字｜背景=紺'); added++; }
+      if (added) { next = m[1] + '\n' + L.join('\n') + '\n［／報道］'; setTimeout(() => toast('動画の場面を ' + added + 'つ足しました。題と下の字を押して直せます'), 50); }
+    }
+  }
+  change(next);
+});
 $('#btnAdd').onclick = () => { const p = parts(), L = p.lines.slice(); L.push('投稿：ユーザー名｜@new_user｜ここに投稿の本文を入れます｜時間=たった今｜返信=0｜RP=0｜いいね=0'); setLines(p, L); toast('投稿を足しました'); setTimeout(() => { const ps = document.querySelectorAll('#stage .tl-p'); ps[ps.length - 1]?.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 30); };
 $('#scene').onchange = e => { const k = e.target.value; e.target.value = ''; if (!k) return; if (!confirm('今の中身を、見本と入れかえます。よいですか？（「↶ もどす」で戻せます）')) return; change(SCENES[k]); toast('見本を読みこみました'); };
 $('#btnUndo').onclick = () => { if (!undo.length) return; src = undo.pop(); render(); };

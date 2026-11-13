@@ -90,10 +90,14 @@ function column(a, R) {
 //   投稿：名前｜@ID｜本文｜時間=2分前｜返信=312｜RP=4,910｜いいね=1.4万｜表示=58万｜色=青｜字=実
 //   画像：見出し｜説明｜背景=ステージ｜写真=…｜出す=インスタ（すぐ上の投稿の画像の枠）
 //   返信：名前｜@ID｜本文｜時間=…｜いいね=84｜先=@相手（なければ、すぐ上の人へ）　返信の返信：同じ（1段下げる）
-const TL_LOOK = { Xダーク: 'xd', Xライト: 'xl', インスタ: 'ig', フェイスブック: 'fb' };
+const TL_LOOK = { Xダーク: 'xd', Xライト: 'xl', インスタ: 'ig', フェイスブック: 'fb', YouTubeショート: 'ys', インスタリール: 'ir' };
+// 動画：場面の題｜場面の下の字｜背景=紫｜音源=…｜印=おすすめ表示｜説明=…｜ID=@…（説明と ID は、書かなければ投稿の本文と @ID）（ショート・リールの見た目のとき、投稿が縦長の動画になる）
+const TL_VBG = { 紺: 'v1', 赤: 'v2', 紫: 'v3', 青緑: 'v4' };
 const TL_COL = { 青: 'blue', ピンク: 'pink', 紫: 'purple', 緑: 'emerald', 黄: 'amber', 灰: 'slate', 水: 'cyan' };
 const TL_COLS = Object.keys(TL_COL);
 const TL_BG = { ステージ: 'stage', 夕焼け: 'sunset', スタジオ: 'studio', ネオン: 'neon' };
+// ショート：題名｜384万回視聴｜背景=紺（すぐ上の投稿の下に、縦長のカードが3つずつ並ぶ）
+const TL_SBG = { 紺: 's1', 赤: 's2', 青緑: 's3' };
 const tlCol = (o, id) => { if (TL_COL[o.色]) return TL_COL[o.色]; let h = 0; for (const c of String(id || '')) h = (h * 31 + c.codePointAt(0)) >>> 0; return TL_COL[TL_COLS[h % TL_COLS.length]]; };
 const tlId = s => { s = String(s || '').trim() || '@user'; return s.startsWith('@') ? s : '@' + s; };
 const tlTx = s => tx(s).replace(/\*\*([^*<]+?)\*\*/g, '<strong>$1</strong>');
@@ -102,18 +106,24 @@ function tlGroups(R) {
   for (const r of R) {
     if (r.k === '投稿') { p = { r, media: null, re: [] }; ps.push(p); }
     else if (r.k === '画像' && p) p.media = r;
+    else if (r.k === 'ショート' && p) (p.sh = p.sh || []).push(r);
+    else if (r.k === '動画' && p) p.vid = r;
     else if ((r.k === '返信' || r.k === '返信の返信') && p) p.re.push(r);
   }
   return ps;
 }
 function timeline(a, R, base, ed) {
-  const look = TL_LOOK[a.見た目] || 'xd';
+  const look = TL_LOOK[a.見た目] || 'xd', isX = look === 'xd' || look === 'xl', isV = look === 'ys' || look === 'ir', fy = isX && a.タブ !== 'フォロー中';
+  const E = (v, k) => v ? ' data-e="r:' + v.i + ':' + k + '"' : '';
   const img = n => /^(md_|ph_|sc_|hs_|sn_)[a-z_0-9]+$/.test(n || '') ? base + 'a/' + n + '.jpg' : /^data:image\/(?:jpeg|png|webp|gif);base64,[A-Za-z0-9+/=]+$/.test(n || '') || /^https?:\/\/[^\s"'<>]+$/.test(n || '') ? n : '';
   // ed（メーカーで直すとき）は、空の数も押して入れられるように、空の枠を出す
   const c = (r, k, kk) => r.o[k] ? '<span data-e="r:' + r.i + ':o:' + k + '">' + cnt(r.o[k], kk) + '</span>' : ed ? '<span class="tl-0" data-e="r:' + r.i + ':o:' + k + '"></span>' : '';
   const av = (r, cls) => '<i class="' + cls + ' av-' + tlCol(r.o, r.v[1]) + '" data-av="' + r.i + '">' + esc(r.o.字 || [...String(r.v[0] || '?')][0] || '?') + '</i>';
-  const title = look === 'ig' ? 'Instagram' : look === 'fb' ? 'facebook' : '';
-  let h = '<div class="nr nr-tml t-' + look + '"><div class="tl-top">' + (title ? '<b>' + title + '</b>' : '<b data-e="a:題">' + esc(a.題 || 'おすすめ') + '</b>') + '<small data-e="a:タグ"' + (ed && !a.タグ ? ' class="tl-tag0"' : '') + '>' + tx(a.タグ || '') + '</small></div>';
+  const title = look === 'ig' ? 'Instagram' : look === 'fb' ? 'facebook' : look === 'ys' ? 'Shorts' : look === 'ir' ? 'Reels' : '';
+  const tagEl = '<small data-e="a:タグ"' + (ed && !a.タグ ? ' class="tl-tag0"' : '') + '>' + tx(a.タグ || '') + '</small>';
+  let h = '<div class="nr nr-tml t-' + look + (fy ? ' tab-fy' : '') + '">' + (isX
+    ? '<div class="tl-top tl-xtop"><div class="tl-tabs"><span class="tl-tab' + (fy ? ' on' : '') + '" data-tab="おすすめ">おすすめ</span><span class="tl-tab' + (fy ? '' : ' on') + '" data-tab="フォロー中">フォロー中</span></div>' + (a.タグ || ed ? '<div class="tl-xtag">' + tagEl + '</div>' : '') + '</div>'
+    : '<div class="tl-top">' + (title ? '<b>' + title + '</b>' : '<b data-e="a:題">' + esc(a.題 || 'おすすめ') + '</b>') + tagEl + '</div>');
   for (const p of tlGroups(R)) {
     const r = p.r, m = p.media, id = tlId(r.v[1]);
     let prev1 = id, prev = id;   // 返信はすぐ上の返信（か投稿）へ。返信の返信は、すぐ上の人へ
@@ -122,11 +132,25 @@ function timeline(a, R, base, ed) {
       return '<div class="tl-r nr-in' + (x.k === '返信の返信' ? ' lv2' : '') + '" data-r="' + x.i + '"><div class="tl-rl">' + av(x, 'tl-rav') + '<i class="tl-ln"></i></div><div class="tl-rc"><div class="tl-rw"><div class="tl-rm"><b data-e="r:' + x.i + ':v0">' + esc(x.v[0] || '名無し') + '</b><small class="tl-hd" data-e="r:' + x.i + ':v1">' + esc(xid) + '</small>' + (x.o.時間 || ed ? '<small class="tl-tm">· <span data-e="r:' + x.i + ':o:時間">' + esc(x.o.時間) + '</span></small>' : '') + '</div><div class="tl-to">返信先: <span data-e="r:' + x.i + ':o:先">' + esc(to) + '</span></div><div class="tl-rt" data-e="r:' + x.i + ':v2">' + tlTx(x.v[2] || '') + '</div></div>'
         + '<div class="tl-ra"><span class="f">いいね！</span><span class="f">返信</span><span class="x">💬 ' + c(x, '返信') + '</span><span class="x">🔁 ' + c(x, 'RP') + '</span><span class="xi">♡ ' + c(x, 'いいね') + '</span></div></div></div>';
     }).join('');
+    const shelf = p.sh && p.sh.length ? '<div class="tl-sh">' + p.sh.map(s => '<div class="tl-sc nr-in sb-' + (TL_SBG[s.o.背景] || 's1') + '" data-sh="' + s.i + '"><div class="tl-st"><span class="tl-sbd">▶ Shorts</span></div><i class="tl-spl">▶</i><div class="tl-sbt"><b data-e="r:' + s.i + ':v0">' + tlTx(s.v[0] || '') + '</b>' + (s.v[1] || ed ? '<small data-e="r:' + s.i + ':v1">' + esc(s.v[1] || '') + '</small>' : '') + '</div></div>').join('') + '</div>' : '';
     const u = m ? img(m.o.写真) : '';
     const media = m ? '<div class="tl-m bg-' + (TL_BG[m.o.背景] || 'stage') + (m.o.出す === 'インスタ' ? ' only-ig' : '') + (u ? ' ph' : '') + '" data-m="' + m.i + '">' + (u ? '<img src="' + esc(u) + '" alt="" loading="lazy">' : '') + '<div class="tl-mc"><b data-e="r:' + m.i + ':v0">' + tlTx(m.v[0] || '') + '</b>' + (m.v[1] || ed ? '<small data-e="r:' + m.i + ':v1">' + tlTx(m.v[1]) + '</small>' : '') + '</div></div>' : '';
+    if (isV) {
+      const v = p.vid, fol = look === 'ys' ? 'チャンネル登録' : 'フォローする';
+      h += '<div class="tl-p tl-vp nr-in" data-r="' + r.i + '"><div class="tl-sv sv-' + (TL_VBG[v && v.o.背景] || 'v1') + '"' + (v ? ' data-v="' + v.i + '"' : '') + '>'
+        + '<div class="sv-top"><span class="sv-pill">▶ ' + (look === 'ys' ? 'Shorts' : 'Reels') + '</span><span class="sv-tag"' + E(v, 'o:印') + '>' + esc((v && v.o.印) || 'おすすめ表示') + '</span></div>'
+        + '<div class="sv-mid"><b' + E(v, 'v0') + '>' + tlTx((v && v.v[0]) || '🎬 切り抜き動画') + '</b>' + ((v && v.v[1]) || (ed && v) ? '<small' + E(v, 'v1') + '>' + tlTx((v && v.v[1]) || '') + '</small>' : '') + '</div>'
+        + '<div class="sv-bot"><div class="sv-meta"><div class="sv-ch">' + av(r, 'sv-av') + (v && v.o.ID ? '<span class="sv-hd"' + E(v, 'o:ID') + '>' + esc(tlId(v.o.ID)) + '</span>' : '<span class="sv-hd" data-e="r:' + r.i + ':v1">' + esc(id) + '</span>') + '<span class="sv-fb">' + fol + '</span></div>' + (v && v.o.説明 ? '<div class="sv-cap"' + E(v, 'o:説明') + '>' + tlTx(v.o.説明) + '</div>' : '<div class="sv-cap" data-e="r:' + r.i + ':v2">' + tlTx(r.v[2] || '') + '</div>') + '<div class="sv-au"><span>🎵</span><span' + E(v, 'o:音源') + '>' + esc((v && v.o.音源) || 'オリジナル音源 - ' + (r.v[0] || '')) + '</span></div></div>'
+        + '<div class="sv-side">' + (look === 'ys' ? '<div><i>👍</i>' + (c(r, 'いいね') || '0') + '</div><div><i>👎</i><span>低評価</span></div>' : '<div><i>♡</i>' + (c(r, 'いいね') || '0') + '</div>') + '<div><i>💬</i>' + (c(r, '返信') || String(p.re.length)) + '</div><div><i>↗️</i><span>共有</span></div></div></div>'
+        + '<i class="sv-prog"><i></i></i></div>'
+        + (reps ? '<div class="tl-rs">' + reps + '</div>' : '') + '</div>';
+      continue;
+    }
+    const algo = fy && r.o.おすすめ;
     h += '<div class="tl-p nr-in' + (p.re.length ? ' th' : '') + '" data-r="' + r.i + '">'
-      + '<div class="tl-ph">' + av(r, 'tl-av') + '<div class="tl-pm"><b data-e="r:' + r.i + ':v0">' + esc(r.v[0] || '名無し') + '</b><small class="tl-hd" data-e="r:' + r.i + ':v1">' + esc(id) + '</small><small class="tl-tm">· <span data-e="r:' + r.i + ':o:時間">' + esc(r.o.時間 || 'たった今') + '</span></small></div></div>'
-      + '<div class="tl-b" data-e="r:' + r.i + ':v2">' + tlTx(r.v[2] || '') + '</div>' + media
+      + (algo ? '<div class="tl-algo"><span>✨</span><span data-e="r:' + r.i + ':o:おすすめ">' + esc(r.o.おすすめ) + '</span></div>' : '')
+      + '<div class="tl-ph">' + av(r, 'tl-av') + '<div class="tl-pm"><b data-e="r:' + r.i + ':v0">' + esc(r.v[0] || '名無し') + '</b><small class="tl-hd" data-e="r:' + r.i + ':v1">' + esc(id) + '</small><small class="tl-tm">· <span data-e="r:' + r.i + ':o:時間">' + esc(r.o.時間 || 'たった今') + '</span></small></div>' + (algo ? '<span class="tl-fl' + (r.o.フォロー === '中' ? ' on' : '') + '" data-fl="' + r.i + '">' + (r.o.フォロー === '中' ? 'フォロー中' : 'フォローする') + '</span>' : '') + '</div>'
+      + '<div class="tl-b" data-e="r:' + r.i + ':v2">' + tlTx(r.v[2] || '') + '</div>' + media + shelf
       + '<div class="tl-igl">いいね！ ' + (c(r, 'いいね') || '0') + '件</div>'
       + '<div class="tl-fbs"><span>' + esc(r.o.反応 || '👍❤️') + ' ' + (c(r, 'いいね') || '0') + '</span><span>コメント ' + (c(r, '返信') || String(p.re.length)) + '件' + (r.o.RP ? ' · シェア ' + c(r, 'RP') + '件' : '') + '</span></div>'
       + '<div class="tl-a"><span class="x">💬 ' + c(r, '返信') + '</span><span class="x">🔁 ' + c(r, 'RP') + '</span><span class="x">♡ ' + c(r, 'いいね') + '</span><span class="x tl-v">📊 ' + c(r, '表示') + '</span>'
@@ -142,7 +166,7 @@ function plain(src) {
   const d = parse(src); if (!d) return ''; const a = d.a, out = [];
   if (a.形 === '炎上') { out.push((a.タグ || '') + ' トレンド' + (a.順位 || '1') + '位'); d.R.forEach(r => { if (r.k === 'トレンド') out.push(r.v[0] || ''); else if (r.k === '削除済み') out.push('このポストは削除されました。'); else out.push(r.v.length >= 2 ? r.v[1] : r.v[0] || ''); }); }
   else if (a.形 === 'ニュース') { out.push(a.見出し || ''); if (a.副題) out.push(a.副題); d.R.forEach(r => { if (!r.k) out.push(r.v.join('｜')); else if (r.k === '関連') out.push(r.v.join('｜')); else if (r.k === 'コメント' || r.k === '返信') out.push(r.v.slice(1).join('｜')); }); }
-  else if (a.形 === 'タイムライン') { if (a.タグ) out.push(a.タグ); d.R.forEach(r => { if (r.k === '投稿' || r.k === '返信' || r.k === '返信の返信') out.push(r.v[2] || ''); else if (r.k === '画像') out.push(r.v.slice(0, 2).join(' ')); }); }
+  else if (a.形 === 'タイムライン') { if (a.タグ) out.push(a.タグ); d.R.forEach(r => { if (r.k === '投稿' || r.k === '返信' || r.k === '返信の返信') out.push(r.v[2] || ''); else if (r.k === '画像') out.push(r.v.slice(0, 2).join(' ')); else if (r.k === 'ショート') out.push(r.v[0] || ''); else if (r.k === '動画') out.push(r.v.slice(0, 2).join(' ')); }); }
   else if (a.形 === 'コラム') { if (a.分類) out.push(a.分類); out.push(a.題 || ''); d.R.forEach(r => out.push(String(r.raw || '').trim().replace(/\*\*/g, ''))); if (a.署名) out.push(a.署名); }
   else { if (!a.続き) out.push(a.題 || '動画のコメント欄'); d.R.forEach(r => out.push(r.v.length >= 2 ? r.v.slice(1).join('｜') : String(r.v[0] || '').replace(/^\s*[―—─－]{1,3}\s*/, ''))); }
   return out.map(s => String(s).replace(/／/g, ' ').trim()).filter(Boolean).join('\n') || '​';
@@ -214,16 +238,16 @@ function edit(src, key, val) {
   const raw = lines[j].replace(/\r$/, ''), lead = raw.match(/^\s*/)[0], r = rows(raw)[0];
   if (!val && b !== 'cap' && b !== 'u' && !/^(v\d|o)$/.test(b)) { lines.splice(j, 1); return m[1] + m[2] + m[3] + lines.join('\n') + m[5]; }
   let v = r.v.slice(); const pre = ((v[0] || '').match(/^\s*(└|[―—─－]{1,3})\s*/) || [''])[0];
-  if (b === 'o') { const o = Object.assign({}, r.o), w = val.replace(/[｜\s]/g, ''); if (w) o[c] = w; else delete o[c]; lines[j] = lead + (r.k ? r.k + '：' : '') + v.concat(Object.entries(o).map(([x, y]) => x + '=' + y)).join('｜'); return m[1] + m[2] + m[3] + lines.join('\n') + m[5]; }
+  if (b === 'o') { const o = Object.assign({}, r.o), w = /^(返信|RP|いいね|表示|時間|色|字|背景|写真|出す|先|フォロー)$/.test(c) ? val.replace(/[｜\s]/g, '') : val.replace(/｜/g, '|').replace(/\s+/g, ' ').trim(); if (w) o[c] = w; else delete o[c]; lines[j] = lead + (r.k ? r.k + '：' : '') + v.concat(Object.entries(o).map(([x, y]) => x + '=' + y)).join('｜'); return m[1] + m[2] + m[3] + lines.join('\n') + m[5]; }
   if (b === 'raw') { lines[j] = lead + val; return m[1] + m[2] + m[3] + lines.join('\n') + m[5]; }
   if (b === 'all') v = [val];
   else if (b === 'u') { if (v.length >= 2) v[0] = (/^\s*└/.test(v[0]) ? '└' : '') + val; }
   else if (b === 'cap') v = val ? [v[0] || '', val] : [v[0] || ''];
-  else if (/^v\d$/.test(b)) { const n = +b.slice(1); while (v.length < n) v.push(''); v[n] = val.replace(/｜/g, '|'); if (n === 1 && v[1] && !v[1].startsWith('@')) v[1] = '@' + v[1]; }
+  else if (/^v\d$/.test(b)) { const n = +b.slice(1); while (v.length < n) v.push(''); v[n] = val.replace(/｜/g, '|'); if (n === 1 && v[1] && !v[1].startsWith('@') && r.k !== 'ショート') v[1] = '@' + v[1]; }
   else if (b === 't') v = v.length >= 2 ? [v[0], val] : [pre + val];
   const opts = Object.entries(r.o).map(([x, y]) => x + '=' + y);
   lines[j] = lead + (r.k ? r.k + '：' : '') + v.concat(opts).join('｜');
   return m[1] + m[2] + m[3] + lines.join('\n') + m[5];
 }
-global.NewsReader = { isSource, html, plain, scan, play, finish, edit, stopAll, KINDS, TL_COLS, TL_BG: Object.keys(TL_BG), TL_LOOKS: Object.keys(TL_LOOK) };
+global.NewsReader = { isSource, html, plain, scan, play, finish, edit, stopAll, KINDS, TL_COLS, TL_BG: Object.keys(TL_BG), TL_SBG: Object.keys(TL_SBG), TL_VBG: Object.keys(TL_VBG), TL_LOOKS: Object.keys(TL_LOOK) };
 })(window);
