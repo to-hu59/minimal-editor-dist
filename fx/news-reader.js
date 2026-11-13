@@ -113,7 +113,7 @@ function timeline(a, R, base, ed) {
   const c = (r, k, kk) => r.o[k] ? '<span data-e="r:' + r.i + ':o:' + k + '">' + cnt(r.o[k], kk) + '</span>' : ed ? '<span class="tl-0" data-e="r:' + r.i + ':o:' + k + '"></span>' : '';
   const av = (r, cls) => '<i class="' + cls + ' av-' + tlCol(r.o, r.v[1]) + '" data-av="' + r.i + '">' + esc(r.o.字 || [...String(r.v[0] || '?')][0] || '?') + '</i>';
   const title = look === 'ig' ? 'Instagram' : look === 'fb' ? 'facebook' : '';
-  let h = '<div class="nr nr-tml t-' + look + '"><div class="tl-top">' + (title ? '<b>' + title + '</b>' : '<b data-e="a:題">' + esc(a.題 || 'おすすめ') + '</b>') + '<small data-e="a:タグ">' + tx(a.タグ || '') + '</small></div>';
+  let h = '<div class="nr nr-tml t-' + look + '"><div class="tl-top">' + (title ? '<b>' + title + '</b>' : '<b data-e="a:題">' + esc(a.題 || 'おすすめ') + '</b>') + '<small data-e="a:タグ"' + (ed && !a.タグ ? ' class="tl-tag0"' : '') + '>' + tx(a.タグ || '') + '</small></div>';
   for (const p of tlGroups(R)) {
     const r = p.r, m = p.media, id = tlId(r.v[1]);
     let prev1 = id, prev = id;   // 返信はすぐ上の返信（か投稿）へ。返信の返信は、すぐ上の人へ
