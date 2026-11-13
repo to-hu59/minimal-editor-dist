@@ -350,3 +350,25 @@
 .nr-tml.t-ys .tl-r .tl-tm, .nr-tml.t-ir .tl-r .tl-tm { color: #71717a; }
 .nr-tml.t-ys .tl-ra .f, .nr-tml.t-ir .tl-ra .f, .nr-tml.t-ys .tl-ra .x:nth-child(4), .nr-tml.t-ir .tl-ra .x:nth-child(4) { display: none; }
 .nr-tml.t-ys .tl-ra, .nr-tml.t-ir .tl-ra { color: #a1a1aa; }
+
+/* 24.4：ショート・リールを横に並べる（並べ=横）。スマホは3本ずつ、PCは入るだけ。コメント欄は出さない */
+.nr-tml .tl-vgrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; padding: 10px; }
+@media (min-width: 900px) { .nr-tml .tl-vgrid { grid-template-columns: repeat(auto-fill, minmax(150px, 170px)); justify-content: center; gap: 12px; } }
+.nr-tml .tl-vgrid .tl-vp { margin: 0; max-width: none; border-radius: 12px; box-shadow: 0 6px 14px rgba(0, 0, 0, .4); }
+.nr-tml .tl-vgrid .tl-rs { display: none; }
+.nr-tml .tl-vgrid .tl-sv { padding: 6px; }
+.nr-tml .tl-vgrid .sv-tag { display: none; }
+.nr-tml .tl-vgrid .sv-pill, .nr-tml .tl-vgrid .sv-tag { font-size: 9px; padding: 1px 5px; }
+.nr-tml .tl-vgrid .sv-mid { left: 8px; right: 8px; }
+.nr-tml .tl-vgrid .sv-mid b { font-size: 10px; }
+.nr-tml .tl-vgrid .sv-mid small { font-size: 9.5px; }
+.nr-tml .tl-vgrid .sv-bot { margin: 0 -8px -8px; padding: 26px 8px 10px; gap: 6px; }
+.nr-tml .tl-vgrid .sv-ch { font-size: 10px; gap: 4px; flex-wrap: wrap; }
+.nr-tml .tl-vgrid .sv-av { width: 18px; height: 18px; font-size: 9px; }
+.nr-tml .tl-vgrid .sv-fb { font-size: 9px; padding: 1px 6px; }
+.nr-tml .tl-vgrid .sv-cap { font-size: 10px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.nr-tml .tl-vgrid .sv-au { font-size: 9px; }
+.nr-tml .tl-vgrid .sv-side { gap: 6px; font-size: 8.5px; }
+.nr-tml .tl-vgrid .sv-side i { width: 24px; height: 24px; font-size: 11px; }
+.nr-tml .tl-vgrid .sv-side div:last-child, .nr-tml.t-ys .tl-vgrid .sv-side div:nth-child(2), .nr-tml .tl-vgrid .sv-fb { display: none; }
+.nr-tml .tl-vgrid .sv-mid { top: 34%; }

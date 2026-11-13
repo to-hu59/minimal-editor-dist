@@ -113,7 +113,8 @@ function tlGroups(R) {
   return ps;
 }
 function timeline(a, R, base, ed) {
-  const look = TL_LOOK[a.見た目] || 'xd', isX = look === 'xd' || look === 'xl', isV = look === 'ys' || look === 'ir', fy = isX && a.タブ !== 'フォロー中';
+  const look = TL_LOOK[a.見た目] || 'xd', isX = look === 'xd' || look === 'xl', isV = look === 'ys' || look === 'ir', fy = isX && a.タブ !== 'フォロー中', grid = isV && a.並べ === '横';
+  let vh = '';
   const E = (v, k) => v ? ' data-e="r:' + v.i + ':' + k + '"' : '';
   const img = n => /^(md_|ph_|sc_|hs_|sn_)[a-z_0-9]+$/.test(n || '') ? base + 'a/' + n + '.jpg' : /^data:image\/(?:jpeg|png|webp|gif);base64,[A-Za-z0-9+/=]+$/.test(n || '') || /^https?:\/\/[^\s"'<>]+$/.test(n || '') ? n : '';
   // ed（メーカーで直すとき）は、空の数も押して入れられるように、空の枠を出す
@@ -137,7 +138,7 @@ function timeline(a, R, base, ed) {
     const media = m ? '<div class="tl-m bg-' + (TL_BG[m.o.背景] || 'stage') + (m.o.出す === 'インスタ' ? ' only-ig' : '') + (u ? ' ph' : '') + '" data-m="' + m.i + '">' + (u ? '<img src="' + esc(u) + '" alt="" loading="lazy">' : '') + '<div class="tl-mc"><b data-e="r:' + m.i + ':v0">' + tlTx(m.v[0] || '') + '</b>' + (m.v[1] || ed ? '<small data-e="r:' + m.i + ':v1">' + tlTx(m.v[1]) + '</small>' : '') + '</div></div>' : '';
     if (isV) {
       const v = p.vid, fol = look === 'ys' ? 'チャンネル登録' : 'フォローする';
-      h += '<div class="tl-p tl-vp nr-in" data-r="' + r.i + '"><div class="tl-sv sv-' + (TL_VBG[v && v.o.背景] || 'v1') + '"' + (v ? ' data-v="' + v.i + '"' : '') + '>'
+      vh += '<div class="tl-p tl-vp nr-in" data-r="' + r.i + '"><div class="tl-sv sv-' + (TL_VBG[v && v.o.背景] || 'v1') + '"' + (v ? ' data-v="' + v.i + '"' : '') + '>'
         + '<div class="sv-top"><span class="sv-pill">▶ ' + (look === 'ys' ? 'Shorts' : 'Reels') + '</span><span class="sv-tag"' + E(v, 'o:印') + '>' + esc((v && v.o.印) || 'おすすめ表示') + '</span></div>'
         + '<div class="sv-mid"><b' + E(v, 'v0') + '>' + tlTx((v && v.v[0]) || '🎬 切り抜き動画') + '</b>' + ((v && v.v[1]) || (ed && v) ? '<small' + E(v, 'v1') + '>' + tlTx((v && v.v[1]) || '') + '</small>' : '') + '</div>'
         + '<div class="sv-bot"><div class="sv-meta"><div class="sv-ch">' + av(r, 'sv-av') + (v && v.o.ID ? '<span class="sv-hd"' + E(v, 'o:ID') + '>' + esc(tlId(v.o.ID)) + '</span>' : '<span class="sv-hd" data-e="r:' + r.i + ':v1">' + esc(id) + '</span>') + '<span class="sv-fb">' + fol + '</span></div>' + (v && v.o.説明 ? '<div class="sv-cap"' + E(v, 'o:説明') + '>' + tlTx(v.o.説明) + '</div>' : '<div class="sv-cap" data-e="r:' + r.i + ':v2">' + tlTx(r.v[2] || '') + '</div>') + '<div class="sv-au"><span>🎵</span><span' + E(v, 'o:音源') + '>' + esc((v && v.o.音源) || 'オリジナル音源 - ' + (r.v[0] || '')) + '</span></div></div>'
@@ -157,6 +158,7 @@ function timeline(a, R, base, ed) {
       + '<span class="i">♡</span><span class="i">💬</span><span class="i">➤</span><span class="i tl-bm">🔖</span><span class="f">👍 いいね！</span><span class="f">💬 コメント</span><span class="f">↗ シェア</span></div>'
       + (reps ? '<div class="tl-rs">' + reps + '</div>' : '') + '</div>';
   }
+  if (vh) h += grid ? '<div class="tl-vgrid">' + vh + '</div>' : vh;
   return h + '</div>';
 }
 // 読む画面は改行をそのまま空白として出すので、部品の HTML の改行は取り除く
