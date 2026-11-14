@@ -2141,6 +2141,7 @@ p.fx-drama.fx-sfx { opacity:1; font-weight:700; font-size:1.15em; letter-spacing
                     <div class="pt-3 border-t border-woodBorder">
                         <span class="font-bold text-softMuted block mb-1">更新履歴</span>
                         <div id="changelog" class="text-[11px] text-softMuted leading-relaxed">
+<div class="mb-1.5"><b class="text-softText">Version 24.25（2026-11-14）</b><br>iPad で、ページめくりの枠がまだ下で切れていたのを直しました（ページからあふれている間は、少しずつ縮めます）。</div>
 <div class="mb-1.5"><b class="text-softText">Version 24.24（2026-11-14）</b><br>ページめくりで、ステータスなどの枠がページの下で切れることがある（iPad など）のを直しました。出したページではみ出していたら、その場で入るまで縮めます。字体を読みこみ終えたときも、ページを作り直します。</div>
 <div class="mb-1.5"><b class="text-softText">Version 24.23（2026-11-14）</b><br>「新しい作品の登録」で、略称も入れられるようにしました（自分・公式・ファンを選べます）。作品のページの略称は、種類の名前を出さず、色で分けた札にしました（自分＝緑・公式＝金・ファン＝青）。</div>
 <div class="mb-1.5"><b class="text-softText">Version 24.22（2026-11-14）</b><br>Wiki で、その人が出てくる「部」を自動で出すようにしました（名前の下の札・一覧の並べ方「部ごと」）。その部でよく出てくる人には「メイン」が付きます。ページに「- 登場：3部（メイン）、7部（再登場）」と書けば、そちらを優先します。また「- 初登場：{{701話から}}」と書くと、その話より前の時点では、一覧にも出さず、名前も「？？？」でふせます。作品のページに「略称」の欄を足しました（公式・ファン・自分。ページに出さないこともできます）。作品を選んでバックアップするときは、ファイル名が略称になります（複数なら「者説・闇俳」）。バックアップのフォルダへの許可が切れていたら、書き出すときに聞きます。</div>
@@ -11194,8 +11195,8 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         // 話の終わり・戻る・本の終わりで、読み終えた話から言葉を拾い、件数を小さく知らせる。読書は止めない
         // ===== 更新の確認：新しい版があれば、魚に青い点とメニュー（版の番号は version.json。公開のたびに、番号が変わる。番号が入っていない開発中は、確かめない） =====
         // 表示用の版。更新の検出は引き続き APP_BUILD の日時番号を使う。
-        const APP_VERSION = '24.24';
-        const APP_BUILD = '20261114185341';
+        const APP_VERSION = '24.25';
+        const APP_BUILD = '20261114190035';
         let updateCheckAt = 0;
         function paintBuild() {
             const el = document.getElementById('app-build-info'); if (!el) return;
@@ -12835,17 +12836,13 @@ class ReaderPaginator {
   fitFrames(leaves){
    if(this.vertical)return;
    for(const leaf of leaves){
-    const lr=leaf.getBoundingClientRect();if(!lr.height)continue;
-    const cs=getComputedStyle(leaf),bottom=Math.min(lr.bottom,leaf.offsetParent?lr.top+leaf.clientHeight:lr.bottom)-(parseFloat(cs.paddingBottom)||0);
-    leaf.querySelectorAll('[data-fxpg]').forEach(el=>{
-     const id=Number(el.getAttribute('data-fxpg'));
-     for(let k=0;k<4;k++){
-      const r=el.getBoundingClientRect();if(!r.height||r.bottom<=bottom+1)break;
-      const z=parseFloat(el.style.zoom)||1,avail=bottom-r.top;if(avail<40)break;
-      const nz=Math.max(0.4,z*avail/r.height*0.97);if(nz>=z-0.005)break;
-      el.style.zoom=String(nz);this.frameZoom.set(id,nz);
-     }
-    });
+    if(!leaf.clientHeight)continue;
+    const frames=[...leaf.querySelectorAll('[data-fxpg]')];if(!frames.length)continue;
+    for(let k=0;k<16&&leaf.scrollHeight>leaf.clientHeight+1;k++){
+     let changed=false;
+     for(const el of frames){const z=parseFloat(el.style.zoom)||1;if(z<=0.4)continue;const nz=Math.max(0.4,z*0.94);el.style.zoom=String(nz);this.frameZoom.set(Number(el.getAttribute('data-fxpg')),nz);changed=true;}
+     if(!changed)break;
+    }
    }
   }
 }
