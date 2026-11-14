@@ -2141,6 +2141,7 @@ p.fx-drama.fx-sfx { opacity:1; font-weight:700; font-size:1.15em; letter-spacing
                     <div class="pt-3 border-t border-woodBorder">
                         <span class="font-bold text-softMuted block mb-1">更新履歴</span>
                         <div id="changelog" class="text-[11px] text-softMuted leading-relaxed">
+<div class="mb-1.5"><b class="text-softText">Version 24.24（2026-11-14）</b><br>ページめくりで、ステータスなどの枠がページの下で切れることがある（iPad など）のを直しました。出したページではみ出していたら、その場で入るまで縮めます。字体を読みこみ終えたときも、ページを作り直します。</div>
 <div class="mb-1.5"><b class="text-softText">Version 24.23（2026-11-14）</b><br>「新しい作品の登録」で、略称も入れられるようにしました（自分・公式・ファンを選べます）。作品のページの略称は、種類の名前を出さず、色で分けた札にしました（自分＝緑・公式＝金・ファン＝青）。</div>
 <div class="mb-1.5"><b class="text-softText">Version 24.22（2026-11-14）</b><br>Wiki で、その人が出てくる「部」を自動で出すようにしました（名前の下の札・一覧の並べ方「部ごと」）。その部でよく出てくる人には「メイン」が付きます。ページに「- 登場：3部（メイン）、7部（再登場）」と書けば、そちらを優先します。また「- 初登場：{{701話から}}」と書くと、その話より前の時点では、一覧にも出さず、名前も「？？？」でふせます。作品のページに「略称」の欄を足しました（公式・ファン・自分。ページに出さないこともできます）。作品を選んでバックアップするときは、ファイル名が略称になります（複数なら「者説・闇俳」）。バックアップのフォルダへの許可が切れていたら、書き出すときに聞きます。</div>
 <div class="mb-1.5"><b class="text-softText">Version 24.21（2026-11-14）</b><br>「選んだ文から作る」で、「―」のない行が書き込みのすぐ下に続くときは、その書き込みの続きにするようにしました。韓国語の「ㅉㅉ」は「やれやれ」にします。</div>
@@ -11193,8 +11194,8 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         // 話の終わり・戻る・本の終わりで、読み終えた話から言葉を拾い、件数を小さく知らせる。読書は止めない
         // ===== 更新の確認：新しい版があれば、魚に青い点とメニュー（版の番号は version.json。公開のたびに、番号が変わる。番号が入っていない開発中は、確かめない） =====
         // 表示用の版。更新の検出は引き続き APP_BUILD の日時番号を使う。
-        const APP_VERSION = '24.23';
-        const APP_BUILD = '20261114083835';
+        const APP_VERSION = '24.24';
+        const APP_BUILD = '20261114185341';
         let updateCheckAt = 0;
         function paintBuild() {
             const el = document.getElementById('app-build-info'); if (!el) return;
@@ -12482,7 +12483,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         const FONT_BLANK_TEST = '•‥…―─━～〜♡♥★☆※♪♫♬→←↑↓⇒○●◎◇◆□■△▲▽▼「」『』【】（）・·∙･‧ー〰＝＋×÷％＆＠＃♂♀！？、。々〃';
         async function fontAddChecked(family, source, desc) {
             const copy = source instanceof ArrayBuffer ? source.slice(0) : source;
-            let face = new FontFace(family, source, desc || {}); await face.load(); document.fonts.add(face);
+            let face = new FontFace(family, source, desc || {}); await face.load(); document.fonts.add(face); window.readerFontsChanged?.();
             let blank = [];
             try {
                 const c = document.createElement('canvas'); c.width = 120; c.height = 50; const x = c.getContext('2d', { willReadFrequently: true });
@@ -12824,12 +12825,28 @@ class ReaderPaginator {
  pageAt(offset){let i=this.pages.findIndex((p,n)=>n===this.pages.length-1||this.pages[n+1].offset>offset);return Math.max(0,i);}
  render(index,target){
    window.fxStopAll?.();
-   if(!this.spread){const p=this.pages[index];target.replaceChildren(window.LineMakerPagination.hydrate(this.fragment(p.start,p.end)));return;}
+   if(!this.spread){const p=this.pages[index];target.replaceChildren(window.LineMakerPagination.hydrate(this.fragment(p.start,p.end)));this.fitFrames([target]);return;}
    // 見開き：左（縦書きは右）から順に、偶数ページと次のページを並べる
    const left=index-index%2,wrap=document.createElement('div');wrap.className='rp-spread';wrap.style.direction=this.vertical?'rtl':'ltr';
    const leaf=i=>{const d=document.createElement('div');d.className='rp-leaf';d.style.width=this.pageW+'px';d.style.writingMode=this.vertical?'vertical-rl':'horizontal-tb';d.style.direction='ltr';const p=this.pages[i];if(p)d.append(window.LineMakerPagination.hydrate(this.fragment(p.start,p.end)));return d;};
    const gutter=document.createElement('div');gutter.className='rp-gutter';
-   wrap.append(leaf(left),gutter,leaf(left+1));target.replaceChildren(wrap);
+   wrap.append(leaf(left),gutter,leaf(left+1));target.replaceChildren(wrap);this.fitFrames([...wrap.querySelectorAll('.rp-leaf')]);
+  }
+  fitFrames(leaves){
+   if(this.vertical)return;
+   for(const leaf of leaves){
+    const lr=leaf.getBoundingClientRect();if(!lr.height)continue;
+    const cs=getComputedStyle(leaf),bottom=Math.min(lr.bottom,leaf.offsetParent?lr.top+leaf.clientHeight:lr.bottom)-(parseFloat(cs.paddingBottom)||0);
+    leaf.querySelectorAll('[data-fxpg]').forEach(el=>{
+     const id=Number(el.getAttribute('data-fxpg'));
+     for(let k=0;k<4;k++){
+      const r=el.getBoundingClientRect();if(!r.height||r.bottom<=bottom+1)break;
+      const z=parseFloat(el.style.zoom)||1,avail=bottom-r.top;if(avail<40)break;
+      const nz=Math.max(0.4,z*avail/r.height*0.97);if(nz>=z-0.005)break;
+      el.style.zoom=String(nz);this.frameZoom.set(id,nz);
+     }
+    });
+   }
   }
 }
 // edge: 'title' のとき、本文の代わりに今の話の扉を出している。null なら本文のページ
@@ -13048,6 +13065,8 @@ function setupPaging(){
  wrap.addEventListener('keydown',e=>{if(!pagingActive()||e.target!==wrap)return;if(e.key==='PageDown'||e.key==='PageUp'){e.preventDefault();turnReaderPage(e.key==='PageDown'?1:-1);}});
  let resizeTimer;new ResizeObserver(()=>{clearTimeout(resizeTimer);resizeTimer=setTimeout(()=>{if(pagingActive())rebuildPages();},100);}).observe(wrap);
  document.fonts?.addEventListener('loadingdone',()=>{if(pagingActive())rebuildPages();});
+ window.readerFontsChanged=(()=>{let t=0;return()=>{clearTimeout(t);t=setTimeout(()=>{if(pagingActive())rebuildPages();},250);};})();
+ document.fonts?.ready?.then(()=>{if(pagingActive()&&pageReader.model)rebuildPages();});
  updatePageControls();
 }
 
