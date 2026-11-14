@@ -2141,6 +2141,7 @@ p.fx-drama.fx-sfx { opacity:1; font-weight:700; font-size:1.15em; letter-spacing
                     <div class="pt-3 border-t border-woodBorder">
                         <span class="font-bold text-softMuted block mb-1">更新履歴</span>
                         <div id="changelog" class="text-[11px] text-softMuted leading-relaxed">
+<div class="mb-1.5"><b class="text-softText">Version 24.27（2026-11-14）</b><br>ページめくりの枠が下で切れる件：出したあとに字体が変わっても縮め直すようにしました。縮めても高さが変わらないブラウザでは、字の大きさを小さくします。</div>
 <div class="mb-1.5"><b class="text-softText">Version 24.26（2026-11-14）</b><br>iPad で、ページめくりの枠が下で切れる件を、もう一度直しました（本文の欄の下を越えていないかも見ます）。</div>
 <div class="mb-1.5"><b class="text-softText">Version 24.25（2026-11-14）</b><br>iPad で、ページめくりの枠がまだ下で切れていたのを直しました（ページからあふれている間は、少しずつ縮めます）。</div>
 <div class="mb-1.5"><b class="text-softText">Version 24.24（2026-11-14）</b><br>ページめくりで、ステータスなどの枠がページの下で切れることがある（iPad など）のを直しました。出したページではみ出していたら、その場で入るまで縮めます。字体を読みこみ終えたときも、ページを作り直します。</div>
@@ -11196,8 +11197,8 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         // 話の終わり・戻る・本の終わりで、読み終えた話から言葉を拾い、件数を小さく知らせる。読書は止めない
         // ===== 更新の確認：新しい版があれば、魚に青い点とメニュー（版の番号は version.json。公開のたびに、番号が変わる。番号が入っていない開発中は、確かめない） =====
         // 表示用の版。更新の検出は引き続き APP_BUILD の日時番号を使う。
-        const APP_VERSION = '24.26';
-        const APP_BUILD = '20261114190626';
+        const APP_VERSION = '24.27';
+        const APP_BUILD = '20261114192249';
         let updateCheckAt = 0;
         function paintBuild() {
             const el = document.getElementById('app-build-info'); if (!el) return;
@@ -12501,7 +12502,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             let range;
             if (desc && desc.unicodeRange) range = desc.unicodeRange.split(',').map(r => r.trim()).filter(r => !blank.some(cp => r.toLowerCase() === 'u+' + cp.toString(16))).join(',');
             else { const cps = blank.slice().sort((a, b) => a - b), parts = []; let from = 0; for (const cp of cps) { if (cp > from) parts.push('U+' + from.toString(16) + (cp - 1 > from ? '-' + (cp - 1).toString(16) : '')); from = cp + 1; } parts.push('U+' + from.toString(16) + '-10ffff'); range = parts.join(','); }
-            try { const f2 = new FontFace(family, copy, Object.assign({}, desc || {}, { unicodeRange: range })); await f2.load(); document.fonts.delete(face); document.fonts.add(f2); face = f2; } catch (e) {}
+            try { const f2 = new FontFace(family, copy, Object.assign({}, desc || {}, { unicodeRange: range })); await f2.load(); document.fonts.delete(face); document.fonts.add(f2); face = f2; window.readerFontsChanged?.(); } catch (e) {}
             return face;
         }
         // 読み込む（初回だけ時間がかかる）。読み込めたら ok、今回新しく入ったときは fresh も true
@@ -12836,6 +12837,9 @@ class ReaderPaginator {
   }
   fitFrames(leaves,clip){
    if(this.vertical)return;
+   if(!this._fitWatch&&typeof ResizeObserver==='function'){this._fitWatch=new ResizeObserver(()=>{if(this._fitBusy)return;const t=document.getElementById('reader-content-text');if(!t||!t.isConnected)return;const ls=[...t.querySelectorAll('.rp-leaf')];this._fitBusy=true;try{this.fitFrames(ls.length?ls:[t],t);}finally{this._fitBusy=false;}});}
+   if(this._fitWatch&&!this._fitBusy){this._fitWatch.disconnect();for(const leaf of leaves)leaf.querySelectorAll('[data-fxpg]').forEach(el=>this._fitWatch.observe(el));}
+   if(!this._fitBusy){clearTimeout(this._fitT1);clearTimeout(this._fitT2);const again=()=>{const t=document.getElementById('reader-content-text');if(!t||!t.isConnected)return;const ls=[...t.querySelectorAll('.rp-leaf')];this._fitBusy=true;try{this.fitFrames(ls.length?ls:[t],t);}finally{this._fitBusy=false;}};this._fitT1=setTimeout(again,300);this._fitT2=setTimeout(again,1500);}
    const clipBottom=()=>{let b=Infinity;for(const el of [clip,...leaves]){if(!el||!el.isConnected)continue;const r=el.getBoundingClientRect();if(!r.height)continue;const cs=getComputedStyle(el);b=Math.min(b,r.top+el.clientHeight+(parseFloat(cs.borderTopWidth)||0)-(parseFloat(cs.paddingBottom)||0));}return b;};
    for(const leaf of leaves){
     if(!leaf.clientHeight)continue;
@@ -12843,7 +12847,12 @@ class ReaderPaginator {
     const over=()=>{if(leaf.scrollHeight>leaf.clientHeight+1)return true;const cb=clipBottom();return frames.some(el=>{const r=el.getBoundingClientRect();return r.height&&r.bottom>cb+1;});};
     for(let k=0;k<16&&over();k++){
      let changed=false;
-     for(const el of frames){const z=parseFloat(el.style.zoom)||1;if(z<=0.4)continue;const nz=Math.max(0.4,z*0.94);el.style.zoom=String(nz);this.frameZoom.set(Number(el.getAttribute('data-fxpg')),nz);changed=true;}
+     for(const el of frames){
+      if(el.dataset.fxfs){const b=parseFloat(el.dataset.fxfs),cur=parseFloat(el.style.fontSize)||b;if(cur<=b*0.4)continue;el.style.fontSize=Math.max(b*0.4,cur*0.94)+'px';changed=true;continue;}
+      const z=parseFloat(el.style.zoom)||1;if(z<=0.4)continue;const h0=el.getBoundingClientRect().height,nz=Math.max(0.4,z*0.94);el.style.zoom=String(nz);
+      if(Math.abs(el.getBoundingClientRect().height-h0)<0.5){el.style.zoom='';el.dataset.fxfs=String(parseFloat(getComputedStyle(el).fontSize)||16);el.style.fontSize=(parseFloat(el.dataset.fxfs)*0.94)+'px';}
+      else this.frameZoom.set(Number(el.getAttribute('data-fxpg')),nz);
+      changed=true;}
      if(!changed)break;
     }
    }
