@@ -2141,6 +2141,7 @@ p.fx-drama.fx-sfx { opacity:1; font-weight:700; font-size:1.15em; letter-spacing
                     <div class="pt-3 border-t border-woodBorder">
                         <span class="font-bold text-softMuted block mb-1">更新履歴</span>
                         <div id="changelog" class="text-[11px] text-softMuted leading-relaxed">
+<div class="mb-1.5"><b class="text-softText">Version 24.28（2026-11-14）</b><br>iPad・iPhone（Safari）のページめくりで、ページに入るかを測るときに、下に1行ぶんの余白を持たせました。枠などが下で切れにくくなります（ページの下が少し空くことがあります）。</div>
 <div class="mb-1.5"><b class="text-softText">Version 24.27（2026-11-14）</b><br>ページめくりの枠が下で切れる件：出したあとに字体が変わっても縮め直すようにしました。縮めても高さが変わらないブラウザでは、字の大きさを小さくします。</div>
 <div class="mb-1.5"><b class="text-softText">Version 24.26（2026-11-14）</b><br>iPad で、ページめくりの枠が下で切れる件を、もう一度直しました（本文の欄の下を越えていないかも見ます）。</div>
 <div class="mb-1.5"><b class="text-softText">Version 24.25（2026-11-14）</b><br>iPad で、ページめくりの枠がまだ下で切れていたのを直しました（ページからあふれている間は、少しずつ縮めます）。</div>
@@ -11197,8 +11198,8 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         // 話の終わり・戻る・本の終わりで、読み終えた話から言葉を拾い、件数を小さく知らせる。読書は止めない
         // ===== 更新の確認：新しい版があれば、魚に青い点とメニュー（版の番号は version.json。公開のたびに、番号が変わる。番号が入っていない開発中は、確かめない） =====
         // 表示用の版。更新の検出は引き続き APP_BUILD の日時番号を使う。
-        const APP_VERSION = '24.27';
-        const APP_BUILD = '20261114192249';
+        const APP_VERSION = '24.28';
+        const APP_BUILD = '20261114192934';
         let updateCheckAt = 0;
         function paintBuild() {
             const el = document.getElementById('app-build-info'); if (!el) return;
@@ -12959,6 +12960,8 @@ function setPagingChapter(html){
  pageReader.offset=pageReader.resetNext?0:Math.max(0,Number(pageReader.positions[pageReader.key])||0);pageReader.resetNext=false;pageReader.index=0;pageReader.edge=null;
  requestAnimationFrame(()=>rebuildPages());
 }
+// Safari のしくみ（WebKit）で動いているか。iPad・iPhone では、Chrome などのアプリも中身は Safari と同じ
+function readerIsSafari(){const ua=navigator.userAgent||'';return /AppleWebKit/.test(ua)&&!/Chrome\/|Chromium|Edg\/|OPR\//.test(ua)||/CriOS|FxiOS|EdgiOS/.test(ua);}
 async function rebuildPages(){
  if(pageReader.model)cancelReaderTurn();clearPageNeighbors();const generation=++pageReader.generation;pageReader.building&&(pageReader.building.cancelled=true);pageReader.model&&(pageReader.model.cancelled=true);
  if(document.getElementById('view-reader').classList.contains('editing'))return;
@@ -12975,6 +12978,7 @@ async function rebuildPages(){
  text.style.writingMode=pageReader.vertical?'vertical-rl':'horizontal-tb';text.style.width=(spreadOn?pageW:width)+'px';text.style.marginLeft=text.style.marginRight='auto';text.style.marginTop=wide?READER_PAGE_BAR_TOP+'px':'';text.style.height=height+'px';
  const measure=text.cloneNode(false);measure.removeAttribute('id');measure.classList.remove('reader-spread-content');measure.classList.add('reader-page-measure');measure.style.position='fixed';measure.style.left='-100000px';measure.style.top='0';measure.style.visibility='hidden';measure.style.pointerEvents='none';measure.style.overflow='hidden';measure.style.boxSizing='border-box';
  const computed=getComputedStyle(text);for(const name of ['fontFamily','fontSize','fontWeight','lineHeight','letterSpacing','whiteSpace','overflowWrap'])measure.style[name]=computed[name];
+ if(readerIsSafari()&&!pageReader.vertical){const lh=parseFloat(computed.lineHeight)||(parseFloat(computed.fontSize)||16)*1.8;measure.style.height=Math.max(80,height-Math.ceil(lh))+'px';}
  document.body.append(measure);text.style.width=width+'px';let model;
  try{
   const prepared=await window.LineMakerPagination.prepare(pageReader.source,{width:(spreadOn?pageW:width)-16,height:height-32});
