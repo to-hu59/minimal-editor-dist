@@ -361,6 +361,9 @@
 .abbr-official { background: #f3e3b8; color: #6b4a12; }
 .abbr-fan { background: #dde8f5; color: #2d4f7a; }
 .wk-hidname { color: #8a7a68; font-weight: 700; letter-spacing: .1em; }
+.wkgrp { color: #23594e; border-bottom: 1px dashed #23594e; cursor: pointer; font-weight: 600; }
+.wkgrp::after { content: ' ▸'; font-size: .75em; } .wkgrp.open::after { content: ' ▾'; }
+.wkgrp-box { display: inline; margin: 0 4px; padding: 2px 8px; border-radius: 8px; background: #eef5f1; border: 1px solid #b9d3c8; }
 .wk-parts { display: flex; flex-wrap: wrap; gap: 4px 6px; align-items: center; margin: 2px 0 4px; }
 .wk-part { font-size: 11.5px; padding: 1px 8px; border-radius: 10px; background: #e7eee9; color: #23594e; font-weight: 700; }
 .wk-part.main { background: #f3e3b8; color: #6b4a12; }
@@ -2144,6 +2147,7 @@ html, body { -webkit-text-size-adjust:100%; text-size-adjust:100%; }
                     <div class="pt-3 border-t border-woodBorder">
                         <span class="font-bold text-softMuted block mb-1">更新履歴</span>
                         <div id="changelog" class="text-[11px] text-softMuted leading-relaxed">
+<div class="mb-1.5"><b class="text-softText">Version 24.36（2026-11-15）</b><br>Wiki の本文に [[主役３人：ユ・スルホ、A、B]] と書くと、「主役３人」だけが出て、押すとその人たちの名前が並ぶようにしました。並んだ人は、自動でこの項目の「出演者」の関連にもなります。</div>
 <div class="mb-1.5"><b class="text-softText">Version 24.35（2026-11-15）</b><br>Wiki で、人物の「お仕事」「出演作品」の行に作品の項目（[[作品]] や『作品』）を書くと、自動で関連になるようにしました（人物には「出演」、作品には「出演者」。役名や {{N話から}} も付きます）。作品のページの「関係に書き出す」で、自動で入ったものを本文の行にでき、そこで直したり消したりできます。</div>
 <div class="mb-1.5"><b class="text-softText">Version 24.34（2026-11-15）</b><br>Wiki の本文で、「-」のうしろに空白がなくても箇条書き（・）になるようにしました。「- 」の行で改行すると、次の行にも「- 」が入ります（空のまま改行すると消えます）。「何話から」「更新（何話から）」のボタンは、カーソルのところに入れます。</div>
 <div class="mb-1.5"><b class="text-softText">Version 24.33（2026-11-14）</b><br>ページめくりで、ステータスなどの枠を縮めるのは 8 割までにしました。それでも入らないときは、枠を次のページへ続けます。「ページのしらべ（一時的）」は外しました。</div>
@@ -6236,6 +6240,10 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             let inRel = false, inFam = false, inWork = false, prevItem = '';
             const catOf = new Map((ents || wikiEntries(bookId)).map(x => [x.id, x.category || '']));
             for (const raw of lines) {
+                for (const gm0 of raw.matchAll(/\[\[([^\[\]\n]{1,200})\]\]/g)) {
+                    const g = byName.has(gm0[1].trim()) ? null : wikiGroupLink(gm0[1]); if (!g) continue; const lk = raw.match(LK), ep = lk ? Number(lk[1]) : null;
+                    for (const n of g.names) { const to = byName.get(n); if (to && to !== e.id && !out.some(r => r.to === to && r.grp)) out.push({ id: 'tr_' + to + '_' + out.length, to, label: (e.category || '') === '人物' ? '関連' : '出演者', back: '', note: g.label, ep, src: 'text', grp: true }); }
+                }
                 const hm = raw.match(/^\s{0,3}#{1,4}\s+(.*)$/); if (hm) { inFam = /家族/.test(hm[1]); inRel = inFam || /関係/.test(hm[1]); inWork = !inRel && /お仕事|出演|フィルモ|作品/.test(hm[1]); prevItem = ''; continue; }
                 if (inWork && /^\s*[-*・●]\s+/.test(raw) && !/^\s*[-*・●]\s+(共演者?|ゲスト|出演者)\s*[：:]/.test(raw)) {
                     const lk = raw.match(LK), ep = lk ? Number(lk[1]) : null, body = wikiPlainMarks(raw.replace(/^\s*[-*・●]\s+/, '')).replace(LK, '');
@@ -6362,6 +6370,8 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         // 書式の印をとった、ただの文字（一行説明・つながりのひとことなど）
         function wikiPlainMarks(t) { return String(t || '').replace(/［／?(?:太字|斜体|下線|取消線|マーカー|大きく|小さく|中央|右|縦書き|ななめ左|ななめ|左右反転|上下反転|逆さ|回転|色|リンク)(?::[^］\n]*)?］/g, '').replace(/｜([^｜《》\n]+)《[^《》\n]+》/g, '$1'); }
         const WIKI_END_RE = /\{\{\s*第?\s*(\d{1,4})\s*話\s*で\s*([^{}]*?)\s*\}\}/;
+        // [[主役３人：ユ・スルホ、A、B]] の形（「：」の前が見せる字、うしろが名前）
+        function wikiGroupLink(t) { const m = String(t || '').match(/^([^：:\[\]]{1,20})[：:](.+)$/); if (!m) return null; const names = m[2].split(/[、,，\/／]/).map(x => x.trim()).filter(Boolean); return names.length ? { label: m[1].trim(), names } : null; }
         function wikiLinkify(bookId, text, selfId) {
             const ents = wikiEntries(bookId), R = wikiHlRegex(bookId), hid = new Set(ents.filter(e => wikiHiddenNow(bookId, e)).map(e => e.id));
             const norm = x => String(x || '').trim();
@@ -6372,11 +6382,12 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                 let inTag = false;
                 return esc.split(/(<[^>]*>)/).map(p => { if (!p) return p; if (p[0] === '<') return p; return p.replace(R.re, m => { const id = R.map[m]; return (id && id !== selfId && !hid.has(id)) ? '<span class="wkw" data-wk="' + id + '">' + m + '</span>' : m; }); }).join('');
             };
-            const src = String(text || ''), re = /\[\[([^\[\]\n]{1,40})\]\]/g;
+            const src = String(text || ''), re = /\[\[([^\[\]\n]{1,200})\]\]/g;
             let out = '', last = 0, m;
             while ((m = re.exec(src))) {
                 out += plain(src.slice(last, m.index));
-                const nm = norm(m[1]), hit = find(nm);
+                const nm = norm(m[1]), hit = find(nm), gm = !hit && wikiGroupLink(nm);
+                if (gm) { out += '<span class="wkgrp" data-names="' + wEsc(gm.names.join('\u0001')) + '" title="押すと、だれか出ます">' + wEsc(gm.label) + '</span>'; last = m.index + m[0].length; continue; }
                 out += hit && hid.has(hit.id) ? '<span class="wk-hidname" title="まだ登場していません">？？？</span>' : hit ? (hit.id === selfId ? wEsc(nm) : '<span class="wkw" data-wk="' + hit.id + '">' + wEsc(nm) + '</span>') : '<span class="wkr" data-wkn="' + wEsc(nm) + '" title="まだ項目がありません。押すと、作れます">' + wEsc(nm) + '</span>';
                 last = m.index + m[0].length;
             }
@@ -7251,6 +7262,14 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             const jump = id => { const t = document.getElementById(id); if (!t) return; if (t.tagName === 'DETAILS') t.open = true; for (let d = t.parentElement && t.parentElement.closest('details'); d; d = d.parentElement && d.parentElement.closest('details')) d.open = true; t.scrollIntoView({ block: 'start', behavior: 'smooth' }); };
             if (fnl) { ev.preventDefault(); ev.stopPropagation(); jump(fnl.dataset.fnto); return; }
             if (goh) { ev.preventDefault(); ev.stopPropagation(); jump(goh.dataset.h); return; }
+            const gl = ev.target.closest && ev.target.closest('.wkgrp');
+            if (gl) {
+                ev.preventDefault(); ev.stopPropagation();
+                const nx = gl.nextElementSibling; if (nx && nx.classList.contains('wkgrp-box')) { nx.remove(); gl.classList.remove('open'); return; }
+                const bookId = state.currentBookId, ents = wikiEntries(bookId), names = String(gl.dataset.names || '').split('\u0001');
+                const html = names.map(n => { const e = ents.find(x => [x.name].concat(x.aliases || []).some(y => String(y || '').trim() === n)); return e ? (wikiHiddenNow(bookId, e) ? '<span class="wk-hidname">？？？</span>' : '<span class="wkw" data-wk="' + e.id + '">' + wEsc(n) + '</span>') : '<span class="wkr" data-wkn="' + wEsc(n) + '" title="まだ項目がありません。押すと、作れます">' + wEsc(n) + '</span>'; }).join('、');
+                const box = document.createElement('span'); box.className = 'wkgrp-box'; box.innerHTML = html; gl.after(box); gl.classList.add('open'); return;
+            }
             const rl = ev.target.closest && ev.target.closest('.wkr');
             if (rl) { ev.preventDefault(); ev.stopPropagation(); wikiNewFromName(rl.dataset.wkn || rl.textContent); return; }
             const w = ev.target.closest && ev.target.closest('.wkw');
@@ -10556,7 +10575,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             const out = []; let inRel = false;
             for (const raw of String(e.basic || '').split('\n')) {
                 const hm = raw.match(/^\s{0,3}#{1,4}\s+(.*)$/); if (hm) { inRel = /家族|関係/.test(hm[1]); continue; } if (!inRel) continue;
-                for (const m of raw.matchAll(/\[\[([^\]]+)\]\]/g)) { const n = m[1].trim(); if (n && !names.has(n) && !out.includes(n)) out.push(n); }
+                for (const m of raw.matchAll(/\[\[([^\]]+)\]\]/g)) { const n = m[1].trim(); if (!n || names.has(n)) continue; const g = wikiGroupLink(n); for (const x of (g ? g.names : [n])) if (!names.has(x) && !out.includes(x)) out.push(x); }
             }
             return out;
         }
@@ -11246,8 +11265,8 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         // 話の終わり・戻る・本の終わりで、読み終えた話から言葉を拾い、件数を小さく知らせる。読書は止めない
         // ===== 更新の確認：新しい版があれば、魚に青い点とメニュー（版の番号は version.json。公開のたびに、番号が変わる。番号が入っていない開発中は、確かめない） =====
         // 表示用の版。更新の検出は引き続き APP_BUILD の日時番号を使う。
-        const APP_VERSION = '24.35';
-        const APP_BUILD = '20261115074227';
+        const APP_VERSION = '24.36';
+        const APP_BUILD = '20261115080016';
         let updateCheckAt = 0;
         function paintBuild() {
             const el = document.getElementById('app-build-info'); if (!el) return;
