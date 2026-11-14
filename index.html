@@ -1488,6 +1488,7 @@ p.fx-drama.fx-sfx { opacity:1; font-weight:700; font-size:1.15em; letter-spacing
                             <button type="button" id="btn-locale-open" class="w-full py-2 rounded-xl border border-woodBorder text-xs font-bold text-woodAccentDark bg-kinariDark active:scale-95 transition">置換辞書のページを開く（人物・場所ごと）</button>
                             <button type="button" id="btn-titlecard-toggle" class="w-full py-2 rounded-xl border border-woodBorder text-xs font-bold">話のあいだに、次の話のタイトルを出す：入</button>
                             <button type="button" id="btn-spread-toggle" class="w-full py-2 rounded-xl border border-woodBorder text-xs font-bold">PCでの見開き：入</button>
+                            <button type="button" id="btn-page-debug" class="w-full py-2 rounded-xl border border-dashed border-woodBorder text-xs font-bold" style="margin-top:6px">ページのしらべ（一時的）</button>
                         </div>
 
                         <!-- 紙の風合い・テーマ -->
@@ -2141,6 +2142,7 @@ p.fx-drama.fx-sfx { opacity:1; font-weight:700; font-size:1.15em; letter-spacing
                     <div class="pt-3 border-t border-woodBorder">
                         <span class="font-bold text-softMuted block mb-1">更新履歴</span>
                         <div id="changelog" class="text-[11px] text-softMuted leading-relaxed">
+<div class="mb-1.5"><b class="text-softText">Version 24.30（2026-11-14）</b><br>ページめくりで枠が切れる件を調べるため、読む画面の設定に「ページのしらべ（一時的）」を足しました。原因が分かったら外します。</div>
 <div class="mb-1.5"><b class="text-softText">Version 24.29（2026-11-14）</b><br>iPad で、枠のすぐ下の行がページの下で切れることがあったのを直しました（ページの中身全部が入るまで、枠を縮めます）。</div>
 <div class="mb-1.5"><b class="text-softText">Version 24.28（2026-11-14）</b><br>iPad・iPhone（Safari）のページめくりで、ページに入るかを測るときに、下に1行ぶんの余白を持たせました。枠などが下で切れにくくなります（ページの下が少し空くことがあります）。</div>
 <div class="mb-1.5"><b class="text-softText">Version 24.27（2026-11-14）</b><br>ページめくりの枠が下で切れる件：出したあとに字体が変わっても縮め直すようにしました。縮めても高さが変わらないブラウザでは、字の大きさを小さくします。</div>
@@ -11199,8 +11201,8 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         // 話の終わり・戻る・本の終わりで、読み終えた話から言葉を拾い、件数を小さく知らせる。読書は止めない
         // ===== 更新の確認：新しい版があれば、魚に青い点とメニュー（版の番号は version.json。公開のたびに、番号が変わる。番号が入っていない開発中は、確かめない） =====
         // 表示用の版。更新の検出は引き続き APP_BUILD の日時番号を使う。
-        const APP_VERSION = '24.29';
-        const APP_BUILD = '20261114194548';
+        const APP_VERSION = '24.30';
+        const APP_BUILD = '20261114195010';
         let updateCheckAt = 0;
         function paintBuild() {
             const el = document.getElementById('app-build-info'); if (!el) return;
@@ -12838,6 +12840,7 @@ class ReaderPaginator {
    wrap.append(leaf(left),gutter,leaf(left+1));target.replaceChildren(wrap);this.fitFrames([...wrap.querySelectorAll('.rp-leaf')],target);
   }
   fitFrames(leaves,clip){
+   window.__fitN=(window.__fitN||0)+1;
    if(this.vertical)return;
    if(!this._fitWatch&&typeof ResizeObserver==='function'){this._fitWatch=new ResizeObserver(()=>{if(this._fitBusy)return;const t=document.getElementById('reader-content-text');if(!t||!t.isConnected)return;const ls=[...t.querySelectorAll('.rp-leaf')];this._fitBusy=true;try{this.fitFrames(ls.length?ls:[t],t);}finally{this._fitBusy=false;}});}
    if(this._fitWatch&&!this._fitBusy){this._fitWatch.disconnect();for(const leaf of leaves)leaf.querySelectorAll('[data-fxpg]').forEach(el=>this._fitWatch.observe(el));}
@@ -12961,6 +12964,27 @@ function setPagingChapter(html){
  pageReader.offset=pageReader.resetNext?0:Math.max(0,Number(pageReader.positions[pageReader.key])||0);pageReader.resetNext=false;pageReader.index=0;pageReader.edge=null;
  requestAnimationFrame(()=>rebuildPages());
 }
+// ページのしらべ（一時的）：今のページの高さ・はみ出し・枠の縮み具合を出す
+function pageDebugShow(){
+ const R=n=>Math.round(n*10)/10,t=document.getElementById('reader-content-text'),o=[];
+ try{
+  o.push('版 '+(typeof APP_VERSION!=='undefined'?APP_VERSION:'?')+'　Safari扱い '+readerIsSafari()+'　読み方 '+pageReader.mode+'　見開き '+!!(pageReader.model&&pageReader.model.spread));
+  o.push('UA '+navigator.userAgent.slice(0,120));
+  o.push('ページ '+(pageReader.index+1)+'/'+(pageReader.model?pageReader.model.pages.length:0)+'　確かめた回数 '+(window.__fitN||0));
+  const mi=window.__measureInfo||{};o.push('測る高さ '+mi.h+' → '+mi.mh+'　幅 '+mi.w+'　字 '+mi.fs+'／行 '+mi.lh+'／字間 '+mi.ls);
+  o.push('字体 '+String(mi.ff||'').slice(0,60));
+  const tr=t.getBoundingClientRect(),tc=getComputedStyle(t);o.push('本文の欄 上 '+R(tr.top)+' 下 '+R(tr.bottom)+' 高さ '+t.clientHeight+' 中身 '+t.scrollHeight+' 下余白 '+tc.paddingBottom+' overflow '+tc.overflow);
+  const leaves=[...t.querySelectorAll('.rp-leaf')];(leaves.length?leaves:[t]).forEach((l,i)=>{
+   const lr=l.getBoundingClientRect();let cb='?';try{const rg=document.createRange();rg.selectNodeContents(l);cb=R(rg.getBoundingClientRect().bottom);}catch(e){}
+   o.push('ページ'+(i+1)+'：下 '+R(lr.bottom)+' 高さ '+l.clientHeight+' 中身 '+l.scrollHeight+' 中身の下 '+cb);
+   l.querySelectorAll('[data-fxpg]').forEach(el=>{const r=el.getBoundingClientRect(),cs=getComputedStyle(el);o.push('　枠：上 '+R(r.top)+' 下 '+R(r.bottom)+' 高さ '+R(r.height)+' zoom '+(el.style.zoom||'-')+'（計算 '+(cs.zoom||'-')+'） 字 '+cs.fontSize+(el.dataset.fxfs?' 元 '+el.dataset.fxfs:''));});
+  });
+ }catch(e){o.push('エラー '+e.message);}
+ let box=document.getElementById('page-debug-box');if(box)box.remove();
+ box=document.createElement('div');box.id='page-debug-box';box.style.cssText='position:fixed;left:8px;right:8px;top:60px;z-index:100001;background:#fff;color:#222;border:2px solid #b45309;border-radius:10px;padding:10px 12px;font:12px/1.6 monospace;white-space:pre-wrap;max-height:70vh;overflow:auto;box-shadow:0 6px 24px rgba(0,0,0,.25)';
+ box.textContent=o.join('\n');const x=document.createElement('button');x.textContent='閉じる';x.style.cssText='position:absolute;right:8px;top:6px;padding:2px 10px;border:1px solid #b45309;border-radius:8px;background:#fff';x.onclick=()=>box.remove();box.appendChild(x);document.body.appendChild(box);
+}
+document.addEventListener('click',e=>{if(e.target&&e.target.id==='btn-page-debug'){e.preventDefault();const d=document.getElementById('btn-close-reader-drawer');if(d)d.click();setTimeout(pageDebugShow,400);}});
 // Safari のしくみ（WebKit）で動いているか。iPad・iPhone では、Chrome などのアプリも中身は Safari と同じ
 function readerIsSafari(){const ua=navigator.userAgent||'';return /AppleWebKit/.test(ua)&&!/Chrome\/|Chromium|Edg\/|OPR\//.test(ua)||/CriOS|FxiOS|EdgiOS/.test(ua);}
 async function rebuildPages(){
@@ -12980,6 +13004,7 @@ async function rebuildPages(){
  const measure=text.cloneNode(false);measure.removeAttribute('id');measure.classList.remove('reader-spread-content');measure.classList.add('reader-page-measure');measure.style.position='fixed';measure.style.left='-100000px';measure.style.top='0';measure.style.visibility='hidden';measure.style.pointerEvents='none';measure.style.overflow='hidden';measure.style.boxSizing='border-box';
  const computed=getComputedStyle(text);for(const name of ['fontFamily','fontSize','fontWeight','lineHeight','letterSpacing','whiteSpace','overflowWrap'])measure.style[name]=computed[name];
  if(readerIsSafari()&&!pageReader.vertical){const lh=parseFloat(computed.lineHeight)||(parseFloat(computed.fontSize)||16)*1.8;measure.style.height=Math.max(80,height-Math.ceil(lh))+'px';}
+ window.__measureInfo={h:height,mh:measure.style.height,w:measure.style.width,ff:computed.fontFamily,fs:computed.fontSize,lh:computed.lineHeight,ls:computed.letterSpacing};
  document.body.append(measure);text.style.width=width+'px';let model;
  try{
   const prepared=await window.LineMakerPagination.prepare(pageReader.source,{width:(spreadOn?pageW:width)-16,height:height-32});
