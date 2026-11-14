@@ -1491,7 +1491,6 @@ html, body { -webkit-text-size-adjust:100%; text-size-adjust:100%; }
                             <button type="button" id="btn-locale-open" class="w-full py-2 rounded-xl border border-woodBorder text-xs font-bold text-woodAccentDark bg-kinariDark active:scale-95 transition">置換辞書のページを開く（人物・場所ごと）</button>
                             <button type="button" id="btn-titlecard-toggle" class="w-full py-2 rounded-xl border border-woodBorder text-xs font-bold">話のあいだに、次の話のタイトルを出す：入</button>
                             <button type="button" id="btn-spread-toggle" class="w-full py-2 rounded-xl border border-woodBorder text-xs font-bold">PCでの見開き：入</button>
-                            <button type="button" id="btn-page-debug" class="w-full py-2 rounded-xl border border-dashed border-woodBorder text-xs font-bold" style="margin-top:6px">ページのしらべ（一時的）</button>
                         </div>
 
                         <!-- 紙の風合い・テーマ -->
@@ -2145,6 +2144,7 @@ html, body { -webkit-text-size-adjust:100%; text-size-adjust:100%; }
                     <div class="pt-3 border-t border-woodBorder">
                         <span class="font-bold text-softMuted block mb-1">更新履歴</span>
                         <div id="changelog" class="text-[11px] text-softMuted leading-relaxed">
+<div class="mb-1.5"><b class="text-softText">Version 24.33（2026-11-14）</b><br>ページめくりで、ステータスなどの枠を縮めるのは 8 割までにしました。それでも入らないときは、枠を次のページへ続けます。「ページのしらべ（一時的）」は外しました。</div>
 <div class="mb-1.5"><b class="text-softText">Version 24.32（2026-11-14）</b><br>iPad で、ページめくりの枠を縮める方法を変えました（その端末で zoom が効かないときは、枠の字の大きさで縮めます）。</div>
 <div class="mb-1.5"><b class="text-softText">Version 24.31（2026-11-14）</b><br>iPad・iPhone で、ページめくりの枠が下で切れていた原因（Safari が小さい字を勝手に大きくするしくみ）を止めました。</div>
 <div class="mb-1.5"><b class="text-softText">Version 24.30（2026-11-14）</b><br>ページめくりで枠が切れる件を調べるため、読む画面の設定に「ページのしらべ（一時的）」を足しました。原因が分かったら外します。</div>
@@ -11206,8 +11206,8 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         // 話の終わり・戻る・本の終わりで、読み終えた話から言葉を拾い、件数を小さく知らせる。読書は止めない
         // ===== 更新の確認：新しい版があれば、魚に青い点とメニュー（版の番号は version.json。公開のたびに、番号が変わる。番号が入っていない開発中は、確かめない） =====
         // 表示用の版。更新の検出は引き続き APP_BUILD の日時番号を使う。
-        const APP_VERSION = '24.32';
-        const APP_BUILD = '20261114202337';
+        const APP_VERSION = '24.33';
+        const APP_BUILD = '20261114203308';
         let updateCheckAt = 0;
         function paintBuild() {
             const el = document.getElementById('app-build-info'); if (!el) return;
@@ -12801,9 +12801,9 @@ class ReaderPaginator {
    if(this.fits(a,b))continue;
    // 報道のカードは、7割より小さくしない（読めなくなる）。7割でも入らなければ、縮めずに次のページへ続ける
    let isNews=false;for(const [el,n] of this.frameIds)if(n===id){isNews=!!(el.classList&&el.classList.contains('fxnews'));break;}
-   const floor=isNews?0.7:0.4;
+   const floor=isNews?0.7:0.8;
    this.frameZoom.set(id,floor);
-   if(!this.fits(a,b)){if(isNews)this.frameZoom.set(id,1);continue;}
+   if(!this.fits(a,b)){this.frameZoom.set(id,1);continue;}
    let lo=floor,hi=1;
    for(let k=0;k<7;k++){const mid=(lo+hi)/2;this.frameZoom.set(id,mid);if(this.fits(a,b))lo=mid;else hi=mid;}
    this.frameZoom.set(id,lo);
@@ -12821,7 +12821,7 @@ class ReaderPaginator {
    // 切れ目が枠の途中なら、枠のはじめまで戻す（枠が1ページに収まるときだけ。前のページの下は空く）
    if(low<this.units.length&&this.units[low].frame&&this.units[low].frame===this.units[low-1].frame){
     const fr=this.units[low].frame;let fs=low-1;while(fs>start&&this.units[fs-1].frame===fr)fs--;
-    if(fs>start){let fe=low;while(fe<this.units.length&&this.units[fe].frame===fr)fe++;if(this.fits(fs,fe))low=fs;}
+    if(fs>start){let fe=low;while(fe<this.units.length&&this.units[fe].frame===fr)fe++;if(this.fits(fs,fe))low=fs;else{this.measure.replaceChildren(this.fragment(fs,low));const rg=document.createRange();rg.selectNodeContents(this.measure);const ph=rg.getBoundingClientRect().height,mh=this.measure.clientHeight;if(ph<mh*0.3)low=fs;}}   // 1ページに入らない枠でも、ページの下に少ししかのらない（3割より少ない）ときは、枠ごと次のページから
    }
    // 切れ目が「投稿＋返信」のまとまりの途中なら、まとまりのはじめまで戻す（まとまりが1ページに入るときだけ）
    if(low<this.units.length&&this.units[low].grp&&this.units[low].grp===this.units[low-1].grp){
@@ -12858,7 +12858,7 @@ class ReaderPaginator {
     for(let k=0;k<16&&over();k++){
      let changed=false;
      for(const el of frames){
-      const cz=parseFloat(el.dataset.fxz)||1;if(cz<=0.4)continue;const nz=Math.max(0.4,cz*0.94);frameScale(el,nz);this.frameZoom.set(Number(el.getAttribute('data-fxpg')),nz);
+      const cz=parseFloat(el.dataset.fxz)||1;if(cz<=0.8)continue;const nz=Math.max(0.8,cz*0.94);frameScale(el,nz);this.frameZoom.set(Number(el.getAttribute('data-fxpg')),nz);
       changed=true;}
      if(!changed)break;
     }
@@ -12986,7 +12986,7 @@ function pageDebugShow(){
  box=document.createElement('div');box.id='page-debug-box';box.style.cssText='position:fixed;left:8px;right:8px;top:60px;z-index:100001;background:#fff;color:#222;border:2px solid #b45309;border-radius:10px;padding:10px 12px;font:12px/1.6 monospace;white-space:pre-wrap;max-height:70vh;overflow:auto;box-shadow:0 6px 24px rgba(0,0,0,.25)';
  box.textContent=o.join('\n');const x=document.createElement('button');x.textContent='閉じる';x.style.cssText='position:absolute;right:8px;top:6px;padding:2px 10px;border:1px solid #b45309;border-radius:8px;background:#fff';x.onclick=()=>box.remove();box.appendChild(x);document.body.appendChild(box);
 }
-document.addEventListener('click',e=>{if(e.target&&e.target.id==='btn-page-debug'){e.preventDefault();const d=document.getElementById('btn-close-reader-drawer');if(d)d.click();setTimeout(pageDebugShow,400);}});
+window.pageDebugShow=pageDebugShow;   // しらべの表示は、コンソールから pageDebugShow() で出せる
 function readerZoomWorks(){
  if(window.__zoomOK!=null&&!window.__forceNoZoom)return window.__zoomOK&&!window.__forceNoZoom;
  try{const d=document.createElement('div');d.style.cssText='position:absolute;left:-9999px;top:0;visibility:hidden;font-size:40px;line-height:40px;white-space:nowrap';d.textContent='あいうえお';document.body.appendChild(d);const w1=d.getBoundingClientRect().width;d.style.zoom='0.5';const w2=d.getBoundingClientRect().width;d.remove();window.__zoomOK=w1>0&&w2<w1*0.8;}catch(e){window.__zoomOK=true;}
