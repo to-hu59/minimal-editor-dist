@@ -2152,6 +2152,7 @@ html, body { -webkit-text-size-adjust:100%; text-size-adjust:100%; }
                     <div class="pt-3 border-t border-woodBorder">
                         <span class="font-bold text-softMuted block mb-1">更新履歴</span>
                         <div id="changelog" class="text-[11px] text-softMuted leading-relaxed">
+<div class="mb-1.5"><b class="text-softText">Version 24.41（2026-11-17）</b><br>Wiki：「▸ 『作品』」の下に共演者を書くと、作品ごとにたためて、作品名の横に人数が出ます（関連の欄には作品名も付きます）。評価などで {{40話から}} の行で区切ったところは、時期ごとにたためるようにしました（新しい2つは開いています）。</div>
 <div class="mb-1.5"><b class="text-softText">Version 24.40（2026-11-17）</b><br>Wiki：関係の見出しの外の「共演：[[名前]]（ひとこと）」の行で、ひとことが上の行のものになってずれるのを直しました。字下げしていない行はその行のかっこの中を使い、下に字下げで書いた行は「いきさつ」になります。本文の中で「共演：」の行が1行にまとめられて消えていたのも直しました。</div>
 <div class="mb-1.5"><b class="text-softText">Version 24.39（2026-11-17）</b><br>Wiki：1行に話数の印を2つ書けるようにしました（いちばん新しい話がその行の話数。ほかは「43話」と小さく出ます）。[[ページ#場所]] でページの中の見出しや言葉へ飛べます。関係は「幼なじみ {{1話から}} → 彼女 {{30話から}}」で移り変わりを書けて、いまの話の関係だけが出ます（変遷も見られます）。関係の下に字下げして書いた行は、たためる「いきさつ」になります。見出しの中の行は「-」がなくても箇条書きで出ます。iPad で改行したときも「- 」が続くようにしました。</div>
 <div class="mb-1.5"><b class="text-softText">Version 24.38（2026-11-16）</b><br>着信の終わりに［／着信 切る］と書くと「ぶちっ」と切れ、［／着信 無視］と書くと鳴りやむようにしました。終わりの印が画面に出たところで止まります。電話が切れたあとの［ツーツー］も足しました。</div>
@@ -6291,7 +6292,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         function wikiTextRels(bookId, e, ents) {
             const out = [], lines = wikiSrcNorm(state.books.find(b => b.id === bookId), String(e.basic || '')).split('\n'), LK = /\{\{\s*第?\s*(\d{1,4})\s*話\s*から\s*\}\}/;
             const byName = new Map(); (ents || wikiEntries(bookId)).forEach(x => [x.name].concat(x.aliases || []).forEach(n => { const k = String(n || '').trim(); if (k && !byName.has(k)) byName.set(k, x.id); }));
-            let inRel = false, inFam = false, inWork = false, prevItem = '', prevInd = -1, lastRel = null;
+            let inRel = false, inFam = false, inWork = false, prevItem = '', prevInd = -1, lastRel = null, tgItem = null;
             const LKA = /\{\{\s*第?\s*(\d{1,4})\s*話(?:\s*から)?\s*\}\}/;
             const catOf = new Map((ents || wikiEntries(bookId)).map(x => [x.id, x.category || '']));
             for (const raw of lines) {
@@ -6299,7 +6300,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                     const g = byName.has(gm0[1].trim()) ? null : wikiGroupLink(gm0[1]); if (!g) continue; const lk = raw.match(LK), ep = lk ? Number(lk[1]) : null;
                     for (const n of g.names) { const to = byName.get(n); if (to && to !== e.id && !out.some(r => r.to === to && r.grp)) out.push({ id: 'tr_' + to + '_' + out.length, to, label: (e.category || '') === '人物' ? '関連' : '出演者', back: '', note: g.label, ep, src: 'text', grp: true }); }
                 }
-                const hm = raw.match(/^\s{0,3}#{1,4}\s+(.*)$/); if (hm) { lastRel = null; prevItem = ''; prevInd = -1; inFam = /家族/.test(hm[1]); inRel = inFam || /関係/.test(hm[1]); inWork = !inRel && /お仕事|出演|フィルモ|作品/.test(hm[1]); prevItem = ''; continue; }
+                const hm = raw.match(/^\s{0,3}#{1,4}\s+(.*)$/); if (hm) { lastRel = null; prevItem = ''; prevInd = -1; tgItem = null; inFam = /家族/.test(hm[1]); inRel = inFam || /関係/.test(hm[1]); inWork = !inRel && /お仕事|出演|フィルモ|作品/.test(hm[1]); prevItem = ''; continue; }
                 if (inWork && /^\s*[-*・●]\s+/.test(raw) && !/^\s*[-*・●]\s+(共演者?|ゲスト|出演者)\s*[：:]/.test(raw)) {
                     const lk = raw.match(LK), ep = lk ? Number(lk[1]) : null, body = wikiPlainMarks(raw.replace(/^\s*[-*・●]\s+/, '')).replace(LK, '');
                     const cands = [...body.matchAll(/\[\[([^\]]+)\]\]/g)].map(x => x[1].trim()).concat([...body.matchAll(/[『「]([^』」\[\]]+)[』」]/g)].map(x => x[1].trim()));
@@ -6314,6 +6315,8 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                         const t0 = raw.replace(/^\s*[-*・●]\s+/, ''), lk0 = t0.match(LKA), it = { t: t0.replace(LKA, '').replace(/\s+$/, ''), ep: lk0 ? Number(lk0[1]) : null };
                         lastRel.rels.forEach(r => (r.story = r.story || []).push(it)); continue;
                     }
+                    const tim = raw.match(/^(\s*)[▸▶►]\s+(.*)$/);
+                    if (tim) { tgItem = { t: tim[2], ind: tim[1].replace(/\t/g, '  ').length }; prevItem = ''; prevInd = -1; lastRel = null; continue; }
                     const cm = raw.match(/^(\s*)[-*・●]\s+(共演者?|ゲスト|出演者)\s*[：:](.*)$/);
                     if (cm) {
                         // 作品の行の下に字下げして書いたときは、上の作品名がひとこと。字下げしていないときは、その行のかっこの中がひとこと
@@ -6321,6 +6324,11 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                         let ep, note;
                         if (under) { const lk = raw.match(LK); ep = lk ? Number(lk[1]) : (prevItem.match(LK) ? Number(prevItem.match(LK)[1]) : null); note = prevItem.replace(/^\s*[-*・●]\s+/, '').replace(LK, '').replace(/\[\[([^\]]+)\]\]/g, '$1').trim(); }
                         else { const own = wikiPlainMarks(cm[3]), lk = own.match(LK); ep = lk ? Number(lk[1]) : null; note = own.replace(LK, '').replace(/\[\[[^\]]+\]\]/g, '').replace(/\{\{\s*第?\s*(\d{1,4})\s*話?\s*\}\}/g, '$1話').trim().replace(/^[（(]/, '').replace(/[）)]$/, '').replace(/[）)]\s*[（(]/g, '。').trim(); }
+                        if (!under && tgItem && tgItem.ind < cInd) {   // 「▸ 『作品』」の下
+                            const work = wikiPlainMarks(tgItem.t).replace(LK, '').replace(/\[\[([^\]]+)\]\]/g, '$1').replace(/[『』]/g, '').trim();
+                            if (work) note = work + (note ? '／' + note : '');
+                            if (!ep) { const lkw = tgItem.t.match(LK); ep = lkw ? Number(lkw[1]) : null; }
+                        }
                         const made0 = [];
                         for (const x of cm[3].matchAll(/\[\[([^\]]+)\]\]/g)) { const to = byName.get(x[1].trim()); if (to && to !== e.id) { const r = { id: 'tr_' + to + '_' + out.length, to, label: cm[2] === 'ゲスト' || cm[2] === '出演者' ? '共演' : cm[2], back: '', note, ep, src: 'text' }; out.push(r); made0.push(r); } }
                         lastRel = !under && made0.length ? { ind: cInd, rels: made0 } : null;
@@ -6564,6 +6572,25 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             if (old.length) out.push('', '▸ 前の説明', ...old.map(x => '  - ' + x.lines.filter(y => y.trim()).join(' ').trim() + (x.ep ? '（' + epLabel(book, x.ep) + '〜）' : '')));
             return out.concat([''], L.slice(end)).join('\n');
         }
+        // 見出しの中で「{{40話から}}」だけの行が区切りになっているところ：区切りごとに「▸ 40話〜」のたためる項目にする
+        // 区切りの前に文があれば「▸ はじめのころ（〜39話）」。まだ読んでいない話の区切りは、今までどおり出さない。新しい2つは、はじめから開く
+        function wikiPeriodFold(book, src, cur, all) {
+            if (src.indexOf('{{') < 0) return src;
+            const L = src.split('\n'), MK = /^\s*\{\{\s*第?\s*(\d{1,4})\s*話\s*から\s*\}\}\s*(.*)$/, out = []; let i = 0;
+            while (i < L.length) {
+                const hm = L[i].match(/^\s{0,3}(#{1,4})\s+(.*)$/); out.push(L[i]); i++; if (!hm) continue;
+                const sec = hm[2].replace(/^[▸▶►]\s*/, '').replace(/\{\{[^}]*\}\}/g, '').trim(); let j = i; while (j < L.length && !/^\s{0,3}#{1,4}\s/.test(L[j])) j++;
+                const body = L.slice(i, j); i = j;
+                const marks = body.map((l, k) => [k, l.match(MK)]).filter(x => x[1] && (all || !cur || Number(x[1][1]) <= cur));
+                const preHas = marks.length > 0 && body.slice(0, marks[0][0]).some(l => l.trim());
+                if (!marks.length || marks.length + (preHas ? 1 : 0) < 2 || body.some(l => /^\s*[▸▶►]\s/.test(l))) { out.push(...body); continue; }
+                const titles = (preHas ? ['はじめのころ（〜' + epLabel(book, Number(marks[0][1][1]) - 1) + '）'] : []).concat(marks.map(([, m]) => { const nm = m[2].trim(), el = epLabel(book, Number(m[1])) + '〜'; return nm ? nm + '（' + el + '）' : el; }));
+                const at = new Map(marks.map(([k], x) => [k, x + (preHas ? 1 : 0)])), item = x => '▸ ' + (x >= titles.length - 2 ? '\u2060' : '\u2061') + sec + '\u2062' + titles[x];
+                let pre = !preHas;
+                body.forEach((l, k) => { if (!pre && l.trim()) { out.push(item(0)); pre = true; } if (at.has(k)) { out.push(item(at.get(k))); return; } out.push(l); });
+            }
+            return out.join('\n');
+        }
         function wikiRich(bookId, text, selfId, opt) {
             let src = wikiSrcNorm(state.books.find(b => b.id === bookId), String(text || '').split(String.fromCharCode(13, 10)).join(String.fromCharCode(10)));
             if (opt && opt.hideProf) {
@@ -6577,6 +6604,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                 if (hi >= 0) { let end = hi + 1; while (end < L.length && !((L[end].match(/^\s{0,3}(#{1,4})\s/) || [, '#####'])[1].length <= lv)) end++; L.splice(hi + 1, end - hi - 1, 'WKRELSLOT', ''); src = L.join('\n'); }
                 else src = src.replace(/\s+$/, '') + (src.trim() ? '\n\n' : '') + '## ▸ 関係\nWKRELSLOT\n';
             }
+            if (opt && opt.toggles) src = wikiPeriodFold(state.books.find(b => b.id === bookId), src, wikiState.asOf || wikiEpisode(bookId), !!((wikiState.panelsAll || {})[selfId]));
             const lines = src.split(String.fromCharCode(10));
             const book = state.books.find(b => b.id === bookId), flat = book ? getFlatChapters(book) : [];
             let lockL = 0;
@@ -6592,7 +6620,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                 }
                 return wikiMarks(out + wikiLinkify(bookId, t.slice(last), selfId));
             };
-            let h = '', hid = 0, headLv = 0; const heads = [], stack = [], toc = [], cnt = [0, 0, 0, 0, 0];
+            let h = '', hid = 0, headLv = 0, pendCnt = 0; const heads = [], stack = [], toc = [], cnt = [0, 0, 0, 0, 0];
             // Notion のように書き分ける：「## 見出し」＝いつも開いている見出し／「## ▸ 見出し」＝見出しの大きさのたためる見出し／「▸ 項目」＝たためる項目（字下げで入れ子）。
             // たためるものは、はじめは閉じる（開いたものは覚える）。{{26話から}} で、その話まで鍵。中身は、次の同じ深さの「▸」か、それより上の見出しまで
             const tgOn = !!(opt && opt.toggles), tgKey = t => (selfId || '') + ':h:' + t, cur = tgOn ? (wikiState.asOf || wikiEpisode(bookId)) : 0, allOn = tgOn && !!((wikiState.panelsAll || {})[selfId]);
@@ -6603,8 +6631,9 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             const closeTo = lv => { while (stack.length) { const top = stack[stack.length - 1]; if (top === 99) { if (lv <= lockL) { stack.pop(); h += '</div>'; lockL = 0; continue; } break; } if (top >= lv) { stack.pop(); h += '</div></details>'; } else break; } };
             const openTg = (lv, text, cls) => {
                 const lk = text.match(LOCK_RE), from = lk ? Number(lk[1]) : 0, title = text.replace(LOCK_RE, '').trim(), key = tgKey(title), nh = cls === 'item' ? { id: '', num: '' } : numHead(lv, title);
-                const locked = from && cur && from > cur && !wikiShowKey(selfId, 'h:' + title), open = allOn || !!((wikiState.tgOpen || {})[key]);
-                h += '<details class="wk-tg ' + cls + '" data-tk="' + wEsc(key) + '"' + (nh.id ? ' id="' + nh.id + '"' : '') + (open ? ' open' : '') + '><summary>' + (nh.num ? '<span class="wk-num">' + nh.num + '</span>' : '') + inline(title) + (from ? '<small>' + (locked ? '🔒 ' : '') + from + '話から</small>' : '') + '</summary><div class="wk-tg-b">';
+                const tgT = (wikiState.tgOpen || {})[key], defO = /^\u2060/.test(title), dispT = title.replace(/^[\u2060\u2061][^\u2062]*\u2062/, '');
+                const locked = from && cur && from > cur && !wikiShowKey(selfId, 'h:' + title), open = allOn || tgT === true || (defO && tgT !== false);
+                h += '<details class="wk-tg ' + cls + '" data-tk="' + wEsc(key) + '"' + (defO ? ' data-defopen="1"' : '') + (nh.id ? ' id="' + nh.id + '"' : '') + (open ? ' open' : '') + '><summary>' + (nh.num ? '<span class="wk-num">' + nh.num + '</span>' : '') + inline(dispT) + (cls === 'item' && pendCnt ? '<small class="wk-muted" style="margin-left:4px">（' + pendCnt + '人）</small>' : '') + (from ? '<small>' + (locked ? '🔒 ' : '') + from + '話から</small>' : '') + '</summary><div class="wk-tg-b">';
                 if (from && cur0 && from > cur0 && !locked) h += '<div class="wk-spoil">⚠ ここから先は、' + wEsc(epLabel(book, from)) + 'の内容（ネタバレ）を含みます</div>';
                 stack.push(lv);
                 if (locked && !lockL) { h += wikiLockBox(selfId, 'h:' + title, '現在の進捗(' + epLabel(book, cur) + ')より先の内容です。') + '<div hidden>'; stack.push(99); lockL = lv; }
@@ -6654,7 +6683,9 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
               const flushRun = () => { for (let a = 0; a < run.length; a++) { const d = run[a].d; let pre = ''; for (let L = 1; L <= d; L++) { let more = false; for (let b = a + 1; b < run.length; b++) { if (run[b].d < L) break; if (run[b].d === L) { more = true; break; } } pre += L < d ? (more ? '│　' : '　　') : (more ? '├ ' : '└ '); } treeP.set(run[a].i, { pre, d }); } run.length = 0; };
               lines.forEach((raw, i) => { const ln = raw.replace(/\s+$/, ''); if (isHeadL(ln)) { flushRun(); inTree = /スキル|ツリー/.test(ln); return; } if (!inTree || skipL.has(i)) return; const mm = ln.match(/^(\s*)[-*・●]\s+/); if (!mm) { if (ln.trim()) flushRun(); return; } run.push({ i, d: Math.floor(mm[1].replace(/\t/g, '  ').length / 2) }); });
               flushRun(); }
-            const bulOK = []; { let hs = false; lines.forEach((l, i) => { const hm = l.match(/^\s{0,3}#{1,4}\s+(.*)$/); if (hm) { const t = hm[1].replace(/^[▸▶►]\s*/, '').replace(/\{\{[^}]*\}\}/g, ''); hs = !(WIKI_INFO_RE.test(t) || /基本情報|能力値/.test(t)); } bulOK[i] = hs; }); }
+            // 「▸ 項目」の中の「役：[[名前]]」の行の数（いま見える分）
+            const itemCnt = new Map(); lines.forEach((l, i) => { const im = l.match(/^(\s*)[▸▶►]\s+/); if (!im) return; const ind = im[1].length; let n = 0, kids = null; for (let j = i + 1; j < lines.length; j++) { const lj = lines[j]; if (/^\s{0,3}#{1,4}\s/.test(lj)) break; const m2 = lj.match(/^(\s*)[▸▶►]\s+/); if (m2 && m2[1].length <= ind) break; const bm = lj.match(/^(\s*)[-*・●]\s+[^：:\[\n]{1,12}[：:]\s*\[\[/); if (!bm) continue; const lk = lj.match(LOCK_RE); if (lk && cur && Number(lk[1]) > cur && !allOn) continue; if (kids === null) kids = bm[1].length; if (bm[1].length === kids) n++; } if (n) itemCnt.set(i, n); });
+            const bulOK = []; { let hs = false; lines.forEach((l, i) => { const hm = l.match(/^\s{0,3}#{1,4}\s+(.*)$/); if (hm) { const t = hm[1].replace(/^[▸▶►]\s*/, '').replace(/\{\{[^}]*\}\}/g, ''); hs = !(WIKI_INFO_RE.test(t) || /基本情報|能力値|概要|あらすじ|説明/.test(t)); } bulOK[i] = hs; }); }
             for (let li = 0; li < lines.length; li++) {
                 if (histAt.has(li)) h += histAt.get(li);
                 if (skipL.has(li)) continue;
@@ -6679,7 +6710,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                 if (tgOn && (m = line.match(/^(\s*)[▸▶►]\s+(.*)$/))) {
                     const ind = Math.floor(m[1].replace(/\t/g, '  ').length / 2), lv = headLv + 0.5 + ind * 0.05;
                     if (lockL && lv > lockL) closeTo(lv); else closeTo(lv);
-                    openTg(lv, m[2], 'item'); continue;
+                    pendCnt = itemCnt.get(li) || 0; openTg(lv, m[2], 'item'); pendCnt = 0; continue;
                 }
                 if ((m = line.match(/^\s{0,3}(#{1,4})\s+(.*)$/))) { const lv = m[1].length, id = 'wkh' + (hid++); heads.push({ id, lv, text: m[2] }); h += '<div id="' + id + '" style="margin:' + (lv <= 2 ? '14px' : '10px') + ' 0 4px;font-weight:700;font-size:' + (lv === 1 ? 17 : lv === 2 ? 16 : 14) + 'px;' + (lv <= 2 ? 'border-left:4px solid #b8923f;padding-left:8px' : 'color:#7a6a4a') + '">' + inline(m[2]) + '</div>'; }
                 else if (/^\s*(-{3,}|_{3,})\s*$/.test(line)) { if (tgOn) closeTo(headLv + 0.01); h += '<hr style="border:0;border-top:1px solid #d8c9a6;margin:10px 0">'; }
@@ -10718,7 +10749,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                     if (d && d.classList && d.classList.contains('wk-ptg')) { const P = wikiState.panels = wikiState.panels || {}, o = P[d.dataset.pid] = P[d.dataset.pid] || {}; if (d.open) o[d.dataset.p] = true; else delete o[d.dataset.p]; return; }
                     if (d && d.id === 'wk-all') { wikiState.allOpen = d.open; return; }
                     if (d && d.classList && d.classList.contains('wk-nav') && d.dataset.nk) { try { localStorage.setItem('wk-nav:' + d.dataset.nk, d.open ? '1' : '0'); } catch (_) {} return; }
-                    if (d && d.classList && d.classList.contains('wk-tg') && d.dataset.tk) { const T = wikiState.tgOpen = wikiState.tgOpen || {}; if (d.open) T[d.dataset.tk] = true; else delete T[d.dataset.tk]; return; }
+                    if (d && d.classList && d.classList.contains('wk-tg') && d.dataset.tk) { const T = wikiState.tgOpen = wikiState.tgOpen || {}; if (d.open) T[d.dataset.tk] = true; else if (d.dataset.defopen) T[d.dataset.tk] = false; else delete T[d.dataset.tk]; return; }
                     if (!d || !d.classList || !d.classList.contains('wk-fold')) return;
                     wikiState.folded = wikiState.folded || {};
                     if (d.open) delete wikiState.folded[d.dataset.fk]; else wikiState.folded[d.dataset.fk] = true;
@@ -11470,8 +11501,8 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         // 話の終わり・戻る・本の終わりで、読み終えた話から言葉を拾い、件数を小さく知らせる。読書は止めない
         // ===== 更新の確認：新しい版があれば、魚に青い点とメニュー（版の番号は version.json。公開のたびに、番号が変わる。番号が入っていない開発中は、確かめない） =====
         // 表示用の版。更新の検出は引き続き APP_BUILD の日時番号を使う。
-        const APP_VERSION = '24.40';
-        const APP_BUILD = '20261117015356';
+        const APP_VERSION = '24.41';
+        const APP_BUILD = '20261117020251';
         let updateCheckAt = 0;
         function paintBuild() {
             const el = document.getElementById('app-build-info'); if (!el) return;
