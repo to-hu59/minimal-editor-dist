@@ -2152,6 +2152,7 @@ html, body { -webkit-text-size-adjust:100%; text-size-adjust:100%; }
                     <div class="pt-3 border-t border-woodBorder">
                         <span class="font-bold text-softMuted block mb-1">更新履歴</span>
                         <div id="changelog" class="text-[11px] text-softMuted leading-relaxed">
+<div class="mb-1.5"><b class="text-softText">Version 24.40（2026-11-17）</b><br>Wiki：関係の見出しの外の「共演：[[名前]]（ひとこと）」の行で、ひとことが上の行のものになってずれるのを直しました。字下げしていない行はその行のかっこの中を使い、下に字下げで書いた行は「いきさつ」になります。本文の中で「共演：」の行が1行にまとめられて消えていたのも直しました。</div>
 <div class="mb-1.5"><b class="text-softText">Version 24.39（2026-11-17）</b><br>Wiki：1行に話数の印を2つ書けるようにしました（いちばん新しい話がその行の話数。ほかは「43話」と小さく出ます）。[[ページ#場所]] でページの中の見出しや言葉へ飛べます。関係は「幼なじみ {{1話から}} → 彼女 {{30話から}}」で移り変わりを書けて、いまの話の関係だけが出ます（変遷も見られます）。関係の下に字下げして書いた行は、たためる「いきさつ」になります。見出しの中の行は「-」がなくても箇条書きで出ます。iPad で改行したときも「- 」が続くようにしました。</div>
 <div class="mb-1.5"><b class="text-softText">Version 24.38（2026-11-16）</b><br>着信の終わりに［／着信 切る］と書くと「ぶちっ」と切れ、［／着信 無視］と書くと鳴りやむようにしました。終わりの印が画面に出たところで止まります。電話が切れたあとの［ツーツー］も足しました。</div>
 <div class="mb-1.5"><b class="text-softText">Version 24.37（2026-11-16）</b><br>［着信］［バイブ］を切り替えにしました。同じ印をもう一度書くか［／着信］［／バイブ］を書くと止まり、間の文がゆれます。2つは別々に始めて止められます。挟んだ文が見えている間は音と振動が続きます（長くても30秒。秒=10 のようにも決められます）。区切りは空白・＋・「・」・「、」のどれでも使えます。</div>
@@ -6290,7 +6291,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         function wikiTextRels(bookId, e, ents) {
             const out = [], lines = wikiSrcNorm(state.books.find(b => b.id === bookId), String(e.basic || '')).split('\n'), LK = /\{\{\s*第?\s*(\d{1,4})\s*話\s*から\s*\}\}/;
             const byName = new Map(); (ents || wikiEntries(bookId)).forEach(x => [x.name].concat(x.aliases || []).forEach(n => { const k = String(n || '').trim(); if (k && !byName.has(k)) byName.set(k, x.id); }));
-            let inRel = false, inFam = false, inWork = false, prevItem = '', lastRel = null;
+            let inRel = false, inFam = false, inWork = false, prevItem = '', prevInd = -1, lastRel = null;
             const LKA = /\{\{\s*第?\s*(\d{1,4})\s*話(?:\s*から)?\s*\}\}/;
             const catOf = new Map((ents || wikiEntries(bookId)).map(x => [x.id, x.category || '']));
             for (const raw of lines) {
@@ -6298,7 +6299,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                     const g = byName.has(gm0[1].trim()) ? null : wikiGroupLink(gm0[1]); if (!g) continue; const lk = raw.match(LK), ep = lk ? Number(lk[1]) : null;
                     for (const n of g.names) { const to = byName.get(n); if (to && to !== e.id && !out.some(r => r.to === to && r.grp)) out.push({ id: 'tr_' + to + '_' + out.length, to, label: (e.category || '') === '人物' ? '関連' : '出演者', back: '', note: g.label, ep, src: 'text', grp: true }); }
                 }
-                const hm = raw.match(/^\s{0,3}#{1,4}\s+(.*)$/); if (hm) { lastRel = null; inFam = /家族/.test(hm[1]); inRel = inFam || /関係/.test(hm[1]); inWork = !inRel && /お仕事|出演|フィルモ|作品/.test(hm[1]); prevItem = ''; continue; }
+                const hm = raw.match(/^\s{0,3}#{1,4}\s+(.*)$/); if (hm) { lastRel = null; prevItem = ''; prevInd = -1; inFam = /家族/.test(hm[1]); inRel = inFam || /関係/.test(hm[1]); inWork = !inRel && /お仕事|出演|フィルモ|作品/.test(hm[1]); prevItem = ''; continue; }
                 if (inWork && /^\s*[-*・●]\s+/.test(raw) && !/^\s*[-*・●]\s+(共演者?|ゲスト|出演者)\s*[：:]/.test(raw)) {
                     const lk = raw.match(LK), ep = lk ? Number(lk[1]) : null, body = wikiPlainMarks(raw.replace(/^\s*[-*・●]\s+/, '')).replace(LK, '');
                     const cands = [...body.matchAll(/\[\[([^\]]+)\]\]/g)].map(x => x[1].trim()).concat([...body.matchAll(/[『「]([^』」\[\]]+)[』」]/g)].map(x => x[1].trim()));
@@ -6308,12 +6309,23 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                     for (const n of cands) { const to = byName.get(n); if (!to || to === e.id || done.has(to) || catOf.get(to) === '人物') continue; done.add(to); out.push({ id: 'tr_' + to + '_' + out.length, to, label: '出演', back: '', note: role, ep, src: 'text' }); }
                 }
                 if (!inRel) {
+                    const indN = (raw.match(/^(\s*)/)[1] || '').replace(/\t/g, '  ').length;
+                    if (lastRel && indN > lastRel.ind && /^\s*[-*・●]\s+\S/.test(raw)) {   // 「共演：」の行の下の字下げは、いきさつ
+                        const t0 = raw.replace(/^\s*[-*・●]\s+/, ''), lk0 = t0.match(LKA), it = { t: t0.replace(LKA, '').replace(/\s+$/, ''), ep: lk0 ? Number(lk0[1]) : null };
+                        lastRel.rels.forEach(r => (r.story = r.story || []).push(it)); continue;
+                    }
                     const cm = raw.match(/^(\s*)[-*・●]\s+(共演者?|ゲスト|出演者)\s*[：:](.*)$/);
                     if (cm) {
-                        const lk = raw.match(LK), ep = lk ? Number(lk[1]) : (prevItem.match(LK) ? Number(prevItem.match(LK)[1]) : null);
-                        const work = prevItem.replace(/^\s*[-*・●]\s+/, '').replace(LK, '').replace(/\[\[([^\]]+)\]\]/g, '$1').trim();
-                        for (const x of cm[3].matchAll(/\[\[([^\]]+)\]\]/g)) { const to = byName.get(x[1].trim()); if (to && to !== e.id) out.push({ id: 'tr_' + to + '_' + out.length, to, label: cm[2] === 'ゲスト' || cm[2] === '出演者' ? '共演' : cm[2], back: '', note: work, ep, src: 'text' }); }
-                    } else if (/^\s*[-*・●]\s+/.test(raw)) prevItem = raw;
+                        // 作品の行の下に字下げして書いたときは、上の作品名がひとこと。字下げしていないときは、その行のかっこの中がひとこと
+                        const cInd = cm[1].replace(/\t/g, '  ').length, under = !!prevItem && prevInd >= 0 && prevInd < cInd;
+                        let ep, note;
+                        if (under) { const lk = raw.match(LK); ep = lk ? Number(lk[1]) : (prevItem.match(LK) ? Number(prevItem.match(LK)[1]) : null); note = prevItem.replace(/^\s*[-*・●]\s+/, '').replace(LK, '').replace(/\[\[([^\]]+)\]\]/g, '$1').trim(); }
+                        else { const own = wikiPlainMarks(cm[3]), lk = own.match(LK); ep = lk ? Number(lk[1]) : null; note = own.replace(LK, '').replace(/\[\[[^\]]+\]\]/g, '').replace(/\{\{\s*第?\s*(\d{1,4})\s*話?\s*\}\}/g, '$1話').trim().replace(/^[（(]/, '').replace(/[）)]$/, '').replace(/[）)]\s*[（(]/g, '。').trim(); }
+                        const made0 = [];
+                        for (const x of cm[3].matchAll(/\[\[([^\]]+)\]\]/g)) { const to = byName.get(x[1].trim()); if (to && to !== e.id) { const r = { id: 'tr_' + to + '_' + out.length, to, label: cm[2] === 'ゲスト' || cm[2] === '出演者' ? '共演' : cm[2], back: '', note, ep, src: 'text' }; out.push(r); made0.push(r); } }
+                        lastRel = !under && made0.length ? { ind: cInd, rels: made0 } : null;
+                    } else if (/^\s*[-*・●]\s+/.test(raw)) { prevItem = raw; prevInd = indN; lastRel = null; }
+                    else if (raw.trim()) lastRel = null;
                     continue;
                 }
                 const ind0 = (raw.match(/^(\s*)/)[1] || '').replace(/\t/g, '  ').length;
@@ -6630,7 +6642,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                 // 字下げした行は、すぐ上の親の行ごとに別もの（作品ごとの「共演：」など）
                 const li0 = ln.match(/^(\s*)[-*・●]\s+/); let parent = '';
                 if (li0) { const ind = li0[1].replace(/\t/g, '  ').length; while (lstack.length && lstack[lstack.length - 1].ind >= ind) lstack.pop(); parent = lstack.length ? String(lstack[lstack.length - 1].i) : ''; lstack.push({ ind, i }); }
-                const kv = keyOf(ln.replace(LOCK_RE, '')); if (!kv) return;
+                const kv = keyOf(ln.replace(LOCK_RE, '')); if (!kv || /^(共演者?|ゲスト|出演者)$/.test(kv.k)) return;   // 共演の行は、人ごとに別の行（値の変遷にしない）
                 const key = seg + '|' + kv.ind + '|' + parent + '|' + kv.k, f0 = first.get(key);
                 if (!f0) { first.set(key, { i0: i, k: kv.k, seg, hist: [{ ep, v: kv.v.replace(LOCK_RE, '') }] }); return; }
                 f0.hist.push({ ep, v: kv.v.replace(LOCK_RE, '') }); skipL.add(i);
@@ -11458,8 +11470,8 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         // 話の終わり・戻る・本の終わりで、読み終えた話から言葉を拾い、件数を小さく知らせる。読書は止めない
         // ===== 更新の確認：新しい版があれば、魚に青い点とメニュー（版の番号は version.json。公開のたびに、番号が変わる。番号が入っていない開発中は、確かめない） =====
         // 表示用の版。更新の検出は引き続き APP_BUILD の日時番号を使う。
-        const APP_VERSION = '24.39';
-        const APP_BUILD = '20261117014224';
+        const APP_VERSION = '24.40';
+        const APP_BUILD = '20261117015356';
         let updateCheckAt = 0;
         function paintBuild() {
             const el = document.getElementById('app-build-info'); if (!el) return;
