@@ -2185,6 +2185,7 @@ html, body { -webkit-text-size-adjust:100%; text-size-adjust:100%; }
                     <div class="pt-3 border-t border-woodBorder">
                         <span class="font-bold text-softMuted block mb-1">更新履歴</span>
                         <div id="changelog" class="text-[11px] text-softMuted leading-relaxed">
+<div class="mb-1.5"><b class="text-softText">Version 24.54（2026-11-18）</b><br>Wiki：ステータスの「[体力 - 11][体力 - 成長限界値：…]」のようにかぎかっこが並ぶ行も、同じ名前の行を書き足すと、いちばん新しい行だけが出て、古い行は「変遷を見る」に入ります（話数の印がなければ、あとに書いた方が新しい値）。「[職業 - 無職]→[職業 - 魔法使い] {{3話から}}」と1行に→でつないで書いても、同じように古い値が「変遷を見る」に入ります。</div>
 <div class="mb-1.5"><b class="text-softText">Version 24.53（2026-11-17）</b><br>Wiki：上の表の「出演作：自動」の並びを、古い順にしました。</div>
 <div class="mb-1.5"><b class="text-softText">Version 24.52（2026-11-17）</b><br>Wiki：上の表の「出演作：自動」は、「お仕事」の欄から集めるようにしました。「番宣」と書いてある行は入れません（入れたくない行には {{出演作から外す}} と書きます）。字下げした行は、親の行の続きなので入れません。</div>
 <div class="mb-1.5"><b class="text-softText">Version 24.51（2026-11-17）</b><br>日記：日付を書かなければ「月　日」の行を出さないようにしました。消し跡のよごれは、消し跡=あり と書いたときだけ付けます。幅を広げ、「。」などが行の頭に来ないようにしました。日記を作る画面は、［背景］がなければ無地にし、音を出すボタン（🔈）を足しました。演出ビューは、画面を押すと音が出せるようにしました。日記がページをまたぐときに、行の途中で切れないようにしました。新しい演出「通知の山」（たまったメッセージが積み上がって、未読の数がふくらむ）を足しました。Wiki：同じ名前の行でも、話数の印がなければ別々の行として並べ、「- →…」の行は上の行の続きにしました。上の表の「出演作」は4つ以上でたたみ、「出演作：自動」でページの作品を集めます。書く画面に見出しのバーを足しました（押すと、その欄の最後へ）。</div>
@@ -6787,7 +6788,8 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                 else src = src.replace(/\s+$/, '') + (src.trim() ? '\n\n' : '') + '## ▸ 関係\nWKRELSLOT\n';
             }
             if (opt && opt.toggles) src = wikiPeriodFold(state.books.find(b => b.id === bookId), src, wikiState.asOf || wikiEpisode(bookId), !!((wikiState.panelsAll || {})[selfId]));
-            const lines = src.split(String.fromCharCode(10));
+            // 「[職業 - 無職]→[職業 - 魔法使い] {{2話から}}」のように→でつないだ1行は、古い値と新しい値の別々の行に分ける（古い値は「変遷を見る」に入る）
+            const lines = src.split(String.fromCharCode(10)).flatMap(l => { if (l.indexOf('→') < 0 || !/^\s*\[/.test(l)) return [l]; const ind = (l.match(/^\s*/) || [''])[0], ps = l.trim().split(/\s*→\s*(?=\[)/); return ps.length > 1 && ps.every(x => x.charAt(0) === '[') ? ps.map(x => ind + x) : [l]; });
             const book = state.books.find(b => b.id === bookId), flat = book ? getFlatChapters(book) : [];
             let lockL = 0;
             const fns = [], fnBase = 'wkfn' + Math.random().toString(36).slice(2, 7);
@@ -6828,7 +6830,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                 let m;
                 if ((m = ln.match(/^(\s*)[-*・●]\s+([^：:\s\[][^：:]{0,19})[：:]\s*(.*)$/))) return { k: m[2].trim(), ind: m[1].length, v: m[3] };
                 if ((m = ln.match(/^(\s*)[-*・●]\s+(.+?)\s*((?:Lv|LV|lv|Ｌｖ)\.?\s*[0-9０-９]+|レベル\s*[0-9０-９]+|[0-9０-９]+\s*レベル)\s*$/))) return { k: m[2].trim(), ind: m[1].length, v: m[3] };
-                if ((m = ln.match(/^\s*\[\s*([^\]\-－–—:：]{1,20}?)\s*[-－–—:：]\s*(.*?)\s*\]\s*$/))) return { k: m[1].trim(), ind: 0, v: m[2] };
+                if ((m = ln.match(/^\s*\[\s*([^\]\-－–—:：]{1,20}?)\s*[-－–—:：]\s*(.*?)\s*\]\s*$/))) return { k: m[1].trim(), ind: 0, v: ln.trim(), br: true };   // かぎかっこの行は、行ぜんぶを値に（[体力 - 11][体力 - 成長限界値：…] も、ひとつの値）
                 if ((m = ln.match(/^\s*([^\s：:\[\]\-*・●#▸][^：:\[\]]{0,19}?)\s*[：:]\s*(.+)$/))) return { k: m[1].trim(), ind: 0, v: m[2] };
                 if ((m = ln.match(/^\s*([^\s\[\]\-*・●#▸][^\[\]]{0,19}?)\s+[-－]\s+(.+)$/))) return { k: m[1].trim(), ind: 0, v: m[2] };
                 return null;
@@ -6856,7 +6858,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                 const kv = keyOf(ln.replace(LOCK_RE, '')); if (!kv || /^(共演者?|ゲスト|出演者)$/.test(kv.k)) return;   // 共演の行は、人ごとに別の行（値の変遷にしない）
                 const key = seg + '|' + kv.ind + '|' + parent + '|' + kv.k, f0 = first.get(key);
                 if (!f0) { first.set(key, { i0: i, k: kv.k, seg, hist: [{ ep, v: kv.v.replace(LOCK_RE, '') }] }); return; }
-                if (!ep) return;   // 話数の印がない行は、同じ名前でも別のもの（「監督した俳優：」が何人もいる、など）
+                if (!ep && !kv.br) return;   // （かぎかっこの行だけは、話数の印がなくても、あとに書いた方が新しい値）話数の印がない行は、同じ名前でも別のもの（「監督した俳優：」が何人もいる、など）
                 f0.hist.push({ ep, v: kv.v.replace(LOCK_RE, '') }); skipL.add(i);
                 dispL.set(f0.i0, ln.replace(LOCK_RE, '').replace(/\s+$/, '')); if (ep) epTag.set(f0.i0, ep); else epTag.delete(f0.i0);
               });
@@ -11882,8 +11884,8 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         // 話の終わり・戻る・本の終わりで、読み終えた話から言葉を拾い、件数を小さく知らせる。読書は止めない
         // ===== 更新の確認：新しい版があれば、魚に青い点とメニュー（版の番号は version.json。公開のたびに、番号が変わる。番号が入っていない開発中は、確かめない） =====
         // 表示用の版。更新の検出は引き続き APP_BUILD の日時番号を使う。
-        const APP_VERSION = '24.53';
-        const APP_BUILD = '20261117204555';
+        const APP_VERSION = '24.54';
+        const APP_BUILD = '20261118065600';
         let updateCheckAt = 0;
         function paintBuild() {
             const el = document.getElementById('app-build-info'); if (!el) return;
