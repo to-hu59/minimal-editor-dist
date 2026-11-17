@@ -2181,6 +2181,7 @@ html, body { -webkit-text-size-adjust:100%; text-size-adjust:100%; }
                     <div class="pt-3 border-t border-woodBorder">
                         <span class="font-bold text-softMuted block mb-1">更新履歴</span>
                         <div id="changelog" class="text-[11px] text-softMuted leading-relaxed">
+<div class="mb-1.5"><b class="text-softText">Version 24.49（2026-11-17）</b><br>［チャイム 連打］を、押しまくっている音に作り直しました（「ピン」が短く続いて、最後だけ「ピンポーン」）。［チャイム 連打 15回］のように回数も決められます。書かなければ8回、次の行に「ピンポン」が3つ以上あれば、その数です。</div>
 <div class="mb-1.5"><b class="text-softText">Version 24.48（2026-11-17）</b><br>［ピッ］（または［インターホン］）で、インターホンに出るときの「ピッ」が鳴るようにしました。チャイムのあとに書くと、チャイムが鳴り終わってから鳴ります。［チャイム］［ツーツー］が、同じ画面にいくつあっても、読む順に、前の音が鳴り終わってから鳴るようにしました（ページめくりで全部が同時に鳴っていたのを直しました）。1行の中で文が分かれても、1回分だけ鳴ります。</div>
 <div class="mb-1.5"><b class="text-softText">Version 24.47（2026-11-17）</b><br>PC の編集画面で本文を右クリックすると、最近使った演出（5つまで）・演出を消す・特殊演出を開くのメニューが出るようにしました（Shift＋右クリックで、いつものメニュー）。特殊演出の一覧のいちばん上にも「最近使った演出」が出ます。［チャイム］は、回数を書かなければ、次の行の「ピンポーン」の数だけ鳴ります。</div>
 <div class="mb-1.5"><b class="text-softText">Version 24.46（2026-11-17）</b><br>編集画面の「装飾を消す」のとなりに「演出を消す」ボタンを足しました。選んだ範囲の演出、選んでいなければカーソルのところの演出の印を消します（文字は残ります）。「装飾を消す」でも、演出の印があれば一緒に消すか聞くようにしました。</div>
@@ -5169,7 +5170,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             try {
                 fxAC = fxAC || new (window.AudioContext || window.webkitAudioContext)(); if (fxAC.state === 'suspended') fxAC.resume();
                 const t0 = fxAC.currentTime + 0.05, bell = (fq, st, d, v) => { [[1, 1], [2.01, 0.25], [3.02, 0.08]].forEach(([m, a]) => { const o = fxAC.createOscillator(), g = fxAC.createGain(); o.type = 'sine'; o.frequency.value = fq * m; g.gain.setValueAtTime(0.0001, st); g.gain.exponentialRampToValueAtTime(v * a, st + 0.008); g.gain.exponentialRampToValueAtTime(0.0001, st + d / m); o.connect(g); g.connect(fxDest()); o.start(st); o.stop(st + d / m + 0.02); }); };
-                if (rapid) { for (let i = 0; i < 6; i++) { const st = t0 + i * 0.36; bell(659.3, st, 0.5, 0.12); bell(523.3, st + 0.18, i === 5 ? 1.8 : 0.5, 0.12); } return; }
+                if (rapid) { const cnt = Math.max(2, Math.min(30, n || 8)); let st = t0; for (let i = 0; i < cnt; i++) { if (i === cnt - 1) { bell(659.3, st, 1.0, 0.13); bell(523.3, st + 0.45, 1.9, 0.13); } else bell(659.3, st, 0.16, 0.13); st += 0.15 + Math.random() * 0.05; } return; }
                 for (let i = 0; i < Math.min(Math.max(1, n || 1), 10); i++) { const st = t0 + i * 1.9; bell(659.3, st, 1.0, 0.13); bell(523.3, st + 0.5, 1.9, 0.13); }
             } catch (e) {}
         }
@@ -5367,7 +5368,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             if (has('h')) run(inl ? [{ textShadow: 'none' }, { textShadow: '0 0 10px rgba(200,0,0,.9)', offset: .08 }, { textShadow: 'none', offset: .2 }, { textShadow: '0 0 8px rgba(200,0,0,.7)', offset: .28 }, { textShadow: 'none', offset: .45 }] : [{ transform: 'scale(1)' }, { transform: 'scale(1.035)', offset: .08 }, { transform: 'scale(1)', offset: .2 }, { transform: 'scale(1.025)', offset: .28 }, { transform: 'scale(1)', offset: .45 }], { duration: 1050, iterations: Math.max(1, Math.round(sec / 1.05)), transformOrigin: 'left center' });
             if (has('b')) { if (stg.sound) fxQueueSound(el, 4.3, () => fxBusy()); if (k === 'b') return; }
             if (has('i')) { if (stg.sound) fxQueueSound(el, 0.5, fxPi); if (k === 'i') return; }
-            if (has('c')) { if (stg.sound) { const c = Number(el.dataset.fxs) || 1, rapid = c < 1, n = Math.round(c); fxQueueSound(el, rapid ? 4.2 : (Math.min(10, Math.max(1, n)) - 1) * 1.9 + 2.6, () => fxChime(n, rapid)); } if (k === 'c') return; }
+            if (has('c')) { if (stg.sound) { const c = Number(el.dataset.fxs) || 1, rapid = c < 1, n = rapid ? Math.round(c * 100) || 8 : Math.round(c); fxQueueSound(el, rapid ? n * 0.18 + 2.6 : (Math.min(10, Math.max(1, n)) - 1) * 1.9 + 2.6, () => fxChime(n, rapid)); } if (k === 'c') return; }
             if (stg.sound) { if (has('r')) fxRing(sec); if (has('h')) fxThump(Math.max(1, Math.round(sec / 1.05))); if (has('n')) fxCrackle(sec); if (has('z')) fxThrob(Math.max(1, Math.round(sec / 0.95))); }
             if (stg.vibrate) {
                 let pat = null;
@@ -8202,7 +8203,9 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         // ［ツーツー］：電話が切れたあとの音。［チャイム］［チャイム 2回］［チャイム 連打］：ピンポーン。印だけの行は次の1行に、文の中なら、そのあとの文に効く
         function fxBusyMark(t) {
             if (t.indexOf('［ツーツー') < 0 && !/［(チャイム|ピンポーン|ピッ|インターホン)/.test(t)) return t;
-            const RX = /［(?:ツーツー|ピッ|インターホン|(?:チャイム|ピンポーン)(?:[ 　]*(?:([0-9０-９]+)回?|(連打)))?)[ 　]*］/, mk = (m, tx) => { if (/ツーツー/.test(m[0])) return '\uE000b:\uE002'; if (/ピッ|インターホン/.test(m[0])) return '\uE000i:1\uE002'; const pc = ((tx || '').match(/ピン[ー－〜~ｰ]*ポ[ー－〜~ｰ]*ン/g) || []).length, n = m[1] ? Number(m[1].replace(/[０-９]/g, d => '０１２３４５６７８９'.indexOf(d))) : (pc || 1); return '\uE000c:' + (m[2] ? '0.5' : String(Math.max(1, Math.min(10, n)))) + '\uE002'; };
+            const RX = /［(?:ツーツー|ピッ|インターホン|(?:チャイム|ピンポーン)(?:[ 　]*(?:([0-9０-９]+)回?|(連打)(?:[ 　]*([0-9０-９]+)回?)?))?)[ 　]*］/, mk = (m, tx) => { if (/ツーツー/.test(m[0])) return '\uE000b:\uE002'; if (/ピッ|インターホン/.test(m[0])) return '\uE000i:1\uE002'; const pc = ((tx || '').match(/ピン[ー－〜~ｰ]*ポ[ー－〜~ｰ]*ン/g) || []).length, dg = x => Number(x.replace(/[０-９]/g, d => '０１２３４５６７８９'.indexOf(d)));
+                if (m[2]) { const rn = m[3] ? dg(m[3]) : (pc >= 3 ? pc : 8); return '\uE000c:' + (Math.max(2, Math.min(30, rn)) / 100).toFixed(2) + '\uE002'; }
+                const n = m[1] ? dg(m[1]) : (pc || 1); return '\uE000c:' + String(Math.max(1, Math.min(10, n))) + '\uE002'; };
             const L = t.split('\n'), out = [];
             for (let i = 0; i < L.length; i++) {
                 const only = L[i].match(new RegExp('^[ \t　]*' + RX.source + '[ \t　]*$'));
@@ -11806,8 +11809,8 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         // 話の終わり・戻る・本の終わりで、読み終えた話から言葉を拾い、件数を小さく知らせる。読書は止めない
         // ===== 更新の確認：新しい版があれば、魚に青い点とメニュー（版の番号は version.json。公開のたびに、番号が変わる。番号が入っていない開発中は、確かめない） =====
         // 表示用の版。更新の検出は引き続き APP_BUILD の日時番号を使う。
-        const APP_VERSION = '24.48';
-        const APP_BUILD = '20261117154859';
+        const APP_VERSION = '24.49';
+        const APP_BUILD = '20261117155902';
         let updateCheckAt = 0;
         function paintBuild() {
             const el = document.getElementById('app-build-info'); if (!el) return;
