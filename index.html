@@ -2152,6 +2152,7 @@ html, body { -webkit-text-size-adjust:100%; text-size-adjust:100%; }
                     <div class="pt-3 border-t border-woodBorder">
                         <span class="font-bold text-softMuted block mb-1">更新履歴</span>
                         <div id="changelog" class="text-[11px] text-softMuted leading-relaxed">
+<div class="mb-1.5"><b class="text-softText">Version 24.42（2026-11-17）</b><br>Wiki：書く画面に「👥 メンバーを登録」「👥 メンバーを入れる」ボタンを足しました。ドラマやギルドのページで登録したメンバーを、別のページで選んで入れられます（来ていない人は外せます。行の頭・役職・話数も選べます）。</div>
 <div class="mb-1.5"><b class="text-softText">Version 24.41（2026-11-17）</b><br>Wiki：「▸ 『作品』」の下に共演者を書くと、作品ごとにたためて、作品名の横に人数が出ます（関連の欄には作品名も付きます）。評価などで {{40話から}} の行で区切ったところは、時期ごとにたためるようにしました（新しい2つは開いています）。</div>
 <div class="mb-1.5"><b class="text-softText">Version 24.40（2026-11-17）</b><br>Wiki：関係の見出しの外の「共演：[[名前]]（ひとこと）」の行で、ひとことが上の行のものになってずれるのを直しました。字下げしていない行はその行のかっこの中を使い、下に字下げで書いた行は「いきさつ」になります。本文の中で「共演：」の行が1行にまとめられて消えていたのも直しました。</div>
 <div class="mb-1.5"><b class="text-softText">Version 24.39（2026-11-17）</b><br>Wiki：1行に話数の印を2つ書けるようにしました（いちばん新しい話がその行の話数。ほかは「43話」と小さく出ます）。[[ページ#場所]] でページの中の見出しや言葉へ飛べます。関係は「幼なじみ {{1話から}} → 彼女 {{30話から}}」で移り変わりを書けて、いまの話の関係だけが出ます（変遷も見られます）。関係の下に字下げして書いた行は、たためる「いきさつ」になります。見出しの中の行は「-」がなくても箇条書きで出ます。iPad で改行したときも「- 」が続くようにしました。</div>
@@ -10850,7 +10851,7 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         function wikiInsCustom(bookId) { const bk = state.books.find(b => b.id === bookId); return (bk && bk.wikiInsCustom) || []; }
         function wikiInsRowHtml(bookId) {
             const fixed = WIKI_INS.filter(t => !t[3]), sub = WIKI_INS.filter(t => t[3]), btn = t => '<button type="button" data-w="ins" data-k="' + wEsc(t[0]) + '"' + (t[3] ? ' class="sub"' : '') + '>＋ ' + wEsc(t[0]) + '</button>';
-            return fixed.map(btn).join('') + wikiInsCustom(bookId).map(c => '<button type="button" class="own" data-w="ins" data-k="c:' + wEsc(c.id) + '" title="長押し（右クリック）で、直す・消す">＋ ' + wEsc(c.name) + '</button>').join('') + '<button type="button" class="sub mk" data-w="insnew">＋ ボタンを作る</button>' + sub.map(btn).join('');
+            return fixed.map(btn).join('') + wikiInsCustom(bookId).map(c => '<button type="button" class="own" data-w="ins" data-k="c:' + wEsc(c.id) + '" title="長押し（右クリック）で、直す・消す">＋ ' + wEsc(c.name) + '</button>').join('') + '<button type="button" class="sub mk" data-w="insnew">＋ ボタンを作る</button>' + '<button type="button" class="own" data-w="castsave" title="このページの [[名前]] の行を、まとまりとして保存します">👥 メンバーを登録</button><button type="button" class="own" data-w="castins" title="登録したメンバーを、書いている所に入れます">👥 メンバーを入れる</button>' + sub.map(btn).join('');
         }
         function wikiInsRefresh() { const bookId = state.currentBookId; document.querySelectorAll('.wiki-sheet .wk-ins').forEach(r => { r.innerHTML = wikiInsRowHtml(bookId); }); }
         // 作る・直す窓（id があれば直す）
@@ -10892,6 +10893,102 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                 const body = bd.value.replace(/\r/g, '').replace(/\s+$/, '');
                 if (cur) { const i = list.findIndex(c => c.id === id); list[i] = { ...cur, name, body }; } else list.push({ id: 'ci' + Date.now().toString(36), name, body });
                 bk.wikiInsCustom = list; save(); ov.remove(); wikiInsRefresh(); toast(cur ? 'ボタンを直しました' : '「＋ ' + name + '」のボタンを作りました');
+            });
+        }
+        // ---- メンバーのまとまり（作品ごと）：ページのメンバーを登録して、別のページで入れる ----
+        function wikiCasts(bookId) { const bk = state.books.find(b => b.id === bookId); return (bk && bk.wikiCasts) || []; }
+        function wikiCurSrc() { const ta = document.getElementById('wk-basic'); if (!ta) return ''; if (window.wikiEdOn) { try { syncVisualDraft(); return draftSource(); } catch (e) {} } return ta.value; }
+        // [[名前]] のある箇条書きの行を、メンバーとして読む（役職は（ ）の中か、名前の前。話数は {{N話から}}）
+        function wikiCastParse(src, self) {
+            const out = [], seen = new Set(), HM = /メンバー|キャスト|共演|出演|ギルメン|仲間|所属|構成|登場/; let head = '';
+            String(src || '').replace(/\r/g, '').split('\n').forEach(raw => {
+                const hm = raw.match(/^\s{0,3}#{1,4}\s+(.*)$/); if (hm) { head = hm[1].replace(/^[▸▶►]\s*/, '').trim(); return; }
+                if (!/^\s*[-*・●]\s*/.test(raw)) return;
+                const lk = raw.match(/\[\[([^\]]+)\]\]/); if (!lk) return;
+                const name = lk[1].replace(/[#＃|｜].*$/, '').trim(); if (!name || name === self || seen.has(name) || wikiGroupLink(name)) return; seen.add(name);
+                const body = raw.replace(/^\s*[-*・●]\s*/, ''), at = body.indexOf(lk[0]);
+                const ep = ((body.match(/\{\{\s*([^{}]*?)から\s*\}\}/) || [])[1] || '').trim();
+                const after = body.slice(at + lk[0].length), pm = after.match(/^\s*[（(]([^）)]*)[）)]/);
+                let role = pm ? pm[1].trim() : '';
+                if (!role) { const bf = body.slice(0, at).replace(/\{\{[^{}]*\}\}/g, '').replace(/[：:\s　]+$/, '').trim(); if (bf && !/^(共演者?|ゲスト|出演者?|メンバー|役|キャスト)$/.test(bf)) role = bf; }
+                out.push({ name, role, ep, on: HM.test(head) });
+            });
+            if (!out.some(x => x.on)) out.forEach(x => { x.on = true; });
+            return out;
+        }
+        function wikiCastOv(inner) {
+            let ov = document.getElementById('wk-castov'); if (ov) ov.remove();
+            ov = document.createElement('div'); ov.id = 'wk-castov';
+            ov.style.cssText = 'position:fixed;inset:0;z-index:96;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;padding:16px';
+            ov.innerHTML = '<div style="width:100%;max-width:480px;max-height:88vh;overflow:auto;background:#f5ede0;border-radius:16px;padding:16px;color:#3b2f1e;font-size:14px">' + inner + '</div>';
+            document.body.appendChild(ov); ov.addEventListener('click', e => { if (e.target === ov) ov.remove(); }); return ov;
+        }
+        const WK_CB = 'display:flex;gap:8px;align-items:center;padding:6px 4px;border-bottom:1px solid #e3d7bd';
+        const wkCastRow = (m, i) => '<label style="' + WK_CB + '"><input type="checkbox" class="wk-cm" data-i="' + i + '"' + (m.on !== false ? ' checked' : '') + '><span><b>' + wEsc(m.name) + '</b>' + (m.role ? '（' + wEsc(m.role) + '）' : '') + (m.ep ? ' <span class="wk-muted" style="font-size:12px">' + wEsc(m.ep) + 'から</span>' : '') + '</span></label>';
+        const WK_BT = 'padding:9px 14px;border-radius:10px;border:1px solid #c9b88f;background:#fff', WK_OK = 'padding:9px 16px;border-radius:10px;border:0;background:#23594e;color:#fff;font-weight:700';
+        function wikiCastSave() {
+            const bookId = state.currentBookId, bk = state.books.find(b => b.id === bookId); if (!bk) return;
+            const self = ((document.getElementById('wk-name') || {}).value || '').trim(), mem = wikiCastParse(wikiCurSrc(), self);
+            if (!mem.length) { toast('「- [[名前]]」の行が見つかりませんでした'); return; }
+            const old = wikiCasts(bookId).find(c => c.name === self);
+            const ov = wikiCastOv('<div style="font-weight:700;margin-bottom:6px">メンバーを登録</div><div class="wk-muted" style="font-size:12px;margin-bottom:8px">チェックした人を、ひとまとまりで保存します。別のページの「👥 メンバーを入れる」で呼び出せます。</div>'
+                + '<label style="display:block;font-size:12px;opacity:.8">まとまりの名前</label><input id="wk-cast-name" type="text" value="' + wEsc(self) + '" placeholder="例：空間メンバー" style="width:100%;margin:4px 0 10px;padding:9px 10px;border-radius:10px;border:1px solid #c9b88f;background:#fff;font-size:15px">'
+                + '<div style="margin-bottom:10px">' + mem.map(wkCastRow).join('') + '</div>' + (old ? '<div class="wk-muted" style="font-size:12px;margin-bottom:8px">同じ名前の登録があります。保存すると新しくなります（もう入れたページの行は、そのままです）。</div>' : '')
+                + '<div style="display:flex;gap:8px;justify-content:flex-end"><button type="button" data-c="cancel" style="' + WK_BT + '">やめる</button><button type="button" data-c="ok" style="' + WK_OK + '">登録する</button></div>');
+            ov.addEventListener('click', e => {
+                const b = e.target.closest('[data-c]'); if (!b) return; if (b.dataset.c === 'cancel') { ov.remove(); return; }
+                const name = ov.querySelector('#wk-cast-name').value.trim(); if (!name) { toast('まとまりの名前を入れてください'); return; }
+                const pick = mem.filter((m, i) => ov.querySelector('.wk-cm[data-i="' + i + '"]').checked).map(m => ({ name: m.name, role: m.role, ep: m.ep })); if (!pick.length) { toast('1人以上えらんでください'); return; }
+                const list = wikiCasts(bookId).filter(c => c.name !== name), prev = wikiCasts(bookId).find(c => c.name === name);
+                list.push({ id: prev ? prev.id : 'cs' + Date.now().toString(36), name, members: pick, at: Date.now() }); bk.wikiCasts = list; save(); ov.remove();
+                toast('「' + name + '」に ' + pick.length + '人を' + (prev ? '登録しなおしました' : '登録しました'));
+            });
+        }
+        // 書いている所に行を入れる（見た目のまま書くエディタでも、文字だけの欄でも）
+        function wikiEditSrc(fn) {
+            const ta = document.getElementById('wk-basic'); if (!ta) return;
+            if (!window.wikiEdOn) { const v = ta.value, a = ta.selectionStart == null ? v.length : ta.selectionStart, r = fn(v, a, ta.selectionEnd == null ? a : ta.selectionEnd); ta.value = r.v; ta.focus(); ta.setSelectionRange(r.c, r.c); ta.dispatchEvent(new Event('input', { bubbles: true })); return; }
+            syncVisualDraft(); const v = draftSource(), len = v.length, lo = window.__wkLastOff, sel = lo ? { start: Math.min(lo.start, len), end: Math.min(lo.end, len) } : (visualOffsets() || { start: len, end: len });
+            const r = fn(v, sel.start, sel.end); ta.value = r.v; storeDraftSource(r.v); renderVisualSource(r.v); setVisualSelection(r.c, r.c); syncVisualDraft(true); window.__wkLastOff = { start: r.c, end: r.c };
+        }
+        function wikiCastLinesAt(v, a, mk) {
+            const ls = v.lastIndexOf('\n', a - 1) + 1; let le = v.indexOf('\n', a); if (le < 0) le = v.length;
+            const line = v.slice(ls, le), indOf = l => { const im = l.match(/^(\s*)[▸▶►]\s/); if (im) return im[1] + '  '; const bm = l.match(/^(\s*)[-*・●]\s/); return bm ? bm[1] : null; };
+            if (!line.trim()) { let ind = ''; for (let k = ls - 1; k > 0;) { const p = v.lastIndexOf('\n', k - 1) + 1, l = v.slice(p, k); if (l.trim()) { ind = indOf(l) || ''; break; } k = p - 1; } const t = mk(ind); return { v: v.slice(0, ls) + t + v.slice(le), c: ls + t.length }; }
+            const t = '\n' + mk(indOf(line) || ''); return { v: v.slice(0, le) + t + v.slice(le), c: le + t.length };
+        }
+        function wikiCastIns() {
+            const bookId = state.currentBookId, bk = state.books.find(b => b.id === bookId); if (!bk) return;
+            const casts = wikiCasts(bookId); if (!casts.length) { toast('まだ登録がありません。まとまりのページ（ドラマ・ギルドなど）で「👥 メンバーを登録」を押してください'); return; }
+            let cur = casts[casts.length - 1].id; const opt = { pre: '共演', role: true, ep: false }, self = ((document.getElementById('wk-name') || {}).value || '').trim();
+            const ov = wikiCastOv('<div id="wk-ci"></div>');
+            const draw = () => {
+                const c = wikiCasts(bookId).find(x => x.id === cur) || wikiCasts(bookId)[0]; if (!c) { ov.remove(); return; } cur = c.id;
+                const chip = x => '<button type="button" data-c="sel" data-id="' + wEsc(x.id) + '" style="padding:6px 12px;border-radius:999px;font-size:13px;border:1px solid ' + (x.id === cur ? '#23594e;background:#23594e;color:#fff' : '#c9b88f;background:#fff') + '">' + wEsc(x.name) + '（' + x.members.length + '）</button>';
+                const pres = ['共演', 'メンバー', '出演', ''];
+                ov.querySelector('#wk-ci').innerHTML = '<div style="font-weight:700;margin-bottom:8px">メンバーを入れる</div><div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">' + wikiCasts(bookId).map(chip).join('') + '</div>'
+                    + '<div style="display:flex;justify-content:space-between;align-items:center;font-size:12px" class="wk-muted"><span>来ていない人は、チェックを外してください</span><span><button type="button" data-c="all" style="border:0;background:none;color:#23594e;text-decoration:underline;font-size:12px">ぜんぶ</button> <button type="button" data-c="none" style="border:0;background:none;color:#23594e;text-decoration:underline;font-size:12px">外す</button></span></div>'
+                    + '<div style="margin:4px 0 10px">' + c.members.map(m => ({ ...m, on: m.name !== self })).map(wkCastRow).join('') + '</div>'
+                    + '<div style="font-size:12px;opacity:.8;margin-bottom:4px">行の頭</div><div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">' + pres.map(p => '<button type="button" data-c="pre" data-p="' + p + '" style="padding:6px 12px;border-radius:999px;font-size:13px;border:1px solid ' + (opt.pre === p ? '#23594e;background:#eef5f1;color:#23594e;font-weight:700' : '#c9b88f;background:#fff') + '">' + (p ? p + '：' : 'なし') + '</button>').join('') + '<input id="wk-ci-pre" type="text" placeholder="自分で（例：ギルメン）" value="' + (pres.includes(opt.pre) ? '' : wEsc(opt.pre)) + '" style="flex:1;min-width:120px;padding:6px 10px;border-radius:10px;border:1px solid #c9b88f;background:#fff;font-size:13px"></div>'
+                    + '<label style="' + WK_CB + ';border:0"><input type="checkbox" id="wk-ci-role"' + (opt.role ? ' checked' : '') + '>役職・役も入れる（ ）</label><label style="' + WK_CB + ';border:0"><input type="checkbox" id="wk-ci-ep"' + (opt.ep ? ' checked' : '') + '>話数（{{○話から}}）も入れる</label>'
+                    + '<div class="wk-muted" style="font-size:12px;margin:6px 0 10px">入れたあとは、ふつうの文字です。消したり書き足したりできます。</div>'
+                    + '<div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap"><button type="button" data-c="del" style="margin-right:auto;padding:9px 14px;border-radius:10px;border:1px solid #c0392b;background:#fff;color:#c0392b">この登録を消す</button><button type="button" data-c="cancel" style="' + WK_BT + '">やめる</button><button type="button" data-c="ok" style="' + WK_OK + '">入れる</button></div>';
+            };
+            const keep = () => { const pi = ov.querySelector('#wk-ci-pre'); if (pi && pi.value.trim()) opt.pre = pi.value.trim().replace(/[：:]$/, ''); const r = ov.querySelector('#wk-ci-role'), e = ov.querySelector('#wk-ci-ep'); if (r) opt.role = r.checked; if (e) opt.ep = e.checked; };
+            draw();
+            ov.addEventListener('click', e => {
+                const b = e.target.closest('[data-c]'); if (!b) return; const k = b.dataset.c;
+                if (k === 'cancel') { ov.remove(); return; }
+                if (k === 'sel') { keep(); cur = b.dataset.id; draw(); return; }
+                if (k === 'pre') { keep(); opt.pre = b.dataset.p; const pi = ov.querySelector('#wk-ci-pre'); if (pi) pi.value = ''; draw(); return; }
+                if (k === 'all' || k === 'none') { ov.querySelectorAll('.wk-cm').forEach(x => { x.checked = k === 'all'; }); return; }
+                const c = wikiCasts(bookId).find(x => x.id === cur); if (!c) return;
+                if (k === 'del') { if (!confirm('「' + c.name + '」の登録を消しますか？（もう入れた行は、そのまま残ります）')) return; bk.wikiCasts = wikiCasts(bookId).filter(x => x.id !== cur); save(); if (!bk.wikiCasts.length) { ov.remove(); toast('登録を消しました'); return; } cur = bk.wikiCasts[0].id; draw(); toast('登録を消しました'); return; }
+                if (k === 'ok') {
+                    keep(); const pick = c.members.filter((m, i) => ov.querySelector('.wk-cm[data-i="' + i + '"]').checked); if (!pick.length) { toast('1人以上えらんでください'); return; }
+                    const line = (ind, m) => ind + '- ' + (opt.pre ? opt.pre + '：' : '') + '[[' + m.name + ']]' + (opt.role && m.role ? '（' + m.role + '）' : '') + (opt.ep && m.ep ? ' {{' + m.ep + 'から}}' : '');
+                    ov.remove(); wikiEditSrc((v, a) => wikiCastLinesAt(v, a, ind => pick.map(m => line(ind, m)).join('\n'))); toast(pick.length + '人を入れました');
+                }
             });
         }
         // ---- Wikiの本文を、本文エディタ（見た目のまま書ける・同じ道具）で書く ----
@@ -11060,6 +11157,8 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             if (act === 'asof-reset') { wikiState.asOf = null; wikiRender(); return; }
             if (act === 'ins') { wikiInsert(el.dataset.k); return; }
             if (act === 'insnew') { wikiInsEdit(null); return; }
+            if (act === 'castsave') { wikiCastSave(); return; }
+            if (act === 'castins') { wikiCastIns(); return; }
             if (act === 'legacyall') {
                 const nl = wikiEntries(bookId).filter(wikiIsLegacy).length; if (!nl) { toast('古い形の項目はありません'); return; }
                 if (!confirm('古い形の項目 ' + nl + '件を、本文の形にそろえます。\n欄・関連・年表は、本文の「## ▸ 見出し」の中に入ります。\n期間や詳細の付いた関連は、そのまま残します。\n前の中身は、項目の中に控えとして残ります。よいですか？')) return;
@@ -11501,8 +11600,8 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         // 話の終わり・戻る・本の終わりで、読み終えた話から言葉を拾い、件数を小さく知らせる。読書は止めない
         // ===== 更新の確認：新しい版があれば、魚に青い点とメニュー（版の番号は version.json。公開のたびに、番号が変わる。番号が入っていない開発中は、確かめない） =====
         // 表示用の版。更新の検出は引き続き APP_BUILD の日時番号を使う。
-        const APP_VERSION = '24.41';
-        const APP_BUILD = '20261117020251';
+        const APP_VERSION = '24.42';
+        const APP_BUILD = '20261117103250';
         let updateCheckAt = 0;
         function paintBuild() {
             const el = document.getElementById('app-build-info'); if (!el) return;
