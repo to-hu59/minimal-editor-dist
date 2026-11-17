@@ -9,6 +9,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DotGothic16&family=Klee+One:wght@400;600&family=Shippori+Mincho:wght@400;600&family=Zen+Maru+Gothic:wght@500;700&family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="fx.css">
+<link rel="stylesheet" href="pile.css">
+<script src="pile.js"></script>
 <style>
   #fxBack { display: inline-flex; align-items: center; gap: 4px; }
   #srcBtn { display: none !important; }
@@ -87,6 +89,7 @@
       const docs=document.createElement('script');docs.src='document-bridge.js';docs.onload=()=>{
       try {
         S.pvMute = !opts.sound;                       // 音は、はじめは出さない
+        if (opts.sound) document.addEventListener('pointerdown', () => { try { audioInit(); } catch (x) {} }, { capture: true });
         document.querySelector('.hd .ttl').textContent = d.title || '';
         document.getElementById(opts.fx === false ? 'no' : 'yes').click();
         if (d.start > 0) setTimeout(() => { try { goto(Math.min(d.start, BOOK.pages.length - 1), { push: false }); } catch (x) {} }, 120);

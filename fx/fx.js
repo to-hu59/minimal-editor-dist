@@ -186,6 +186,7 @@ const BGCSS={
   '異世界':'radial-gradient(14% 8% at 78% 16%,rgba(255,250,235,.95),rgba(255,240,210,.5) 40%,transparent 70%),radial-gradient(6% 3.5% at 64% 10%,rgba(220,235,255,.9),transparent 70%),radial-gradient(80% 40% at 50% 62%,rgba(255,200,140,.55),transparent 70%),linear-gradient(#1b2350 0%,#5a5a9a 30%,#e3a97e 55%,#7a9a52 58%,#3f6230 75%,#1f3a1a 100%)',
   '夜空':'radial-gradient(1px 1px at 12% 18%,#fff,transparent),radial-gradient(1.5px 1.5px at 30% 8%,#fff,transparent),radial-gradient(1px 1px at 55% 22%,#fff,transparent),radial-gradient(2px 2px at 72% 12%,#fff,transparent),radial-gradient(1px 1px at 88% 30%,#fff,transparent),radial-gradient(1.5px 1.5px at 20% 40%,#fff,transparent),radial-gradient(1px 1px at 45% 48%,#fff,transparent),radial-gradient(1px 1px at 80% 52%,#fff,transparent),radial-gradient(1.5px 1.5px at 8% 62%,#fff,transparent),radial-gradient(1px 1px at 63% 70%,#fff,transparent),radial-gradient(60% 40% at 50% 100%,rgba(90,60,160,.5),transparent 70%),linear-gradient(#05061a,#141a44 60%,#2a1f4e)',
   '黒':'linear-gradient(#000,#000)',
+  '無地':'radial-gradient(70% 60% at 50% 40%,#3a332c,#1e1a17 80%)',
   /* 宮殿の広間（乙女ゲーム・令嬢もの）：シャンデリアの光と、アーチ窓、ばら色の壁 */
   '宮殿':'radial-gradient(9% 5% at 50% 8%,rgba(255,244,214,1),rgba(255,226,160,.55) 45%,transparent 75%),radial-gradient(5% 3% at 22% 12%,rgba(255,236,190,.9),transparent 70%),radial-gradient(5% 3% at 78% 12%,rgba(255,236,190,.9),transparent 70%),radial-gradient(60% 30% at 50% 10%,rgba(255,214,150,.35),transparent 70%),radial-gradient(12% 26% at 14% 46%,rgba(190,215,255,.55),rgba(150,180,240,.18) 60%,transparent 75%),radial-gradient(12% 26% at 86% 46%,rgba(190,215,255,.55),rgba(150,180,240,.18) 60%,transparent 75%),repeating-linear-gradient(90deg,rgba(255,255,255,.04) 0 2px,transparent 2px 60px),linear-gradient(#3a1828 0%,#6e2c45 32%,#8f4a5e 58%,#c89b6e 74%,#5a3326 75%,#2a1610 100%)',
 
@@ -3498,9 +3499,9 @@ function addEndNav(){
 const N=BOOK.pages.length;
 /* ページの見た目（背景・人影）をそろえる */
 function setScene(i,c){
-  const m=meta(i);$('bg').dataset.k='';setBg(m.bg||'部屋',false);
+  const m=meta(i),dbg=window.FX_PLAIN_BG?'無地':'部屋';$('bg').dataset.k='';setBg(m.bg||dbg,false);
   if(m.noSil)$('silw').classList.add('gone');
-  if(c)bgLife(c,m.bg||'部屋');
+  if(c)bgLife(c,m.bg||dbg);
 }
 async function goto(i,{via='paper',push=true}={}){
   if(S.busy)return;S.busy=true;
@@ -6829,6 +6830,12 @@ EDT['トーク'].live=(pv,a,o,save)=>{const el=pv.querySelector('.talk');if(!el)
 /* ===== LINE通知：画面の上から降りてくる（LINE風・カカオ風）=====
    ［LINE通知 アプリ=LINE／カカオ 秒=4］ 1行＝「送り主：本文」。順に降りてきて、そのあと文章の中に記録として残る。押すと閉じる */
 BLOCKS.add('LINE通知');
+/* 通知の山（pile.js）：たまった通知が積み上がって、未読の数がふくらむ */
+BLOCKS.add('通知の山');
+BR['通知の山']=(a,L)=>window.FxPile?FxPile.html(a,L,'blk pile',' data-fx="通知の山" data-a="'+encA(a)+'"'):'<div class="blk">'+L.map(esc).join('<br>')+'</div>';
+D['通知の山']={prep(el){},async run(el,a,c){if(window.FxPile)await FxPile.run(el,{wait:ms=>c.wait(ms),sound:()=>{try{SFX.notif()}catch(e){}},dead:()=>c.dead})}};
+TPL['通知の山']={block:1,attrs:[['アプリ'],['件数'],['時刻']],parse:l=>[l],fmt:r=>r[0]};
+TPNAME['通知の山']='通知の山';
 BR['LINE通知']=(a,L)=>{const kk=a.アプリ==='カカオ'?'kk':'ln';
   return`<div class="blk lnn" data-fx="LINE通知" data-a="${encA(a)}">${L.filter(l=>l.trim()).map((l,i)=>{const k=l.indexOf('：'),n=k<0?'':l.slice(0,k).trim(),t=k<0?l:l.slice(k+1);
     return`<div class="lnc ${kk}" data-i="${i}"><span class="lnav"><i class="pic" style="background-image:url(a/p${pIdx(n||'相手')}.jpg)"></i><u>${kk==='kk'?'●':'💬'}</u></span><div class="lncb"><div class="lnch"><b>${esc(n)}</b><em>${kk==='kk'?'カカオトーク':'LINE'} • 今</em></div><p>${esc(t)}</p></div></div>`}).join('')}</div>`};
