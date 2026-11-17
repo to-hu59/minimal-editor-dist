@@ -2177,6 +2177,7 @@ html, body { -webkit-text-size-adjust:100%; text-size-adjust:100%; }
                     <div class="pt-3 border-t border-woodBorder">
                         <span class="font-bold text-softMuted block mb-1">更新履歴</span>
                         <div id="changelog" class="text-[11px] text-softMuted leading-relaxed">
+<div class="mb-1.5"><b class="text-softText">Version 24.45（2026-11-17）</b><br>特殊演出の一覧に、出ていなかったボタンを足しました。「音・振動」に着信を切る・無視・ツーツー・チャイム、新しい「日記」の欄に手書きの日記とPC日記があります。本文を選んで押すと、そこを囲みます。</div>
 <div class="mb-1.5"><b class="text-softText">Version 24.44（2026-11-17）</b><br>演出ビュー（🎬）の「手書きの日記」が、読む画面の本文の中にも出て、ペンで1文字ずつ書いていくようにしました。特殊演出の「選んだ文から作る」に「手書きの日記」を足しました。ニュースの見出しリストで長い見出しが切れないようにしました。Wiki：時期や作品が5つ以上ある欄は、古いほうを「〜N話まで」にまとめてたためます。「この項目が、出てくるところ」もたためるようにしました。</div>
 <div class="mb-1.5"><b class="text-softText">Version 24.43（2026-11-17）</b><br>効果音に［チャイム］（ピンポーン）を足しました。［チャイム 2回］で回数、［チャイム 連打］で急いで押した感じになります。</div>
 <div class="mb-1.5"><b class="text-softText">Version 24.42（2026-11-17）</b><br>Wiki：書く画面に「👥 メンバーを登録」「👥 メンバーを入れる」ボタンを足しました。ドラマやギルドのページで登録したメンバーを、別のページで選んで入れられます（来ていない人は外せます。行の頭・役職・話数も選べます）。</div>
@@ -8666,11 +8667,12 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             { id: 'fx-ring', name: '着信（音・振動・文字がゆれる）', note: '次の行が、電話の着信のように、ゆれて、音が鳴る', tag: '［着信］' },
             { id: 'fx-vib', name: 'バイブ（振動・文字がゆれる）', note: '次の行が、ぶるぶると、ゆれて、振動する', tag: '［バイブ］' },
             { id: 'fx-both', name: '着信＋バイブ（同時）', note: '着信の音と、振動が、同時', tag: '［着信 バイブ］' },
-            { id: 'fx-cut', name: '着信を切る（ぶちっ）', note: '鳴っている着信を、ここで切る', tag: '［／着信 切る］' },
-            { id: 'fx-ign', name: '着信を無視（鳴りやむ）', note: '鳴っている着信が、ここで鳴りやむ', tag: '［／着信 無視］' },
-            { id: 'fx-busy', name: 'ツーツー（切れたあと）', note: '電話が切れたあとの、ツー・ツー', tag: '［ツーツー］' },
+            { id: 'fx-cut', name: '着信を切る（ぶちっ）', note: '鳴っている着信を、ここで切る', tag: '［／着信 切る］', solo: true },
+            { id: 'fx-ign', name: '着信を無視（鳴りやむ）', note: '鳴っている着信が、ここで鳴りやむ', tag: '［／着信 無視］', solo: true },
+            { id: 'fx-busy', name: 'ツーツー（切れたあと）', note: '電話が切れたあとの、ツー・ツー', tag: '［ツーツー］', solo: true },
             { id: 'fx-diary', name: '手書きの日記（ノートに1文字ずつ書く）', note: 'ノートにペンで書くように1文字ずつ出る。[[消す]] 消しゴム、~~消す~~ 線で消す、［しみ］ 涙のしみ など', block: '［日記 日付=10月30日（木） 天気=くもり 紙=クリーム ペン=鉛筆］', close: '［／日記］', tmpl: '今日は' },
-            { id: 'fx-chime', name: 'チャイム（ピンポーン）', note: '玄関のチャイム。［チャイム 2回］で2回、［チャイム 連打］でピンポンピンポン…', tag: '［チャイム］' },
+            { id: 'fx-pcdiary', name: 'PC日記（画面にカタカタ打つ）', note: 'パソコンの画面に、1文字ずつ打っていく日記。演出ビュー（🎬）で動く', block: '［PC 題=diary.txt 見た目=白 速さ=ふつう］', close: '［／PC］', tmpl: '10月30日' },
+            { id: 'fx-chime', name: 'チャイム（ピンポーン）', note: '玄関のチャイム。［チャイム 2回］で2回、［チャイム 連打］でピンポンピンポン…', tag: '［チャイム］', solo: true },
             { id: 'fx-shout', name: '怒鳴り（強くゆれて・振動）', note: '次の行（選んだ文字だけ）が、どなるように、強くゆれて、振動する', tag: '［怒鳴り］' },
             { id: 'fx-noise', name: 'ジジッ（ノイズ・ざわっ）', note: '文字が、ジジッとブレる。ホラーの、ひずみ', tag: '［ジジッ］' },
             { id: 'fx-type', name: 'タイピング音（1文字ずつ・カタカタ）', note: '文字を選んで押すと、その文字が、キーを打つ音といっしょに1文字ずつ出る。［タイピング音 速さ=ふつう タダダダッ］と、印の中に書いてもよい。速さ=とても速い／速い／ふつう／ゆっくり／とてもゆっくり（数字なら1文字の秒数）', tag: '［タイピング音 速さ=ふつう］' },
@@ -8714,7 +8716,8 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         // 同じ系統は、まとめて、たためるようにする（開閉は覚えておく）
         const FRAME_GROUPS = [
             { g: '文字の向き', note: '縦書き・ななめ・反転・回転（この部分だけ。止まった見た目）', ids: ['ori-v', 'ori-sr', 'ori-sl', 'ori-f', 'ori-g', 'ori-r90', 'ori-r180'] },
-            { g: '音・振動', note: '着信・バイブ・怒鳴り・ジジッ・頭痛・心臓・タイピング音', ids: ['fx-ring', 'fx-vib', 'fx-both', 'fx-shout', 'fx-noise', 'fx-head', 'fx-heart', 'fx-type'] },
+            { g: '音・振動', note: '着信・切る・ツーツー・チャイム・バイブ・怒鳴り・ジジッ・頭痛・心臓・タイピング音', ids: ['fx-ring', 'fx-vib', 'fx-both', 'fx-cut', 'fx-ign', 'fx-busy', 'fx-chime', 'fx-shout', 'fx-noise', 'fx-head', 'fx-heart', 'fx-type'] },
+            { g: '日記', note: '手書きの日記・PC日記（選んだ文を囲みます）', ids: ['fx-diary', 'fx-pcdiary'] },
             { g: '流れる文字・案内板', note: '電光掲示板・駅の発車案内・空港の出発案内（🎬で動く）', ids: ['led', 'led-wrap', 'board-sta', 'board-air'] },
             { g: 'ホラー・ぐちゃぐちゃ', note: '文字化け・文字が崩れる・めくれない・巻き戻る（🎬で動く）', ids: ['err-sys', 'crash-chat', 'page-lock', 'page-rewind'] },
             { g: 'システム画面', note: '青・茶・赤・黒の枠', ids: ['win-blue', 'win-brown', 'win-red', 'win-black'] },
@@ -11735,8 +11738,8 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         // 話の終わり・戻る・本の終わりで、読み終えた話から言葉を拾い、件数を小さく知らせる。読書は止めない
         // ===== 更新の確認：新しい版があれば、魚に青い点とメニュー（版の番号は version.json。公開のたびに、番号が変わる。番号が入っていない開発中は、確かめない） =====
         // 表示用の版。更新の検出は引き続き APP_BUILD の日時番号を使う。
-        const APP_VERSION = '24.44';
-        const APP_BUILD = '20261117145934';
+        const APP_VERSION = '24.45';
+        const APP_BUILD = '20261117151508';
         let updateCheckAt = 0;
         function paintBuild() {
             const el = document.getElementById('app-build-info'); if (!el) return;
