@@ -2185,6 +2185,7 @@ html, body { -webkit-text-size-adjust:100%; text-size-adjust:100%; }
                     <div class="pt-3 border-t border-woodBorder">
                         <span class="font-bold text-softMuted block mb-1">更新履歴</span>
                         <div id="changelog" class="text-[11px] text-softMuted leading-relaxed">
+<div class="mb-1.5"><b class="text-softText">Version 24.52（2026-11-17）</b><br>Wiki：上の表の「出演作：自動」は、「お仕事」の欄から集めるようにしました。「番宣」と書いてある行は入れません（入れたくない行には {{出演作から外す}} と書きます）。字下げした行は、親の行の続きなので入れません。</div>
 <div class="mb-1.5"><b class="text-softText">Version 24.51（2026-11-17）</b><br>日記：日付を書かなければ「月　日」の行を出さないようにしました。消し跡のよごれは、消し跡=あり と書いたときだけ付けます。幅を広げ、「。」などが行の頭に来ないようにしました。日記を作る画面は、［背景］がなければ無地にし、音を出すボタン（🔈）を足しました。演出ビューは、画面を押すと音が出せるようにしました。日記がページをまたぐときに、行の途中で切れないようにしました。新しい演出「通知の山」（たまったメッセージが積み上がって、未読の数がふくらむ）を足しました。Wiki：同じ名前の行でも、話数の印がなければ別々の行として並べ、「- →…」の行は上の行の続きにしました。上の表の「出演作」は4つ以上でたたみ、「出演作：自動」でページの作品を集めます。書く画面に見出しのバーを足しました（押すと、その欄の最後へ）。</div>
 <div class="mb-1.5"><b class="text-softText">Version 24.50（2026-11-17）</b><br>［チャイム 連打］の1回ずつが「ち」のような音になっていたのを、「ピンポ」と聞こえる音に直しました（ピンポ、ピンポ、…ピンポーン）。</div>
 <div class="mb-1.5"><b class="text-softText">Version 24.49（2026-11-17）</b><br>［チャイム 連打］を、押しまくっている音に作り直しました（「ピン」が短く続いて、最後だけ「ピンポーン」）。［チャイム 連打 15回］のように回数も決められます。書かなければ8回、次の行に「ピンポン」が3つ以上あれば、その数です。</div>
@@ -6671,7 +6672,18 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             let list = [];
             if (/^自動$/.test(String(v || '').trim())) {
                 const L = String(e.basic || '').split('\n'), got = [];
-                L.forEach((l, i) => { const m = l.match(/^\s*[▸▶►]\s+(.*)$/); if (!m || m[1].indexOf('『') < 0) return; const ep = Number((m[1].match(/\{\{\s*第?\s*(\d{1,4})\s*話\s*から\s*\}\}/) || [])[1]) || 0; if (cur && cur !== Infinity && ep > cur) return; got.push({ t: m[1].replace(/\{\{[^}]*\}\}/g, '').trim(), ep, i }); });
+                // 「お仕事」の見出しがあれば、その中の行（字下げしていない - ・▸）から集める。番宣の行と {{出演作から外す}} の行は入れない
+                const WH = L.findIndex(l => /^\s{0,3}#{1,4}\s+(?:[▸▶►]\s*)?お仕事/.test(l));
+                if (WH >= 0) {
+                    const lv = L[WH].match(/#+/)[0].length;
+                    for (let i = WH + 1; i < L.length; i++) {
+                        const h = L[i].match(/^\s{0,3}(#{1,4})\s/); if (h && h[1].length <= lv) break;
+                        const m = L[i].match(/^ {0,1}(?:[-*・●]|[▸▶►])\s+(.*)$/); if (!m || /番宣|\{\{\s*出演作から外す\s*\}\}/.test(m[1])) continue;
+                        const tt = m[1].match(/『[^』]+』|\[\[[^\]]+\]\]/); if (!tt) continue;
+                        const ep = Number((m[1].match(/\{\{\s*第?\s*(\d{1,4})\s*話\s*から\s*\}\}/) || [])[1]) || 0; if (cur && cur !== Infinity && ep > cur) continue;
+                        got.push({ t: tt[0], ep, i });
+                    }
+                } else L.forEach((l, i) => { const m = l.match(/^\s*[▸▶►]\s+(.*)$/); if (!m || m[1].indexOf('『') < 0) return; const ep = Number((m[1].match(/\{\{\s*第?\s*(\d{1,4})\s*話\s*から\s*\}\}/) || [])[1]) || 0; if (cur && cur !== Infinity && ep > cur) return; got.push({ t: m[1].replace(/\{\{[^}]*\}\}/g, '').trim(), ep, i }); });
                 list = got.sort((a, b) => (b.ep - a.ep) || (b.i - a.i)).map(x => x.t);
             } else list = String(v || '').split(/[、,，]/).map(x => x.trim()).filter(Boolean);
             if (!list.length) return '';
@@ -11869,8 +11881,8 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         // 話の終わり・戻る・本の終わりで、読み終えた話から言葉を拾い、件数を小さく知らせる。読書は止めない
         // ===== 更新の確認：新しい版があれば、魚に青い点とメニュー（版の番号は version.json。公開のたびに、番号が変わる。番号が入っていない開発中は、確かめない） =====
         // 表示用の版。更新の検出は引き続き APP_BUILD の日時番号を使う。
-        const APP_VERSION = '24.51';
-        const APP_BUILD = '20261117200127';
+        const APP_VERSION = '24.52';
+        const APP_BUILD = '20261117204106';
         let updateCheckAt = 0;
         function paintBuild() {
             const el = document.getElementById('app-build-info'); if (!el) return;
