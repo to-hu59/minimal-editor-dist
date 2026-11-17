@@ -2185,6 +2185,7 @@ html, body { -webkit-text-size-adjust:100%; text-size-adjust:100%; }
                     <div class="pt-3 border-t border-woodBorder">
                         <span class="font-bold text-softMuted block mb-1">更新履歴</span>
                         <div id="changelog" class="text-[11px] text-softMuted leading-relaxed">
+<div class="mb-1.5"><b class="text-softText">Version 24.55（2026-11-18）</b><br>Wiki：「進行度別情報」が9件以上になったら、8件ずつの折りたたみに分けました（見出しは「27話〜48話（8件）」のように話数のはば）。いまの進捗に近い所だけ開き、「全部開く」のときは全部開きます。編集の画面では、追記を入れる欄を、これまでの追記の上に移しました（いちばん下まで行かなくて入れられます）。これまでの追記は、新しい話が上です。</div>
 <div class="mb-1.5"><b class="text-softText">Version 24.54（2026-11-18）</b><br>Wiki：ステータスの「[体力 - 11][体力 - 成長限界値：…]」のようにかぎかっこが並ぶ行も、同じ名前の行を書き足すと、いちばん新しい行だけが出て、古い行は「変遷を見る」に入ります（話数の印がなければ、あとに書いた方が新しい値）。「[職業 - 無職]→[職業 - 魔法使い] {{3話から}}」と1行に→でつないで書いても、同じように古い値が「変遷を見る」に入ります。</div>
 <div class="mb-1.5"><b class="text-softText">Version 24.53（2026-11-17）</b><br>Wiki：上の表の「出演作：自動」の並びを、古い順にしました。</div>
 <div class="mb-1.5"><b class="text-softText">Version 24.52（2026-11-17）</b><br>Wiki：上の表の「出演作：自動」は、「お仕事」の欄から集めるようにしました。「番宣」と書いてある行は入れません（入れたくない行には {{出演作から外す}} と書きます）。字下げした行は、親の行の続きなので入れません。</div>
@@ -10538,6 +10539,16 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
             if (R[pre + k]) delete R[pre + k]; else R[pre + k] = true;
         }
         function wikiNoteLocked(n, cur) { return n.ep ? !!(cur && n.ep > cur) : n.spoiler === true; }
+        // 追記が多いとき（9件から）は、8件ずつの折りたたみにする。見出しは、その中の話数のはば（例：35〜61話（8件））
+        function wikiNoteFolds(items, openFn) {
+            const N = 8; if (items.length <= N) return items.map(x => x.html).join('');
+            const bk = wikiBook(), chunks = []; for (let i = 0; i < items.length; i += N) chunks.push(items.slice(i, i + N));
+            return chunks.map((c, ci) => {
+                const eps = c.map(x => x.ep).filter(Boolean), lo = Math.min(...eps), hi = Math.max(...eps);
+                const lab = !eps.length ? '話数なし' : (lo === hi ? epLabel(bk, lo) : epLabel(bk, lo) + '〜' + epLabel(bk, hi));
+                return '<details class="wk-hist wk-nfold"' + (openFn(c, ci) ? ' open' : '') + '><summary>' + wEsc(lab) + '（' + c.length + '件）</summary>' + c.map(x => x.html).join('') + '</details>';
+            }).join('');
+        }
 
         // --- Wiki画面 ---
         function wikiOpen(view) {
@@ -10879,11 +10890,16 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                 const notes = (e.notes || []).slice().sort((a, b) => (a.ep || 0) - (b.ep || 0)), nVis = notes.filter(n => !wikiNoteLocked(n, cur) || wikiShowKey(e.id, 'n:' + n.id)), nLocked = notes.filter(n => wikiNoteLocked(n, cur) && !wikiShowKey(e.id, 'n:' + n.id));
                 if (notes.length) {
                     h += wikiFoldOpen(e, 'notes', '進行度別情報');
+                    const np = [];
                     for (const n of notes) {
-                        const future = wikiNoteLocked(n, cur), shown = !future || wikiShowKey(e.id, 'n:' + n.id);
-                        if (!shown) { h += '<div class="wk-ep wk-ep-future"><div class="wk-ep-label">' + (n.ep ? n.ep + '話 判明予定' : '話数なし') + '</div>' + wikiLockBox(e.id, 'n:' + n.id, '現在の進捗(' + cur + '話)より先の設定です。') + '</div>'; continue; }
-                        h += '<div class="wk-ep' + (future ? ' wk-ep-future' : '') + '"><div class="wk-ep-label">' + (n.ep ? wEsc(epLabel(wikiBook(), n.ep)) + ' 判明' + (future ? '予定' : '') : '話数なし') + '</div><div class="wk-note" style="white-space:normal">' + wikiRich(bookId, n.text, e.id, { toc: false }) + '</div></div>';
+                        const hb4 = h.length, future = wikiNoteLocked(n, cur), shown = !future || wikiShowKey(e.id, 'n:' + n.id);
+                        if (!shown) { h += '<div class="wk-ep wk-ep-future"><div class="wk-ep-label">' + (n.ep ? n.ep + '話 判明予定' : '話数なし') + '</div>' + wikiLockBox(e.id, 'n:' + n.id, '現在の進捗(' + cur + '話)より先の設定です。') + '</div>'; }
+                        else h += '<div class="wk-ep' + (future ? ' wk-ep-future' : '') + '"><div class="wk-ep-label">' + (n.ep ? wEsc(epLabel(wikiBook(), n.ep)) + ' 判明' + (future ? '予定' : '') : '話数なし') + '</div><div class="wk-note" style="white-space:normal">' + wikiRich(bookId, n.text, e.id, { toc: false }) + '</div></div>';
+                        np.push({ ep: n.ep || 0, now: !future, html: h.slice(hb4) }); h = h.slice(0, hb4);
                     }
+                    // 多いときは、8件ずつの折りたたみに分ける。いまの進捗に近い所だけ開く（「全部開く」のときは、全部）
+                    { const allM = !!(wikiState.panelsAll || {})[e.id]; let nowI = -1; np.forEach((x, i) => { if (x.now) nowI = i; });
+                      h += wikiNoteFolds(np, (c, ci) => allM || (nowI >= 0 ? c.some(x => x === np[nowI]) : ci === 0)); }
                 }
                 if (notes.length) h += wikiFoldClose();
                 h += '<div id="wk-backlinks">' + wikiBacklinksHtml(bookId, e, cur) + '</div>';
@@ -10978,10 +10994,10 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                 const cur = wikiEpisode(bookId);
                 h += '<details class="wk-more"' + (d.notes.length || (d.pendingNote && d.pendingNote.text) ? ' open' : '') + '><summary>話数ごとの追記（進行度別情報 ' + d.notes.length + '）</summary>';
                 h += `<div class="wk-row" style="justify-content:space-between"><div class="wk-label" style="margin-top:14px">進行度別情報</div><span class="wk-chip">現在進捗: ${cur ? cur + '話' : '不明'}</span></div>`;
-                if (!d.notes.length) h += '<div class="wk-muted">まだ追記はありません</div>';
-                const sorted = d.notes.slice().sort((a, b) => (a.ep || 0) - (b.ep || 0) || (a.at || 0) - (b.at || 0));
+                const sorted = d.notes.slice().sort((a, b) => (b.ep || 0) - (a.ep || 0) || (b.at || 0) - (a.at || 0)), noteItems = [];   // 新しい話が上
                 for (const n of sorted) {
                     if (!n.ep && n.spoiler === true) continue; // 旧試作のネタバレ追記は詳細には出さない（データは残す）
+                    const hb4 = h.length;
                     const locked = wikiNoteLocked(n, cur) && !wikiState.revealed[n.id];
                     const future = wikiNoteLocked(n, cur);
                     const label = n.ep ? `${n.ep}話 判明${future ? '予定' : ''}` : '話数なし';
@@ -10991,12 +11007,15 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
                     else if (!editing) h += `<div class="wk-note">${wEsc(n.text)}</div>`;
                     else h += wikiNoteEditorHtml(n.text, n.id) + `<div class="wk-row"><label>判明した話数</label><input type="number" class="wk-ne" data-n="${wEsc(n.id)}" min="1" value="${n.ep || ''}" placeholder="話数" style="margin-top:0;width:90px"></div><div class="wk-row"><button type="button" class="wk-mini wk-danger" data-w="note-del" data-nid="${wEsc(n.id)}">この追記を消す</button><button type="button" class="wk-mini" data-w="note-done">直し終わり</button></div>`;
                     h += '</div>';
+                    noteItems.push({ ep: n.ep || 0, edit: editing, html: h.slice(hb4) }); h = h.slice(0, hb4);
                 }
                 const pendingNote = d.pendingNote || (d.pendingNote = { text: '', ep: String(cur || '') });
                 h += wikiNoteEditorHtml(pendingNote.text);
                 h += '<div class="wk-muted" style="font-size:12px">文章に合わせて入力欄が広がります。長文は欄の中でスクロールできます。</div>';
                 h += `<div class="wk-row"><label for="wk-ep">判明した話数</label><input type="number" id="wk-ep" min="1" value="${wEsc(pendingNote.ep)}" placeholder="話数" style="margin-top:0;width:90px"></div>`;
                 h += '<button class="wk-btn" data-w="addnote" style="background:#b8923f;color:#fff;border-color:#b8923f;font-weight:700">＋ この内容を、追記に入れる</button><div class="wk-muted" style="margin-top:4px">書いたら、このボタンで追記に入ります（押さずに保存しても、いっしょに入ります）</div>';
+                // これまでの追記は、入力欄の下に（新しい話が上）。9件からは、8件ずつの折りたたみ。いちばん新しい所と、直している追記の所だけ開く
+                h += noteItems.length ? '<div class="wk-label" style="margin-top:14px">これまでの追記（新しい話から）</div>' + wikiNoteFolds(noteItems, (c, ci) => ci === 0 || c.some(x => x.edit)) : '<div class="wk-muted" style="margin-top:10px">まだ追記はありません</div>';
                 h += '</details>';
                 h += '<button class="wk-btn wk-accent" data-w="save">保存して閉じる</button>';
                 if (wikiState.editId) h += `<button class="wk-btn wk-danger" data-w="del">${wikiState.confirmDel ? 'もう一度押すと削除します' : '削除'}</button>`;
@@ -11884,8 +11903,8 @@ let DRIVE_CLIENT_ID = DRIVE_CLIENT_ID_FIXED; try { if (!DRIVE_CLIENT_ID) DRIVE_C
         // 話の終わり・戻る・本の終わりで、読み終えた話から言葉を拾い、件数を小さく知らせる。読書は止めない
         // ===== 更新の確認：新しい版があれば、魚に青い点とメニュー（版の番号は version.json。公開のたびに、番号が変わる。番号が入っていない開発中は、確かめない） =====
         // 表示用の版。更新の検出は引き続き APP_BUILD の日時番号を使う。
-        const APP_VERSION = '24.54';
-        const APP_BUILD = '20261118065600';
+        const APP_VERSION = '24.55';
+        const APP_BUILD = '20261118070758';
         let updateCheckAt = 0;
         function paintBuild() {
             const el = document.getElementById('app-build-info'); if (!el) return;
